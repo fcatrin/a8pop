@@ -1,5 +1,7 @@
 package fcatrin.pop;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import org.eclipse.swt.widgets.Display;
@@ -16,6 +18,8 @@ public class Main {
 	public static void main(String[] args) throws IOException {
 		display = new Display();
 		SWTUtils.display = display;
+		
+		dumpGraphics(new File("/Users/fcatrin/tmp/pop/IMG.BGTAB1.DUN"), 0x6000);
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
@@ -24,5 +28,54 @@ public class Main {
 		mainWindow.open();
 		AsyncTask.asyncProcessor.shutdown();
 		display.dispose();
+	}
+	
+	private static class ImageData {
+		int width;
+		int height;
+		int offset;
+		byte data[];
+	}
+	
+	private static void dumpGraphics(File file, int address) throws IOException {
+		byte data[] = new byte[262144];
+		FileInputStream fis = new FileInputStream(file);
+		fis.read(data);
+		fis.close();
+		
+		int nImages = data[0];
+		int index = 1;
+		ImageData images[] = new ImageData[nImages];
+		for(int i=0; i<nImages; i++) {
+			ImageData image = new ImageData();
+			byte l = data[index++];
+			byte h = data[index++];
+			String format = "[%d] l:%x, h:%x";
+			System.out.println(String.format(format, i+1, l, h));
+			image.offset = word(l, h) - address; 
+			images[i] = image;
+		}
+		
+		for(int i=0; i<nImages; i++) {
+			ImageData image = images[i];
+			int offset = image.offset;
+			image.width = b2i(data[offset++]);
+			image.height = b2i(data[offset++]);
+			image.data = new byte[image.width * image.height];
+			for(int p=0; p<image.data.length; p++) {
+				image.data[p] = data[offset+p];
+			}
+			String format = "image[%d].offset = %x  %dx%d";
+			System.out.println(String.format(format, i+1, images[i].offset, image.width, image.height));
+		}
+	}
+	
+	private static int word(byte l, byte h) {
+		return b2i(l) + 256 * b2i(h);
+	}
+	
+	private static int b2i(byte b) {
+		if (b>0) return b;
+		return b+256;
 	}
 }
