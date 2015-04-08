@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.eclipse.swt.widgets.Display;
 
+import xtvapps.core.swt.AsyncProcessor;
 import xtvapps.core.swt.AsyncTask;
 import xtvapps.core.swt.SWTUtils;
 
@@ -16,6 +17,8 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 
+		AsyncTask.asyncProcessor = new AsyncProcessor(display);
+		AsyncTask.asyncProcessor.start();
 		
 		MainWindow mainWindow = new MainWindow(display);
 		mainWindow.open();

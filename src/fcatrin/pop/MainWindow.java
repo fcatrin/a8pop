@@ -11,7 +11,8 @@ public class MainWindow {
 
 	private Shell shell;
 	private ScreenView screenView;
-	private String colors[] = {"#000000", "#404040", "#A0A0A0", "#F0F0F0"};
+	private String colors[] = {"#000000", "#804040", "#A0A0C0", "#F0F0F0"};
+	private float RENDER_PERIOD = 1000 / 15.0f;
 
 	public MainWindow(Display display) {
 		shell = new Shell(display);
@@ -25,13 +26,27 @@ public class MainWindow {
 	    	screenView.setColor(i, colors[i]);
 	    }
 	    
-	    screenView.clear();
-	    for(int x=0; x<ScreenView.WIDTH; x++) {
-	    	for(int y=0; y<ScreenView.HEIGHT; y++) {
-	    		screenView.setPixel(x, y, x % 3);
-	    	}
-	    }
-	    screenView.finishFrame();
+	    Thread t = new Thread("RenderThread") {
+
+			@Override
+			public void run() {
+				while (!shell.isDisposed()) {
+					long t0 = System.currentTimeMillis();
+					render();
+					screenView.finishFrame();
+					screenView.postInvalidate();
+					long elapsed = System.currentTimeMillis() - t0;
+					if (elapsed < RENDER_PERIOD) {
+						try {
+							Thread.sleep((long)(RENDER_PERIOD - elapsed));
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+	    };
+	    t.start();
 	}
 
 	public void open() {
@@ -41,7 +56,19 @@ public class MainWindow {
 	    shell.open();
 	    
 	    SWTUtils.mainLoop(shell);
-		
+	}
+	
+	int scroll = 0;
+	private void render() {
+		synchronized (screenView) {
+		    screenView.clear();
+		    for(int x=0; x<ScreenView.WIDTH; x++) {
+		    	for(int y=0; y<ScreenView.HEIGHT; y++) {
+		    		screenView.setPixel(x, y, (x+scroll) % 3);
+		    	}
+		    }
+			//scroll++;
+		}
 	}
 
 }

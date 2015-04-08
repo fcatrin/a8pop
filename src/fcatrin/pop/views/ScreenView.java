@@ -32,7 +32,7 @@ public class ScreenView extends CustomWidget {
 	};
 	PaletteData palette = new PaletteData(colors);
 	private ImageData sourceData;
-	private Image image;
+	private Image image = null;
 
 	public ScreenView(Composite parent) {
 		super(parent);
@@ -49,8 +49,10 @@ public class ScreenView extends CustomWidget {
 	}
 	
 	public void finishFrame() {
-		if (image!=null) image.dispose();
-		image = new Image(Display.getCurrent(), sourceData);
+		synchronized (this) {
+			if (image!=null) image.dispose();
+			image = new Image(Display.getCurrent(), sourceData);
+		}
 	}
 	
 	public void clear() {
@@ -64,10 +66,11 @@ public class ScreenView extends CustomWidget {
 	@Override
 	protected void onPaint(PaintEvent e) {
 		if (image == null) return;
-		
-		GC gc = e.gc;
-		gc.drawImage(image, 0, 0, WIDTH, HEIGHT, 0, 0, VIEW_WIDTH, VIEW_HEIGHT);
-
+		synchronized (this) {
+			GC gc = e.gc;
+			gc.drawImage(image, 0, 0, WIDTH, HEIGHT, 0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+			
+		}
 	}
 
 }
