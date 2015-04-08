@@ -19,11 +19,19 @@ public class MainWindow {
 	    shell.setLayout(new GridLayout(1, true));
 	    
 	    screenView = new ScreenView(shell);
-	    SWTUtils.setSize(screenView, ScreenView.WIDTH, ScreenView.HEIGHT);
+	    SWTUtils.setSize(screenView, ScreenView.VIEW_WIDTH, ScreenView.VIEW_HEIGHT);
 	    
 	    for(int i=0; i<colors.length; i++) {
 	    	screenView.setColor(i, colors[i]);
 	    }
+	    
+	    screenView.clear();
+	    for(int x=0; x<ScreenView.WIDTH; x++) {
+	    	for(int y=0; y<ScreenView.HEIGHT; y++) {
+	    		screenView.setPixel(x, y, x % 3);
+	    	}
+	    }
+	    screenView.finishFrame();
 	}
 
 	public void open() {
