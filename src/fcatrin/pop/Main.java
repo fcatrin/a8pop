@@ -19,25 +19,19 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		dumpGraphics(new File("/Users/fcatrin/tmp/pop/IMG.BGTAB1.DUN"), 0x6000);
+		ImageData[] graphics = dumpGraphics(new File("/Users/fcatrin/tmp/pop/IMG.BGTAB1.DUN"), 0x6000);
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
 		
 		MainWindow mainWindow = new MainWindow(display);
+		mainWindow.setImages(graphics);
 		mainWindow.open();
 		AsyncTask.asyncProcessor.shutdown();
 		display.dispose();
 	}
 	
-	private static class ImageData {
-		int width;
-		int height;
-		int offset;
-		byte data[];
-	}
-	
-	private static void dumpGraphics(File file, int address) throws IOException {
+	private static ImageData[] dumpGraphics(File file, int address) throws IOException {
 		byte data[] = new byte[262144];
 		FileInputStream fis = new FileInputStream(file);
 		fis.read(data);
@@ -68,6 +62,7 @@ public class Main {
 			String format = "image[%d].offset = %x  %dx%d";
 			System.out.println(String.format(format, i+1, images[i].offset, image.width, image.height));
 		}
+		return images;
 	}
 	
 	private static int word(byte l, byte h) {

@@ -13,6 +13,8 @@ public class MainWindow {
 	private ScreenView screenView;
 	private String colors[] = {"#000000", "#804040", "#A0A0C0", "#F0F0F0"};
 	private float RENDER_PERIOD = 1000 / 15.0f;
+	private ImageData[] graphics;
+	private int frame = 0;
 
 	public MainWindow(Display display) {
 		shell = new Shell(display);
@@ -32,6 +34,7 @@ public class MainWindow {
 			public void run() {
 				while (!shell.isDisposed()) {
 					long t0 = System.currentTimeMillis();
+					frame++;
 					render();
 					screenView.finishFrame();
 					screenView.postInvalidate();
@@ -58,17 +61,37 @@ public class MainWindow {
 	    SWTUtils.mainLoop(shell);
 	}
 	
-	int scroll = 0;
+	int graphicsIndex = 0;
+	
 	private void render() {
 		synchronized (screenView) {
 		    screenView.clear();
-		    for(int x=0; x<ScreenView.WIDTH; x++) {
-		    	for(int y=0; y<ScreenView.HEIGHT; y++) {
-		    		screenView.setPixel(x, y, (x+scroll) % 3);
-		    	}
-		    }
-			//scroll++;
+		    renderGraphic(graphicsIndex);
+		    if (frame % 30 == 0) graphicsIndex++;
 		}
+	}
+	
+	private void renderGraphic(int index) {
+		ImageData image = graphics[index];
+		for(int y=0; y<image.height; y++) {
+			for(int x=0; x<image.width; x++) {
+				renderByte(x*7, y, image.data[(image.height-y-1)*image.width + x]);
+			}
+		}
+	}
+	
+	private void renderByte(int x, int y, byte b) {
+		int mask = 1;
+		do {
+			int value = ((b & mask)!=0)?1:0;
+			screenView.setPixel(x, y, value);
+			x++;
+			mask *= 2;
+		} while (mask<128);
+	}
+
+	public void setImages(ImageData[] graphics) {
+		this.graphics = graphics;
 	}
 
 }
