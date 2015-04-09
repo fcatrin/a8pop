@@ -14,11 +14,11 @@ import xtvapps.core.swt.CustomWidget;
 import xtvapps.core.swt.SWTUtils;
 
 public class ScreenView extends CustomWidget {
-	public static final int WIDTH = 320;
+	public static final int WIDTH = 160;
 	public static final int HEIGHT = 192;
 	
-	public static final int VIEW_WIDTH = 1280;
-	public static final int VIEW_HEIGHT = 768;
+	public static final int VIEW_WIDTH = 640;
+	public static final int VIEW_HEIGHT = 384;
 	
 	private static final String COLOR_DEFAULT[] = {
 		"#000000", "#404040", "#808080", "#C0C0C0"

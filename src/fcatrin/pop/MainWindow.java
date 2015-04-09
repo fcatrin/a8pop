@@ -61,7 +61,7 @@ public class MainWindow {
 	    SWTUtils.mainLoop(shell);
 	}
 	
-	int graphicsIndex = 6;
+	int graphicsIndex = 125;
 	
 	private void render() {
 		synchronized (screenView) {
