@@ -67,7 +67,7 @@ public class MainWindow {
 		synchronized (screenView) {
 		    screenView.clear();
 		    renderGraphic(graphicsIndex);
-		    if (frame % 30 == 0) graphicsIndex++;
+		    //if (frame % 30 == 0) graphicsIndex++;
 		}
 	}
 	
@@ -75,18 +75,20 @@ public class MainWindow {
 		ImageData image = graphics[index];
 		for(int y=0; y<image.height; y++) {
 			for(int x=0; x<image.width; x++) {
-				renderByte(x*7, y, image.data[(image.height-y-1)*image.width + x]);
+				renderByte(x*4, y, image.data[(image.height-y-1)*image.width + x]);
 			}
 		}
 	}
 	
 	private void renderByte(int x, int y, byte b) {
-		int mask = 1;
+		int mask = 3;
+		int shift = 1;
 		do {
-			int value = ((b & mask)!=0)?1:0;
+			int value = ((b & mask)) / shift;
 			screenView.setPixel(x, y, value);
 			x++;
-			mask *= 2;
+			mask *= 4;
+			shift *=4;
 		} while (mask<128);
 	}
 
