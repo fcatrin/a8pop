@@ -11,7 +11,7 @@ public class MainWindow {
 
 	private Shell shell;
 	private ScreenView screenView;
-	private String colors[] = {"#000000", "#804040", "#A0A0C0", "#F0F0F0"};
+	private String colors[] = {"#000000", "#4040FF", "#FFFF00", "#F0F0F0"};
 	private float RENDER_PERIOD = 1000 / 15.0f;
 	private ImageData[] graphics;
 	private int frame = 0;
@@ -61,7 +61,7 @@ public class MainWindow {
 	    SWTUtils.mainLoop(shell);
 	}
 	
-	int graphicsIndex = 0;
+	int graphicsIndex = 6;
 	
 	private void render() {
 		synchronized (screenView) {
@@ -74,22 +74,49 @@ public class MainWindow {
 	private void renderGraphic(int index) {
 		ImageData image = graphics[index];
 		for(int y=0; y<image.height; y++) {
-			for(int x=0; x<image.width; x++) {
-				renderByte(x*4, y, image.data[(image.height-y-1)*image.width + x]);
-			}
+			renderLine(0, y, image.width, image.data, (image.height-y-1)*image.width);
 		}
 	}
 	
-	private void renderByte(int x, int y, byte b) {
-		int mask = 3;
-		int shift = 1;
+	private void renderLine(int x, int y, int width, byte[] data, int base) {
+		// ignore MSB
+		// width in bytes
+		
+		int pixel[] = new int[width * 7];
+		int mask = 1;
+		int offset = 0;
+		int pixelIndex = 0;
 		do {
-			int value = ((b & mask)) / shift;
-			screenView.setPixel(x, y, value);
-			x++;
-			mask *= 4;
-			shift *=4;
-		} while (mask<128);
+			byte b = data[base+ offset];
+			int value = (b & mask)!=0?1:0;
+			pixel[pixelIndex++] = value;
+			mask *= 2;
+			if (mask == 128) {
+				offset++;
+				mask = 1;
+			}
+		} while (offset < width);
+		for(int i=0; i<pixel.length; i++) {
+			boolean even = i % 2 == 0;
+			int v0 = i>0?pixel[i-1]:0;
+			int v1 = pixel[i];
+			int v2 = (i<pixel.length-1)?pixel[i+1]:0;
+			int value = 0;
+			if (v1!=0) {
+				if (v0!=0 || v2!=0) {
+					value = 3; 
+				} else {
+					value = even?1:2;
+				}
+			} else {
+				if (v0 == 0 || v2 == 0) {
+					value = 0;
+				} else {
+					value = even?2:1;
+				}
+			}
+			screenView.setPixel(x++, y, value);
+		}
 	}
 
 	public void setImages(ImageData[] graphics) {
