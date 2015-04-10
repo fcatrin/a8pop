@@ -19,7 +19,7 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		ImageData[] graphics = dumpGraphics(new File("/Users/fcatrin/tmp/pop/IMG.BGTAB1.DUN"), 0x6000);
+		ImageData[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
@@ -70,7 +70,7 @@ public class Main {
 	}
 	
 	private static int b2i(byte b) {
-		if (b>0) return b;
+		if (b>=0) return b;
 		return b+256;
 	}
 }
