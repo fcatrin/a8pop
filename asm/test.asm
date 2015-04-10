@@ -2,7 +2,7 @@
 * = $600
 start	lda #15
 		sta 710
-	
+
 		lda #15
 		sta 710
 
