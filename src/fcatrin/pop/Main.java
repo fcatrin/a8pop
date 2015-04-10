@@ -19,7 +19,7 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		ImageData[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
+		ImageData[] graphics = dumpGraphics(new File("images/IMG.BGTAB2.DUN"), 0x6000);
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
