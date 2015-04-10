@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.eclipse.swt.widgets.Display;
 
+import fcatrin.pop.ImageData.Mode;
 import xtvapps.core.swt.AsyncProcessor;
 import xtvapps.core.swt.AsyncTask;
 import xtvapps.core.swt.SWTUtils;
@@ -19,7 +20,12 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		ImageData[] graphics = dumpGraphics(new File("images/IMG.CHTAB7"), 0x6000);
+		ImageData[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
+		
+		
+		graphics = new ImageData[] {
+				ImageData.loadBMP(new File("images/dungeon/tile_07.bmp"))		
+		};
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
@@ -42,19 +48,20 @@ public class Main {
 		ImageData images[] = new ImageData[nImages];
 		for(int i=0; i<nImages; i++) {
 			ImageData image = new ImageData();
+			image.mode = Mode.AppleColor;
 			byte l = data[index++];
 			byte h = data[index++];
 			String format = "[%d] l:%x, h:%x";
 			System.out.println(String.format(format, i+1, l, h));
-			image.offset = word(l, h) - address; 
+			image.offset = Utils.word(l, h) - address; 
 			images[i] = image;
 		}
 		
 		for(int i=0; i<nImages; i++) {
 			ImageData image = images[i];
 			int offset = image.offset;
-			image.width = b2i(data[offset++]);
-			image.height = b2i(data[offset++]);
+			image.width = Utils.b2i(data[offset++]);
+			image.height = Utils.b2i(data[offset++]);
 			image.data = new byte[image.width * image.height];
 			for(int p=0; p<image.data.length; p++) {
 				image.data[p] = data[offset+p];
@@ -65,12 +72,5 @@ public class Main {
 		return images;
 	}
 	
-	private static int word(byte l, byte h) {
-		return b2i(l) + 256 * b2i(h);
-	}
-	
-	private static int b2i(byte b) {
-		if (b>=0) return b;
-		return b+256;
-	}
+
 }

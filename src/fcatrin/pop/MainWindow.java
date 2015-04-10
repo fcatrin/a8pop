@@ -1,9 +1,13 @@
 package fcatrin.pop;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
+import fcatrin.pop.ImageData.Mode;
 import fcatrin.pop.views.ScreenView;
 import xtvapps.core.swt.SWTUtils;
 
@@ -22,6 +26,16 @@ public class MainWindow {
 	    shell.setLayout(new GridLayout(1, true));
 	    
 	    screenView = new ScreenView(shell);
+	    screenView.addKeyListener(new KeyListener() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				onKeyReleased(e);
+			}
+			
+			@Override
+			public void keyPressed(KeyEvent e) {
+			}
+		});
 	    SWTUtils.setSize(screenView, ScreenView.VIEW_WIDTH, ScreenView.VIEW_HEIGHT);
 	    
 	    for(int i=0; i<colors.length; i++) {
@@ -52,6 +66,18 @@ public class MainWindow {
 	    t.start();
 	}
 
+	protected void onKeyReleased(KeyEvent e) {
+		if (e.keyCode == SWT.ARROW_LEFT) {
+			graphicsIndex --;
+		} else if (e.keyCode == SWT.ARROW_RIGHT) {
+			graphicsIndex++;
+		}
+		if (graphicsIndex < 0) graphicsIndex = graphics.length-1;
+		if (graphicsIndex+1 > graphics.length) graphicsIndex = 0;
+		System.out.println("graphics " + (graphicsIndex+1));
+		screenView.postInvalidate();
+	}
+
 	public void open() {
 		shell.pack();
 	    //shell.setSize(1024, 640);
@@ -67,14 +93,22 @@ public class MainWindow {
 		synchronized (screenView) {
 		    screenView.clear();
 		    renderGraphic(graphicsIndex);
-		    if (frame % 1 == 0) graphicsIndex++;
+		    //if (frame % 1 == 0) graphicsIndex++;
 		}
 	}
 	
 	private void renderGraphic(int index) {
 		ImageData image = graphics[index];
-		for(int y=0; y<image.height; y++) {
-			renderLine(0, y, image.width, image.data, (image.height-y-1)*image.width);
+		if (image.mode == Mode.Atari) {
+			for(int y=0; y<image.height; y++) {
+				for(int x=0; x<image.width; x++) {
+					screenView.setPixel(x, y, (int)image.data[image.width*y + x]);
+				}
+			}
+		} else {
+			for(int y=0; y<image.height; y++) {
+				renderLine(0, y, image.width, image.data, (image.height-y-1)*image.width);
+			}
 		}
 	}
 	
