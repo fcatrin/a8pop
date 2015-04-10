@@ -42,9 +42,9 @@ public class ImageData {
 					int value = r * 65536 + g*256 + b;
 					String hex = String.format("%06x", value);
 					int color = 0;
-					if (hex.equals("ffbc7854")) color = 1;
-					else if (hex.equals("ffbbbbbc")) color = 2;
-					else if (hex.equals("ff80280c")) color = 3;
+					if (hex.equals("ffbc7854")) color = 2;
+					else if (hex.equals("ffbbbbbc")) color = 3;
+					else if (hex.equals("ff80280c")) color = 1;
 					else if (!hex.equals("000000"))	System.out.println(hex);
 					image.data[y*width + x] = (byte)color;
 					x++;

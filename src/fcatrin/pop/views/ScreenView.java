@@ -21,7 +21,8 @@ public class ScreenView extends CustomWidget {
 	public static final int VIEW_HEIGHT = 768;
 	
 	private static final String COLOR_DEFAULT[] = {
-		"#000000", "#404040", "#808080", "#C0C0C0"
+		"#000000", "#0c2880", "#5478bc", "#bcbcbc"
+		
 	};
 	
 	RGB colors[] = new RGB[] {

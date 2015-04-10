@@ -15,7 +15,7 @@ public class MainWindow {
 
 	private Shell shell;
 	private ScreenView screenView;
-	private String colors[] = {"#000000", "#4040FF", "#FFFF00", "#F0F0F0"};
+	private String colors[] = {"#000000", "#0c2880", "#5478bc", "#bcbcbc"};
 	private float RENDER_PERIOD = 1000 / 15.0f;
 	private ImageData[] graphics;
 	private int frame = 0;
