@@ -14,7 +14,7 @@ import xtvapps.core.swt.CustomWidget;
 import xtvapps.core.swt.SWTUtils;
 
 public class ScreenView extends CustomWidget {
-	public static final int WIDTH = 160;
+	public static final int WIDTH = 280;
 	public static final int HEIGHT = 192;
 	
 	public static final int VIEW_WIDTH = 640;

@@ -61,13 +61,13 @@ public class MainWindow {
 	    SWTUtils.mainLoop(shell);
 	}
 	
-	int graphicsIndex = 125;
+	int graphicsIndex = 0;
 	
 	private void render() {
 		synchronized (screenView) {
 		    screenView.clear();
 		    renderGraphic(graphicsIndex);
-		    //if (frame % 30 == 0) graphicsIndex++;
+		    if (frame % 30 == 0) graphicsIndex++;
 		}
 	}
 	
