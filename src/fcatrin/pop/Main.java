@@ -6,25 +6,23 @@ import java.io.IOException;
 
 import org.eclipse.swt.widgets.Display;
 
-import fcatrin.pop.ImageData.Mode;
 import xtvapps.core.swt.AsyncProcessor;
 import xtvapps.core.swt.AsyncTask;
 import xtvapps.core.swt.SWTUtils;
+import fcatrin.pop.Image.Mode;
 
 public class Main {
-	private static final String LOGTAG = Main.class.getSimpleName();
-	
 	public static Display display;
 
 	public static void main(String[] args) throws IOException {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		ImageData[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
+		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
 		
 		
-		graphics = new ImageData[] {
-				ImageData.loadBMP(new File("images/dungeon/tile_07.bmp"))		
+		graphics = new Image[] {
+				Image.loadBMP(new File("images/dungeon/tile_07.bmp"))		
 		};
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
@@ -37,7 +35,7 @@ public class Main {
 		display.dispose();
 	}
 	
-	private static ImageData[] dumpGraphics(File file, int address) throws IOException {
+	private static Image[] dumpGraphics(File file, int address) throws IOException {
 		byte data[] = new byte[262144];
 		FileInputStream fis = new FileInputStream(file);
 		fis.read(data);
@@ -45,21 +43,22 @@ public class Main {
 		
 		int nImages = data[0];
 		int index = 1;
-		ImageData images[] = new ImageData[nImages];
+		Image images[] = new Image[nImages];
+		int offsets[] = new int[nImages];
 		for(int i=0; i<nImages; i++) {
-			ImageData image = new ImageData();
+			Image image = new Image();
 			image.mode = Mode.AppleColor;
 			byte l = data[index++];
 			byte h = data[index++];
 			String format = "[%d] l:%x, h:%x";
 			System.out.println(String.format(format, i+1, l, h));
-			image.offset = Utils.word(l, h) - address; 
+			offsets[i] = Utils.word(l, h) - address; 
 			images[i] = image;
 		}
 		
 		for(int i=0; i<nImages; i++) {
-			ImageData image = images[i];
-			int offset = image.offset;
+			Image image = images[i];
+			int offset = offsets[i];
 			image.width = Utils.b2i(data[offset++]);
 			image.height = Utils.b2i(data[offset++]);
 			image.data = new byte[image.width * image.height];
@@ -67,7 +66,7 @@ public class Main {
 				image.data[p] = data[offset+p];
 			}
 			String format = "image[%d].offset = %x  %dx%d";
-			System.out.println(String.format(format, i+1, images[i].offset, image.width, image.height));
+			System.out.println(String.format(format, i+1, offset, image.width, image.height));
 		}
 		return images;
 	}
