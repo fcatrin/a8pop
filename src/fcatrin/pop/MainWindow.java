@@ -67,7 +67,7 @@ public class MainWindow {
 		synchronized (screenView) {
 		    screenView.clear();
 		    renderGraphic(graphicsIndex);
-		    if (frame % 30 == 0) graphicsIndex++;
+		    if (frame % 1 == 0) graphicsIndex++;
 		}
 	}
 	
