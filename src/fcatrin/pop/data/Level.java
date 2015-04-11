@@ -163,7 +163,7 @@ public class Level {
 				
 				int objmaska = maska[objid];
 				int obja = piecea[objid];
-				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska, true);
+				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska, false);
 			
 				int frontDy = fronty[objid];
 				int frontDx = frontx[objid];
