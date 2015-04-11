@@ -24,6 +24,8 @@ public class MainWindow {
 	    shell.setText("Prince of Persia Testing");
 	    shell.setLayout(new GridLayout(1, true));
 	    
+	    changed = true;
+	    
 	    screenView = new ScreenView(shell);
 	    screenView.addKeyListener(new KeyListener() {
 			@Override
@@ -47,9 +49,10 @@ public class MainWindow {
 			public void run() {
 				while (!shell.isDisposed()) {
 					long t0 = System.currentTimeMillis();
-					render();
-					screenView.finishFrame();
-					screenView.postInvalidate();
+					if (render()) {
+						screenView.finishFrame();
+						screenView.postInvalidate();
+					}
 					long elapsed = System.currentTimeMillis() - t0;
 					if (elapsed < RENDER_PERIOD) {
 						try {
@@ -73,6 +76,7 @@ public class MainWindow {
 		if (graphicsIndex < 0) graphicsIndex = graphics.length-1;
 		if (graphicsIndex+1 > graphics.length) graphicsIndex = 0;
 		System.out.println("graphics " + (graphicsIndex+1));
+		changed = true;
 		screenView.postInvalidate();
 	}
 
@@ -87,8 +91,10 @@ public class MainWindow {
 	
 	int graphicsIndex = 0;
 	private Level level;
+	private boolean changed;
 	
-	private void render() {
+	private boolean render() {
+		if (!changed) return false;
 		synchronized (screenView) {
 		    screenView.clear();
 		    
@@ -96,8 +102,9 @@ public class MainWindow {
 		    image.render(screenView, 0, 0);
 		    
 		    level.render(screenView, 0);
-		    
 		}
+		changed = false;
+		return true;
 	}
 	
 

@@ -45,7 +45,7 @@ public class Image {
 					if (hex.equals("ffbc7854")) color = 2;
 					else if (hex.equals("ffbbbbbc")) color = 3;
 					else if (hex.equals("ff80280c")) color = 1;
-					else if (!hex.equals("000000"))	System.out.println(hex);
+					else if (!hex.equals("000000"))	color = 3;
 					image.data[y*width + x] = (byte)color;
 					x++;
 				}
@@ -70,6 +70,32 @@ public class Image {
 			}
 		}
 	}
+	
+	public void renderBottom(ScreenView screenView, int bottom, int left, Image mask) {
+		if (mode == Mode.Atari) {
+			if (mask == null) {
+				for(int y=0; y<height; y++) {
+					int basey = bottom - height + y;
+					for(int x=0; x<width; x++) {
+						screenView.setPixel(left+x, basey, (int)data[width*y + x]);
+					}
+				}
+			} else {
+				for(int y=0; y<height; y++) {
+					int basey = bottom - height + y;
+					int masky = mask.height - height + y;
+					for(int x=0; x<width; x++) {
+						if (masky>=0 && x<mask.width && (int)mask.data[mask.width*masky + x] != 0) {
+							
+						} else {
+							screenView.setPixel(left+x, basey, (int)data[width*y + x]);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	
 	private void renderScanApple(ScreenView screenView, int x, int y, int width, byte[] data, int base) {
 		// ignore MSB
@@ -111,5 +137,6 @@ public class Image {
 			screenView.setPixel(x++, y, value);
 		}
 	}
+
 
 }

@@ -29,12 +29,16 @@ public class Main {
 		File baseDir = new File("images/dungeon");
 		Level.addTile(1,  new File(baseDir, "tile_01.bmp"));
 		Level.addTile(2,  new File(baseDir, "tile_02.bmp"));
+		Level.addTile(3,  new File(baseDir, "tile_03.bmp"));
+		Level.addTile(4,  new File(baseDir, "tile_04.bmp"));
 		Level.addTile(7,  new File(baseDir, "tile_07.bmp"));
 		Level.addTile(8,  new File(baseDir, "tile_08.bmp"));
 		Level.addTile(9,  new File(baseDir, "tile_09.bmp"));
 		Level.addTile(0x15,  new File(baseDir, "tile_15.bmp"));
+		Level.addTile(0x45,  new File(baseDir, "tile_45.bmp"));
 		Level.addTile(0x83,  new File(baseDir, "tile_83.bmp"));
 		Level.addTile(0x84,  new File(baseDir, "tile_84.bmp"));;
+		Level.addTile(0x85,  new File(baseDir, "tile_85.bmp"));;
 		
 		Level level = Level.load(new File("levels/level1"));
 		level.debugScreen(0);

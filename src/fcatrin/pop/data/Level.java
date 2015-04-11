@@ -25,6 +25,12 @@ public class Level {
 	// object descriptors 
 	// https://github.com/jmechner/Prince-of-Persia-Apple-II/blob/master/01%20POP%20Source/Source/BGDATA.S
 	
+	/*
+	 * 
+	 *	 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+	 *	16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+	 */
+	
 	int maska[] = {00, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0x03, 0x00, 0x03, 0x03, 0x03, 
 			0x03, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00};
 	int piecea[] = {00, 0x01, 0x05, 0x07, 0x0a, 0x01, 0x01, 0x0a, 0x10, 0x00, 0x01, 0x00, 0x00, 0x14, 0x20, 0x4b,
@@ -45,9 +51,9 @@ public class Level {
 			0x15, 0x15, 0x15, 0x15, 0x86, 0x15, 0x15, 0x15, 0x15, 0x15, 0xab, 0x00, 0x00, 0x00};
 	int fronti[] = {00, 0x00, 0x00, 0x45, 0x46, 0x00, 0x00, 0x46, 0x48, 0x49, 0x87, 0x00, 0x46, 0x0f, 0x13, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x83, 0x00, 0x00, 0x00, 0x00, 0xa8, 0x00, 0xae, 0xae, 0xae};
-	int fronty[] = {00, 0x00, 0x00, -1, 0x00, 0x00, 0x00, 0x00, -1, 0x03, -3, 0x00, 0x00, -1, 0x00, 0x00, 
+	int fronty[] = {00, 0x00, 0x00, -3, 0x00, 0x00, 0x00, 0x00, -1, 0x03, -3, 0x00, 0x00, -1, 0x00, 0x00, 
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, -1, 0x0, -36, -36, -36};
-	int frontx[] = {00, 0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x03, 0x01, 0x01, 0x02, 0x00, 0x03, 0x01, 0x00, 0x00, 
+	int frontx[] = {00, 0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x03, 0x01, 0x01, 0x02, 0x00, 0x03, 0x01, 0x00, 0x00, 
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
 	
 	public static void addTile(int position, File file) {
@@ -109,28 +115,37 @@ public class Level {
 						drawTileBaseBottom(screenView, bottom, nextLeft, objc);
 					}
 					int objb = pieceb[objid];
+					int objmaskb = maskb[objid];
 					System.out.println(String.format("objid:%d, b:%d", objid, objb));
-					drawTileBaseBottom(screenView, bottom, nextLeft, objb);
+					drawTileBaseBottom(screenView, bottom, nextLeft, objb, objmaskb);
 				}
 				
 				int objd = pieced[objid];
 				drawTileBaseBottom(screenView, bottom, left, objd);
 				
+				int objmaska = maska[objid];
 				int obja = piecea[objid];
-				drawTileBaseBottom(screenView, bottom-3, left, obja);
+				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska);
 			
 				int front = fronti[objid];
-				drawTileBaseBottom(screenView, bottom, left, front);
+				int frontDy = fronty[objid];
+				int frontDx = frontx[objid];
+				drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front);
 			}
 		}
 	}
 
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int objid) {
+		drawTileBaseBottom(screenView, bottom, left, objid, 0);
+	}
+	
+	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int objid, int objmaskb) {
 		Image image = tiles.get(objid);
 		if (image == null) return;
 		
-		int top = bottom - image.height;
-		image.render(screenView, top, left);
+		Image mask = tiles.get(objmaskb);
+		
+		image.renderBottom(screenView, bottom, left, mask);
 	}
 	
 	
@@ -141,5 +156,50 @@ public class Level {
 		image.render(screenView, top, left);
 	}
 	
+	
+	/*
+	 * *-------------------------------
+*
+*  Return cs if C-section is visible, cc if hidden
+*
+*-------------------------------
+checkc
+ lda objid ;Does this space contain solid floorpiece?
+ beq :vis
+ cmp #pillartop
+ beq :vis
+ cmp #panelwof
+ beq :vis
+ cmp #archtop1
+ bcs :vis
+ bcc ]rts ;C-section is hidden
+:vis sec ;C-section is visible
+]rts rts
+*/
+	 
+	
+	/*
+	 * *-------------------------------
+*
+*  Redraw entire block
+*
+*-------------------------------
+RedBlockSure
+ jsr drawc ;C-section of piece below & to left
+ jsr drawmc
+
+ jsr drawb ;B-section of piece to left
+ jsr drawmb
+
+ jsr drawd ;D-section
+ jsr drawmd
+
+ jsr drawa ;A-section
+ jsr drawma
+
+ jmp drawfrnt ;A-section frontpiece
+;(Note: This is necessary in case we do a
+;layersave before we get to f.g. plane)
+	 */
 			
 }
