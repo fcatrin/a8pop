@@ -24,6 +24,8 @@ public class Level {
 	private static final int OBJID_BLOCK = 20;
 	private static final int TILE_BLOCK_RIGHT = 0xA0;
 	private static final int TILE_BLOCK_LEFT = 0xA1;
+	private static final int TILE_BLOCK_D_RIGHT = 0xA2;
+	private static final int TILE_BLOCK_D_LEFT = 0xA3;
 	
 	static Map<Integer, Image> tiles = new HashMap<Integer, Image>(); // TODO use an array when all tiles got created
 	
@@ -101,6 +103,7 @@ public class Level {
 		}
 	}
 	
+	int currentObjId = 0;
 	public void render(ScreenView screenView, int screen) {
 		byte objids[] = getScreen(screen);
 		for(int row = ROWS-1; row>=0; row--) {
@@ -114,40 +117,46 @@ public class Level {
 						objids[(row+1)*TILES_PER_ROW+i] : 0;
 				
 				if (i<TILES_PER_ROW-1) {
+					currentObjId = objidLeftBottom;
 					int nextLeft = left + TILE_WIDTH;
 					int objc = piecec[objidLeftBottom];
 					if (objc!=0) {
 						drawTileBaseBottom(screenView, bottom, nextLeft, objc);
 					}
+					
+					currentObjId = objid;
 					int objb = pieceb[objid];
 					int objby = pieceby[objid];
 					int objmaskb = maskb[objid];
-					System.out.println(String.format("objid:%d, b:%d", objid, objb));
 					drawTileBaseBottom(screenView, bottom + objby, nextLeft, objb, objmaskb);
 				}
+				currentObjId = objid;
 				
 				int objd = pieced[objid];
-				drawTileBaseBottom(screenView, bottom, left, objd);
-				
-				int objmaska = maska[objid];
-				int obja = piecea[objid];
-				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska);
-			
 				int front = fronti[objid];
 				if (objid == OBJID_BLOCK) { 
 					if (i<TILES_PER_ROW-1) {
 						int objidRight = objids[row*TILES_PER_ROW+i+1];
 						if (objidRight!=OBJID_BLOCK) {
 							front = TILE_BLOCK_RIGHT;
+							objd = TILE_BLOCK_D_RIGHT;
 						}
 					}
 					if (i>0) {
 						int objidLeft = objids[row*TILES_PER_ROW+i-1];
 						if (objidLeft!=OBJID_BLOCK) {
 							front = TILE_BLOCK_LEFT;
+							objd = TILE_BLOCK_D_LEFT;
 						}
 					}
 				}
+				
+				drawTileBaseBottom(screenView, bottom, left, objd);
+				
+				int objmaska = maska[objid];
+				int obja = piecea[objid];
+				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska);
+			
 				int frontDy = fronty[objid];
 				int frontDx = frontx[objid];
 				drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front);
@@ -155,15 +164,21 @@ public class Level {
 		}
 	}
 
-	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int objid) {
-		drawTileBaseBottom(screenView, bottom, left, objid, 0);
+	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId) {
+		drawTileBaseBottom(screenView, bottom, left, tileId, 0);
 	}
 	
-	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int objid, int objmaskb) {
-		Image image = tiles.get(objid);
-		if (image == null) return;
+	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, int tileMaskId) {
+		Image image = tiles.get(tileId);
+		if (image == null) {
+			if (tileId!=0) System.out.println(String.format("Tile %d not found for object id %d", tileId, currentObjId));
+			return;
+		}
 		
-		Image mask = tiles.get(objmaskb);
+		Image mask = tiles.get(tileMaskId);
+		if (mask == null) {
+			if (tileMaskId!=0) System.out.println(String.format("Mask %d not found for object id %d", tileMaskId, currentObjId));
+		}
 		
 		image.renderBottom(screenView, bottom, left, mask);
 	}
