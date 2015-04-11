@@ -10,6 +10,7 @@ import xtvapps.core.swt.AsyncProcessor;
 import xtvapps.core.swt.AsyncTask;
 import xtvapps.core.swt.SWTUtils;
 import fcatrin.pop.Image.Mode;
+import fcatrin.pop.data.Level;
 
 public class Main {
 	public static Display display;
@@ -20,10 +21,11 @@ public class Main {
 		
 		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
 		
-		
 		graphics = new Image[] {
 				Image.loadBMP(new File("images/dungeon/tile_07.bmp"))		
 		};
+		
+		Level.load(new File("levels/level1")).debugScreen(0);;
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
