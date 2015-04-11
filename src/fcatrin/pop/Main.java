@@ -20,18 +20,26 @@ public class Main {
 		SWTUtils.display = display;
 		
 		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
-		
+		/*
 		graphics = new Image[] {
 				Image.loadBMP(new File("images/dungeon/tile_07.bmp"))		
 		};
+		*/
 		
-		Level.load(new File("levels/level1")).debugScreen(0);;
+		File baseDir = new File("images/dungeon");
+		Level.addTile(7,  new File(baseDir, "tile_07.bmp"));;
+		Level.addTile(8,  new File(baseDir, "tile_08.bmp"));;
+		Level.addTile(9,  new File(baseDir, "tile_09.bmp"));;
+		Level.addTile(0x15,  new File(baseDir, "tile_15.bmp"));;
+		
+		Level level = Level.load(new File("levels/level1"));
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();
 		
 		MainWindow mainWindow = new MainWindow(display);
 		mainWindow.setImages(graphics);
+		mainWindow.setLevel(level);
 		mainWindow.open();
 		AsyncTask.asyncProcessor.shutdown();
 		display.dispose();

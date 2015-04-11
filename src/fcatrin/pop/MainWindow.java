@@ -8,6 +8,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 import xtvapps.core.swt.SWTUtils;
+import fcatrin.pop.data.Level;
 import fcatrin.pop.views.ScreenView;
 
 public class MainWindow {
@@ -85,19 +86,27 @@ public class MainWindow {
 	}
 	
 	int graphicsIndex = 0;
+	private Level level;
 	
 	private void render() {
 		synchronized (screenView) {
 		    screenView.clear();
+		    /*
 		    Image image = graphics[graphicsIndex];
-		    image.render(screenView);
-		    //if (frame % 1 == 0) graphicsIndex++;
+		    image.render(screenView, 0, 0);
+		    */
+		    level.render(screenView, 0);
+		    
 		}
 	}
 	
 
 	public void setImages(Image[] graphics) {
 		this.graphics = graphics;
+	}
+	
+	public void setLevel(Level level) {
+		this.level = level;
 	}
 
 }

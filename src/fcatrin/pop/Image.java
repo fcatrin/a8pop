@@ -7,12 +7,11 @@ import java.io.IOException;
 import fcatrin.pop.views.ScreenView;
 
 public class Image {
-	enum Mode {AppleMono, AppleColor, Atari}
-	int width;
-	int height;
-	byte data[];
-	Mode mode;
-	
+	public enum Mode {AppleMono, AppleColor, Atari}
+	public int width;
+	public int height;
+	public byte data[];
+	public Mode mode;
 	
 	public static Image loadBMP(File file) throws IOException {
 		byte header[] = new byte[0x7a];
@@ -58,16 +57,16 @@ public class Image {
 		}
 	}
 	
-	public void render(ScreenView screenView) {
+	public void render(ScreenView screenView, int top, int left) {
 		if (mode == Mode.Atari) {
 			for(int y=0; y<height; y++) {
 				for(int x=0; x<width; x++) {
-					screenView.setPixel(x, y, (int)data[width*y + x]);
+					screenView.setPixel(left+x, top+y, (int)data[width*y + x]);
 				}
 			}
 		} else {
 			for(int y=0; y<height; y++) {
-				renderScanApple(screenView, 0, y, width, data, (height-y-1)*width);
+				renderScanApple(screenView, left, top+y, width, data, (height-y-1)*width);
 			}
 		}
 	}
