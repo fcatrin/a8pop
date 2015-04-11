@@ -99,23 +99,22 @@ public class Level {
 				int left = i * TILE_WIDTH;
 				int objid = objids[row*TILES_PER_ROW+i];
 				
-				if (i <TILES_PER_ROW-1 ) {
-					int objidLeftBottom = (row<ROWS-1)?
-							objids[(row+1)*TILES_PER_ROW+i+1] : 0;
-							
-					int objc = piecec[objidLeftBottom];
-					if (objc!=0) {
-						drawTileBaseBottom(screenView, bottom, left+TILE_WIDTH, objc);
-					}
-					int objb = pieceb[objid];
-					drawTileBaseTop(screenView, top, left+TILE_WIDTH, objb);
+				int objidLeftBottom = (row<ROWS-1)?
+						objids[(row+1)*TILES_PER_ROW+i] : 0;
+				int nextLeft = left + TILE_WIDTH;
+						
+				int objc = piecec[objidLeftBottom];
+				if (objc!=0) {
+					drawTileBaseBottom(screenView, bottom, nextLeft, objc);
 				}
+				int objb = pieceb[objid];
+				drawTileBaseTop(screenView, top, nextLeft, objb);
 				
 				int objd = pieced[objid];
 				drawTileBaseBottom(screenView, bottom, left, objd);
 				
 				int obja = piecea[objid];
-				drawTileBaseBottom(screenView, bottom, left, obja);
+				drawTileBaseBottom(screenView, bottom-3, left, obja);
 			
 				int front = fronti[objid];
 				drawTileBaseBottom(screenView, bottom, left, front);
@@ -124,7 +123,6 @@ public class Level {
 	}
 
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int objid) {
-		if (objid == 0) return;
 		Image image = tiles.get(objid);
 		if (image == null) return;
 		
@@ -134,7 +132,6 @@ public class Level {
 	
 	
 	private void drawTileBaseTop(ScreenView screenView, int top, int left, int objid) {
-		if (objid == 0) return;
 		Image image = tiles.get(objid);
 		if (image == null) return;
 		
