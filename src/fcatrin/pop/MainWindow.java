@@ -85,7 +85,7 @@ public class MainWindow {
 		if (screenIndex < 0) screenIndex = 23;
 		if (screenIndex+1 > 24) screenIndex = 0;
 		
-		
+		System.out.println(String.format("Screen Index %d", screenIndex));
 		changed = true;
 		screenView.postInvalidate();
 	}

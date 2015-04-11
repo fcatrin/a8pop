@@ -19,7 +19,7 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
+		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB2.DUN"), 0x6000);
 		/*
 		graphics = new Image[] {
 				Image.loadBMP(new File("images/dungeon/tile_07.bmp"))		
@@ -49,6 +49,7 @@ public class Main {
 		Level.addTile(0xA1,  new File(baseDir, "tile_A1.bmp")); // block front end right
 		Level.addTile(0xA2,  new File(baseDir, "tile_A2.bmp")); // block D end left
 		Level.addTile(0xA3,  new File(baseDir, "tile_A3.bmp")); // block D end right
+		Level.addTile(0xA4,  new File(baseDir, "tile_A4.bmp")); // Pillar Mask
 		
 		
 		Level level = Level.load(new File("levels/level1"));

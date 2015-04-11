@@ -38,7 +38,7 @@ public class Level {
 	 *	16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 	 */
 	
-	int maska[] = {00, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0x03, 0x00, 0x03, 0x03, 0x03, 
+	int maska[] = {00, 0x03, 0x03, 0xa4, 0x03, 0x03, 0x03, 0x03, 0x03, 0x00, 0x03, 0x03, 0x00, 0x03, 0x03, 0x03, 
 			0x03, 0x00, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00};
 	int piecea[] = {00, 0x01, 0x05, 0x07, 0x0a, 0x01, 0x01, 0x0a, 0x10, 0x00, 0x01, 0x00, 0x00, 0x14, 0x20, 0x4b,
 			0x01, 0x00, 0x00, 0x01, 0x00, 0x97, 0x00, 0x01, 0x00, 0xa7, 0xa9, 0xaa, 0xac, 0xad};
@@ -63,7 +63,13 @@ public class Level {
 	int frontx[] = {00, 0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x03, 0x01, 0x01, 0x02, 0x00, 0x03, 0x01, 0x00, 0x00, 
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
 	
+	// 0x00 = autoMask
+	// 0xFF = solid
+	int maskFront[] = {00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	
 	// TODO verificar si rubble requiere pieza frontal: Tile 0x13
+	// TODO pieza rubble D se reemplazo por la de piso normal
 	
 	public static void addTile(int position, File file) {
 		try {
@@ -130,7 +136,7 @@ public class Level {
 					int objb = pieceb[objid];
 					int objby = pieceby[objid];
 					int objmaskb = maskb[objid];
-					drawTileBaseBottom(screenView, bottom + objby, nextLeft, objb, objmaskb);
+					drawTileBaseBottom(screenView, bottom + objby, nextLeft, objb, objmaskb, false);
 				}
 				currentObjId = objid;
 				
@@ -157,20 +163,26 @@ public class Level {
 				
 				int objmaska = maska[objid];
 				int obja = piecea[objid];
-				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska);
+				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska, true);
 			
 				int frontDy = fronty[objid];
 				int frontDx = frontx[objid];
-				drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front);
+				int frontMask = maskFront[objid];
+				boolean autoMask = frontMask==0;
+				drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front, frontMask, autoMask);
 			}
 		}
 	}
 
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId) {
-		drawTileBaseBottom(screenView, bottom, left, tileId, 0);
+		drawTileBaseBottom(screenView, bottom, left, tileId, 0, false);
+	}
+
+	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, boolean autoMask) {
+		drawTileBaseBottom(screenView, bottom, left, tileId, 0, autoMask);
 	}
 	
-	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, int tileMaskId) {
+	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, int tileMaskId, boolean autoMask) {
 		Image image = tiles.get(tileId);
 		if (image == null) {
 			if (tileId!=0) System.out.println(String.format("Tile %d not found for object id %d", tileId, currentObjId));
@@ -182,7 +194,7 @@ public class Level {
 			if (tileMaskId!=0) System.out.println(String.format("Mask %d not found for object id %d", tileMaskId, currentObjId));
 		}
 		
-		image.renderBottom(screenView, bottom, left, mask);
+		image.renderBottom(screenView, bottom, left, mask, autoMask);
 	}
 	
 	
