@@ -109,7 +109,8 @@ public class Level {
 						drawTileBaseBottom(screenView, bottom, nextLeft, objc);
 					}
 					int objb = pieceb[objid];
-					drawTileBaseTop(screenView, top, nextLeft, objb);
+					System.out.println(String.format("objid:%d, b:%d", objid, objb));
+					drawTileBaseBottom(screenView, bottom, nextLeft, objb);
 				}
 				
 				int objd = pieced[objid];
