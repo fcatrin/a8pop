@@ -43,6 +43,7 @@ public class Main {
 		
 		// extra graphics
 		Level.addTile(0xA0,  new File(baseDir, "tile_A0.bmp"));
+		Level.addTile(0xA1,  new File(baseDir, "tile_A1.bmp"));
 		
 		Level level = Level.load(new File("levels/level1"));
 		level.debugScreen(0);
