@@ -20,6 +20,9 @@ public class Level {
 	byte type[] = new byte[DESCRIPTORS];
 	byte spec[] = new byte[DESCRIPTORS];
 	
+	private static final int OBJID_BLOCK = 20;
+	private static final int TILE_BLOCK_RIGHT = 0xA0;
+	
 	static Map<Integer, Image> tiles = new HashMap<Integer, Image>(); // TODO use an array when all tiles got created
 	
 	// object descriptors 
@@ -129,6 +132,12 @@ public class Level {
 				drawTileBaseBottom(screenView, bottom-3, left, obja, objmaska);
 			
 				int front = fronti[objid];
+				if (i<TILES_PER_ROW-1) {
+					int objidRight = objids[row*TILES_PER_ROW+i+1];
+					if (objid == OBJID_BLOCK && objidRight!=OBJID_BLOCK) {
+						front = TILE_BLOCK_RIGHT;
+					}
+				}
 				int frontDy = fronty[objid];
 				int frontDx = frontx[objid];
 				drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front);
