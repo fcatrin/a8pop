@@ -91,10 +91,10 @@ public class MainWindow {
 	private void render() {
 		synchronized (screenView) {
 		    screenView.clear();
-		    /*
-		    Image image = graphics[graphicsIndex];
-		    image.render(screenView, 0, 0);
-		    */
+		    
+		    //Image image = graphics[graphicsIndex];
+		    //image.render(screenView, 0, 0);
+		    
 		    level.render(screenView, 0);
 		    
 		}

@@ -101,14 +101,16 @@ public class Level {
 				
 				int objidLeftBottom = (row<ROWS-1)?
 						objids[(row+1)*TILES_PER_ROW+i] : 0;
-				int nextLeft = left + TILE_WIDTH;
-						
-				int objc = piecec[objidLeftBottom];
-				if (objc!=0) {
-					drawTileBaseBottom(screenView, bottom, nextLeft, objc);
+				
+				if (i<TILES_PER_ROW-1) {
+					int nextLeft = left + TILE_WIDTH;
+					int objc = piecec[objidLeftBottom];
+					if (objc!=0) {
+						drawTileBaseBottom(screenView, bottom, nextLeft, objc);
+					}
+					int objb = pieceb[objid];
+					drawTileBaseTop(screenView, top, nextLeft, objb);
 				}
-				int objb = pieceb[objid];
-				drawTileBaseTop(screenView, top, nextLeft, objb);
 				
 				int objd = pieced[objid];
 				drawTileBaseBottom(screenView, bottom, left, objd);
