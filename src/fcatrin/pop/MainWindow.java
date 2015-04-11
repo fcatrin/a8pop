@@ -76,6 +76,16 @@ public class MainWindow {
 		if (graphicsIndex < 0) graphicsIndex = graphics.length-1;
 		if (graphicsIndex+1 > graphics.length) graphicsIndex = 0;
 		System.out.println("graphics " + (graphicsIndex+1));
+		
+		if (e.keyCode == SWT.ARROW_UP) {
+			screenIndex --;
+		} else if (e.keyCode == SWT.ARROW_DOWN) {
+			screenIndex++;
+		}
+		if (screenIndex < 0) screenIndex = 23;
+		if (screenIndex+1 > 24) screenIndex = 0;
+		
+		
 		changed = true;
 		screenView.postInvalidate();
 	}
@@ -90,6 +100,7 @@ public class MainWindow {
 	}
 	
 	int graphicsIndex = 0;
+	int screenIndex = 0;
 	private Level level;
 	private boolean changed;
 	
@@ -101,7 +112,7 @@ public class MainWindow {
 		    Image image = graphics[graphicsIndex];
 		    image.render(screenView, 0, 0);
 		    
-		    level.render(screenView, 0);
+		    level.render(screenView, screenIndex);
 		}
 		changed = false;
 		return true;
