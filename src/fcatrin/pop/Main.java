@@ -40,10 +40,13 @@ public class Main {
 		Level.addTile(0x13,  new File(baseDir, "tile_13.bmp"));
 		Level.addTile(0x15,  new File(baseDir, "tile_15.bmp"));
 		Level.addTile(0x19,  new File(baseDir, "tile_19.bmp"));
+		Level.addTile(0x1B,  new File(baseDir, "tile_1B.bmp"));
 		Level.addTile(0x20,  new File(baseDir, "tile_20.bmp"));
 		Level.addTile(0x21,  new File(baseDir, "tile_21.bmp"));
 		Level.addTile(0x45,  new File(baseDir, "tile_45.bmp"));
 		Level.addTile(0x46,  new File(baseDir, "tile_46.bmp"));
+		Level.addTile(0x4B,  new File(baseDir, "tile_4B.bmp"));
+		Level.addTile(0x4C,  new File(baseDir, "tile_4C.bmp"));
 		Level.addTile(0x51,  new File(baseDir, "tile_51.bmp"));
 		Level.addTile(0x83,  new File(baseDir, "tile_83.bmp"));
 		Level.addTile(0x84,  new File(baseDir, "tile_84.bmp"));
@@ -58,6 +61,7 @@ public class Main {
 		Level.addTile(0xA3,  new File(baseDir, "tile_A3.bmp")); // block D end right
 		Level.addTile(0xA4,  new File(baseDir, "tile_A4.bmp")); // Pillar Mask
 		Level.addTile(0xA5,  new File(baseDir, "tile_A5.bmp")); // Bottle Mask
+		Level.addTile(0xA6,  new File(baseDir, "tile_A6.bmp")); // presplate Mask
 		
 		
 		Level level = Level.load(new File("levels/level1"));
