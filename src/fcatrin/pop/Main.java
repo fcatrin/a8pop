@@ -34,12 +34,16 @@ public class Main {
 		Level.addTile(7,  new File(baseDir, "tile_07.bmp"));
 		Level.addTile(8,  new File(baseDir, "tile_08.bmp"));
 		Level.addTile(9,  new File(baseDir, "tile_09.bmp"));
+		Level.addTile(0xa,  new File(baseDir, "tile_0A.bmp"));
+		Level.addTile(0xb,  new File(baseDir, "tile_0B.bmp"));
+		Level.addTile(0xc,  new File(baseDir, "tile_0C.bmp"));
 		Level.addTile(0x13,  new File(baseDir, "tile_13.bmp"));
 		Level.addTile(0x15,  new File(baseDir, "tile_15.bmp"));
 		Level.addTile(0x19,  new File(baseDir, "tile_19.bmp"));
 		Level.addTile(0x20,  new File(baseDir, "tile_20.bmp"));
 		Level.addTile(0x21,  new File(baseDir, "tile_21.bmp"));
 		Level.addTile(0x45,  new File(baseDir, "tile_45.bmp"));
+		Level.addTile(0x46,  new File(baseDir, "tile_46.bmp"));
 		Level.addTile(0x51,  new File(baseDir, "tile_51.bmp"));
 		Level.addTile(0x83,  new File(baseDir, "tile_83.bmp"));
 		Level.addTile(0x84,  new File(baseDir, "tile_84.bmp"));
@@ -57,7 +61,7 @@ public class Main {
 		
 		
 		Level level = Level.load(new File("levels/level1"));
-		level.debugScreen(0);
+		
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
 		AsyncTask.asyncProcessor.start();

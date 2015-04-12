@@ -112,6 +112,7 @@ public class MainWindow {
 		    Image image = graphics[graphicsIndex];
 		    image.render(screenView, 0, 0);
 		    
+		    level.debugScreen(screenIndex);
 		    level.render(screenView, screenIndex);
 		}
 		changed = false;
