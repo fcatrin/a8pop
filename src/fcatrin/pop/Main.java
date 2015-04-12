@@ -19,7 +19,7 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB2.DUN"), 0x6000);
+		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
 		/*
 		graphics = new Image[] {
 				Image.loadBMP(new File("images/dungeon/tile_07.bmp"))		
@@ -36,6 +36,7 @@ public class Main {
 		Level.addTile(9,  new File(baseDir, "tile_09.bmp"));
 		Level.addTile(0x13,  new File(baseDir, "tile_13.bmp"));
 		Level.addTile(0x15,  new File(baseDir, "tile_15.bmp"));
+		Level.addTile(0x19,  new File(baseDir, "tile_19.bmp"));
 		Level.addTile(0x20,  new File(baseDir, "tile_20.bmp"));
 		Level.addTile(0x21,  new File(baseDir, "tile_21.bmp"));
 		Level.addTile(0x45,  new File(baseDir, "tile_45.bmp"));
