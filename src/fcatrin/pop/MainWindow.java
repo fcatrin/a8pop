@@ -85,6 +85,13 @@ public class MainWindow {
 		if (screenIndex < 0) screenIndex = 23;
 		if (screenIndex+1 > 24) screenIndex = 0;
 		
+		if (e.keyCode == 'a') level.drawA = !level.drawA;
+		if (e.keyCode == 'b') level.drawB = !level.drawB;
+		if (e.keyCode == 'c') level.drawC = !level.drawC;
+		if (e.keyCode == 'd') level.drawD = !level.drawD;
+		if (e.keyCode == 'f') level.drawF = !level.drawF;
+		
+		
 		System.out.println(String.format("Screen Index %d", screenIndex));
 		changed = true;
 		screenView.postInvalidate();

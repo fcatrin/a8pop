@@ -60,17 +60,23 @@ public class Level {
 			0x00, 0x00, 0x00, 0x00, 0x83, 0x00, 0x00, 0x00, 0x00, 0xa8, 0x00, 0xae, 0xae, 0xae};
 	int fronty[] = {00, 0x00, 0x00, -3, -3, 0x00, 0x00, 0x00, -1, 0x03, -6, 0x00, 0x00, -1, -3, 0x00, 
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, -1, 0x0, -36, -36, -36};
-	int frontx[] = {00, 0x00, 0x00, 0x04, 0x0C, 0x00, 0x00, 0x03, 0x01, 0x01, 0x0A, 0x00, 0x03, 0x01, 0x00, 0x00, 
+	int frontx[] = {00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x03, 0x01, 0x01, 0x0A, 0x00, 0x03, 0x01, 0x00, 0x00, 
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
 	
 	// 0x00 = autoMask
 	// 0xFF = solid
-	int maskFront[] = {00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa5, 0x00, 0x00, 0x00, 0x00, 0x00,
+	int maskFront[] = {00, 0x00, 0x00, 0xa4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa5, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	
 	// TODO verificar si rubble requiere pieza frontal: Tile 0x13. Por ahora se incluye
 	// TODO pieza rubble D se reemplazo por la de piso normal
 	// TODO tile 0x19 es igual al 0x4c (unpressed floor)
+	
+	public boolean drawA = true;
+	public boolean drawB = true;
+	public boolean drawC = true;
+	public boolean drawD = true;
+	public boolean drawF = true;	
 	
 	public static void addTile(int position, File file) {
 		try {
@@ -130,14 +136,14 @@ public class Level {
 					int nextLeft = left + TILE_WIDTH;
 					int objc = piecec[objidLeftBottom];
 					if (objc!=0) {
-						drawTileBaseBottom(screenView, bottom, nextLeft, objc);
+						if (drawC) drawTileBaseBottom(screenView, bottom, nextLeft, objc);
 					}
 					
 					currentObjId = objid;
 					int objb = pieceb[objid];
 					int objby = pieceby[objid];
 					int objmaskb = maskb[objid];
-					drawTileBaseBottom(screenView, bottom + objby, nextLeft, objb, objmaskb, false);
+					if (drawB) drawTileBaseBottom(screenView, bottom + objby, nextLeft, objb, objmaskb, false);
 				}
 				currentObjId = objid;
 				
@@ -160,18 +166,18 @@ public class Level {
 					}
 				}
 				
-				drawTileBaseBottom(screenView, bottom, left, objd);
+				if (drawD)  drawTileBaseBottom(screenView, bottom, left, objd);
 				
 				int objmaska = maska[objid];
 				int obja = piecea[objid];
 				int objay = pieceay[objid];
-				drawTileBaseBottom(screenView, bottom-3 + objay, left, obja, objmaska, false);
+				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objay, left, obja, objmaska, false);
 			
 				int frontDy = fronty[objid];
 				int frontDx = frontx[objid];
 				int frontMask = maskFront[objid];
 				boolean autoMask = frontMask==0;
-				drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front, frontMask, autoMask);
+				if (drawF) drawTileBaseBottom(screenView, bottom + frontDy, left + frontDx, front, frontMask, autoMask);
 			}
 		}
 	}
