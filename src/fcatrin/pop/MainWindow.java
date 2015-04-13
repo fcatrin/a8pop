@@ -111,7 +111,7 @@ public class MainWindow {
 	}
 	
 	int graphicsIndex = 0;
-	int screenIndex = 4;
+	int screenIndex = 0;
 	private Level level;
 	private boolean changed;
 	
