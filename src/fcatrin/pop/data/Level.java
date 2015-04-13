@@ -251,8 +251,8 @@ public class Level {
 					if (i>0) {
 						int objidLeft = objids[linearPos-1];
 						if (objidLeft!=OBJID_BLOCK) {
-							objD = TILE_BLOCK_LEFT;
-							objF = TILE_BLOCK_D_LEFT;
+							objF = TILE_BLOCK_LEFT;
+							objD = TILE_BLOCK_D_LEFT;
 						}
 					}
 				} else if (objid == OBJID_LOOSE) {
