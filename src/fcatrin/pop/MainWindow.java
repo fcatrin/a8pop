@@ -49,6 +49,8 @@ public class MainWindow {
 			public void run() {
 				while (!shell.isDisposed()) {
 					long t0 = System.currentTimeMillis();
+					if (level.advanceFrame()) changed = true;
+					
 					if (render()) {
 						screenView.finishFrame();
 						screenView.postInvalidate();
@@ -90,6 +92,8 @@ public class MainWindow {
 		if (e.keyCode == 'c') level.drawC = !level.drawC;
 		if (e.keyCode == 'd') level.drawD = !level.drawD;
 		if (e.keyCode == 'f') level.drawF = !level.drawF;
+		
+		if (e.keyCode == 'l') level.moveFloor(screenIndex);
 		
 		
 		System.out.println(String.format("Screen Index %d", screenIndex));

@@ -21,11 +21,21 @@ public class Level {
 	byte spec[] = new byte[DESCRIPTORS];
 	
 	// special cases
+	private static final int OBJID_SPACE = 0;
 	private static final int OBJID_BLOCK = 20;
+	private static final int OBJID_LOOSE = 11;
 	private static final int TILE_BLOCK_RIGHT = 0xA0;
 	private static final int TILE_BLOCK_LEFT = 0xA1;
 	private static final int TILE_BLOCK_D_RIGHT = 0xA2;
 	private static final int TILE_BLOCK_D_LEFT = 0xA3;
+	
+	private static final int MAX_TROBS = 0x20;
+	private final int trLoc[]       = new int[MAX_TROBS];
+	private final int trScreen[]    = new int[MAX_TROBS];
+	private final int trDirection[] = new int[MAX_TROBS];
+	private final int trObjid[] = new int[MAX_TROBS];
+	private int trobs = 0;
+	
 	
 	static Map<Integer, Image> tiles = new HashMap<Integer, Image>(); // TODO use an array when all tiles got created
 	
@@ -68,6 +78,12 @@ public class Level {
 	int maskFront[] = {00, 0x00, 0x00, 0xa4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa5, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	
+	static final int looseFrames = 11; 
+	static final int looseb = 0x1b;
+	int looseby[] = {00,01,00,-1,-1,00,00,00,-1,-1,-1};
+	int loosea[] = {0x01,0x1e,0x01,0x1f,0x1f,0x01,0x01,0x01,0x1f,0x1f,0x1f};
+	int loosed[] = {0x15,0x2c,0x15,0x2d,0x2d,0x15,0x15,0x15,0x2d,0x2d,0x2d};
+	
 	// TODO verificar si rubble requiere pieza frontal: Tile 0x13. Por ahora se incluye
 	// TODO pieza rubble D se reemplazo por la de piso normal
 	// TODO tile 0x19 es igual al 0x4c (unpressed floor)
@@ -78,6 +94,9 @@ public class Level {
 	public boolean drawC = true;
 	public boolean drawD = true;
 	public boolean drawF = true;	
+	
+	public Level() {
+	}
 	
 	public static void addTile(int position, File file) {
 		try {
@@ -97,6 +116,29 @@ public class Level {
 		} finally {
 			if (fis!=null) fis.close();
 		}
+	}
+	
+	public int getTROB(int screen, int position) {
+		for(int i=0; i<trobs; i++) {
+			int trobScreen = trScreen[i];
+			int trobLoc = trLoc[i];
+			if (trobScreen == screen && trobLoc == position) return i;
+		}
+		return -1;
+	}
+	
+	public int addTROB(int screen, int position, int objid) {
+		int trob = getTROB(screen, position);
+		if (trob<0) {
+			if (trobs == MAX_TROBS) return -1; // should fail
+			trob = trobs;
+			trScreen[trob] = screen;
+			trLoc[trob] = position;
+			trDirection[trob] = 0;
+			trObjid[trob] = objid;
+			trobs++;
+		}
+		return trob;
 	}
 	
 	public byte[] getScreen(int screen) {
@@ -119,6 +161,46 @@ public class Level {
 		}
 	}
 	
+	public boolean advanceFrame() {
+		for(int i=0; i<trobs; i++) {
+			int direction = trDirection[i];
+			if (direction == -1) continue;
+			
+			int screen = trScreen[i];
+			int position = trLoc[i];
+			int linearLoc = screen * TILES_PER_SCREEN + position;
+			int obj = type[linearLoc];
+			int objid = obj & 0x1F;
+			if (objid == OBJID_LOOSE && (obj & 0xE0) != 0) { // hight bits indicates animation
+				int times = (direction & 0xF0) >> 4;
+				int frame = (direction & 0x0F) + 1;
+				if (frame == looseFrames) {
+					if (times == 2) { // disappear on the second time. Just for testing
+						trDirection[i] = -1;
+						type[linearLoc] = OBJID_SPACE;
+					} else {
+						times++;
+						frame = 0;
+						type[linearLoc] = OBJID_LOOSE; // stop animation
+					}
+				}
+				trDirection[i] = (times << 4) | frame;
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public void moveFloor(int screen) {
+		int base = screen * TILES_PER_SCREEN;
+		for(int i=0; i<TILES_PER_SCREEN; i++) {
+			if (type[base+i] == OBJID_LOOSE) {
+				type[base+i] = OBJID_LOOSE | 0x20; // turn on animation flag;
+				return;
+			}
+		}
+	}
+	
 	int currentObjId = 0;
 	public void render(ScreenView screenView, int screen) {
 		byte objids[] = getScreen(screen);
@@ -126,11 +208,12 @@ public class Level {
 			int top = row * TILE_HEIGHT;
 			int bottom = top + TILE_HEIGHT;
 			for(int i=0; i<TILES_PER_ROW; i++) {
+				int linearPos = row*TILES_PER_ROW+i;
 				int left = i * TILE_WIDTH;
-				int objid = objids[row*TILES_PER_ROW+i];
+				int objid = objids[linearPos];
 				
 				int objidLeftBottom = (row<ROWS-1)?
-						objids[(row+1)*TILES_PER_ROW+i] : 0;
+						objids[linearPos + TILES_PER_ROW] : 0;
 						
 				int objA = piecea[objid];
 				int objB = 0;
@@ -159,18 +242,28 @@ public class Level {
 				
 				if (objid == OBJID_BLOCK) { 
 					if (i<TILES_PER_ROW-1) {
-						int objidRight = objids[row*TILES_PER_ROW+i+1];
+						int objidRight = objids[linearPos+1];
 						if (objidRight!=OBJID_BLOCK) {
 							objF = TILE_BLOCK_RIGHT;
 							objD = TILE_BLOCK_D_RIGHT;
 						}
 					}
 					if (i>0) {
-						int objidLeft = objids[row*TILES_PER_ROW+i-1];
+						int objidLeft = objids[linearPos-1];
 						if (objidLeft!=OBJID_BLOCK) {
 							objD = TILE_BLOCK_LEFT;
 							objF = TILE_BLOCK_D_LEFT;
 						}
+					}
+				} else if (objid == OBJID_LOOSE) {
+					int trob = addTROB(screen, linearPos, objid);
+					int direction = trDirection[trob];
+					if (direction > 0 ) {  // moving
+						direction &= 0x0f;
+						objB = looseb;
+						objA = loosea[direction];
+						objBy = looseby[direction];
+						objD = loosed[direction];
 					}
 				}
 
@@ -178,7 +271,7 @@ public class Level {
 				int nextLeft = left + TILE_WIDTH;
 				if (drawC) drawTileBaseBottom(screenView, bottom, nextLeft, objC);
 				if (drawB) drawTileBaseBottom(screenView, bottom + objBy, nextLeft, objB, objBmask, false);
-				if (drawD)  drawTileBaseBottom(screenView, bottom, left, objD);
+				if (drawD) drawTileBaseBottom(screenView, bottom, left, objD);
 				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
 				if (drawF) drawTileBaseBottom(screenView, bottom + objFy, left + objFx, objF, objFmask, objFmask==0);
 			}
