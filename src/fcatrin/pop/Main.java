@@ -59,6 +59,8 @@ public class Main {
 		Level.addTile(0x85,  new File(baseDir, "tile_85.bmp"));
 		Level.addTile(0x86,  new File(baseDir, "tile_86.bmp"));
 		Level.addTile(0x87,  new File(baseDir, "tile_87.bmp"));
+		Level.addTile(0x97,  new File(baseDir, "tile_97.bmp"));
+		Level.addTile(0x98,  new File(baseDir, "tile_98.bmp"));
 		
 		// extra graphics
 		Level.addTile(0xA0,  new File(baseDir, "tile_A0.bmp")); // block front end left
@@ -68,6 +70,7 @@ public class Main {
 		Level.addTile(0xA4,  new File(baseDir, "tile_A4.bmp")); // Pillar Mask
 		Level.addTile(0xA5,  new File(baseDir, "tile_A5.bmp")); // Bottle Mask
 		Level.addTile(0xA6,  new File(baseDir, "tile_A6.bmp")); // presplate Mask
+		Level.addTile(0xA7,  new File(baseDir, "tile_A7.bmp")); // skeleton Mask
 		
 		
 		Level level = Level.load(new File("levels/level1"));
