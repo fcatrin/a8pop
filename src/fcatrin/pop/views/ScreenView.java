@@ -46,6 +46,7 @@ public class ScreenView extends CustomWidget {
 	}
 	
 	public void setPixel(int x, int y, int value) {
+		//System.out.println("set pixel " + x + "," + y);
 		sourceData.setPixel(x, y, value);
 	}
 	

@@ -241,8 +241,7 @@ public class Level {
 			int leftObjBMask = maskb[leftObjId];
 			int leftObjBy = pieceby[leftObjId];
 			
-			int top = row * TILE_HEIGHT;
-			int bottom = top + TILE_HEIGHT;
+			int bottom = (row+1) * TILE_HEIGHT + 2;
 			
 			System.out.println("row " + row + " leftObjB " + leftObjB + " leftObjBMask " + leftObjBMask + " leftDownObjId " + leftDownObjId + " leftObjC " + leftObjC);
 
@@ -309,6 +308,15 @@ public class Level {
 				if (drawD) drawTileBaseBottom(screenView, bottom, left, objD);
 				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
 				if (drawF) drawTileBaseBottom(screenView, bottom + objFy, left + objFx, objF, objFmask, objFmask==0);
+			}
+			
+			// draw all D blocks of screen above
+			for(int i=0; i<TILES_PER_ROW; i++) {
+				int topOffset = neighborBlocksOffset[i];
+				int objid = topOffset>=0?type[topOffset] & 0x1F:OBJID_BLOCK;
+				int objD = pieced[objid];
+				int left = i * TILE_WIDTH;
+				if (drawD) drawTileBaseBottom(screenView, 3, left, objD);
 			}
 		}
 	}
