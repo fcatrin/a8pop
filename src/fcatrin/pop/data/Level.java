@@ -17,8 +17,18 @@ public class Level {
 	private static final int DESCRIPTORS = TILES_PER_SCREEN * SCREENS;
 	private static final int TILE_HEIGHT = 63;
 	private static final int TILE_WIDTH = 16;
+	private static final int MAX_LINK = 256;
 	byte type[] = new byte[DESCRIPTORS];
-	byte spec[] = new byte[DESCRIPTORS];
+	byte spec[] = new byte[DESCRIPTORS]; // TODO process patterns, state
+	byte linkMap[] = new byte[MAX_LINK];
+	byte linkLoc[] = new byte[MAX_LINK];
+	byte map[] = new byte[SCREENS*4];
+	byte info[] = new byte[256];
+	
+	private static final int MAP_LEFT = 0;
+	private static final int MAP_RIGHT = 1;
+	private static final int MAP_TOP = 2;
+	private static final int MAP_BOTTOM = 3;
 	
 	// special cases
 	private static final int OBJID_SPACE = 0;
@@ -112,6 +122,11 @@ public class Level {
 			fis = new FileInputStream(file);
 			Level level = new Level();
 			fis.read(level.type);
+			fis.read(level.spec);
+			fis.read(level.linkLoc);
+			fis.read(level.linkMap);
+			fis.read(level.map);
+			fis.read(level.info);
 			return level;
 		} finally {
 			if (fis!=null) fis.close();
@@ -203,57 +218,69 @@ public class Level {
 	
 	int currentObjId = 0;
 	public void render(ScreenView screenView, int screen) {
-		byte objids[] = getScreen(screen);
+		int neighborBlocksOffset[] = getNeighborBlocksOffset(screen); 
+		int screenOffset = screen * TILES_PER_SCREEN;
 		for(int row = ROWS-1; row>=0; row--) {
+			boolean isLastRow = row == ROWS-1;
+			int linearPosBase = row*TILES_PER_ROW;
+			
+			// draw right side of left screen
+			int leftObjOffset = neighborBlocksOffset[TILES_PER_ROW*2 + row];
+			int leftObjId = leftObjOffset>=0?type[leftObjOffset] & 0x1F: 0;
+			int leftDownObjOffset = isLastRow?neighborBlocksOffset[neighborBlocksOffset.length-1]:neighborBlocksOffset[TILES_PER_ROW*2 +row +1]; // top right block at bottom screen or just the object in this screen
+			int leftDownObjId = leftDownObjOffset>=0?(type[leftDownObjOffset] & 0x1F):0;
+			
+			int leftObjC = piecec[leftDownObjId];
+			int leftObjB = pieceb[leftObjId];
+			int leftObjBMask = maskb[leftObjId];
+			int leftObjBy = pieceby[leftObjId];
+			
 			int top = row * TILE_HEIGHT;
 			int bottom = top + TILE_HEIGHT;
+			
+			System.out.println("row " + row + " leftObjB " + leftObjB + " leftObjBMask " + leftObjBMask + " leftDownObjId " + leftDownObjId + " leftObjC " + leftObjC);
+
+			if (drawC) drawTileBaseBottom(screenView, bottom, 0, leftObjC);
+			if (drawB) drawTileBaseBottom(screenView, bottom + leftObjBy, 0, leftObjB, leftObjBMask, false);
+
 			for(int i=0; i<TILES_PER_ROW; i++) {
-				int linearPos = row*TILES_PER_ROW+i;
+				boolean isLastCol = i == (TILES_PER_ROW-1);
+				boolean isFirstCol = i == 0;
+				int linearPos = linearPosBase+i;
 				int left = i * TILE_WIDTH;
-				int objid = objids[linearPos];
+				int objid = type[screenOffset + linearPos] & 0x1F;
 				
-				int objidLeftBottom = (row<ROWS-1)?
-						objids[linearPos + TILES_PER_ROW] : 0;
+				int objidLeftBottomOffset = isLastRow?
+						neighborBlocksOffset[TILES_PER_ROW + i]: // bottom screen
+						screenOffset + linearPos + TILES_PER_ROW; // next row
+				int objidC = (!isLastCol && objidLeftBottomOffset>=0)? type[objidLeftBottomOffset] & 0x1F:0;
 						
 				int objA = piecea[objid];
-				int objB = 0;
-				int objC = 0;
+				int objB = isLastCol?0:pieceb[objid];
+				int objC = piecec[objidC];
 				int objD = pieced[objid];
 				int objF = fronti[objid];
 				int objAmask = maska[objid];
-				int objBmask = 0;
+				int objBmask = maskb[objid];
 				int objFmask = maskFront[objid];
 				int objAy = pieceay[objid];
-				int objBy = 0;
+				int objBy = pieceby[objid];
 				int objFy = fronty[objid];
 				int objFx = frontx[objid];
 
 				
-				if (i<TILES_PER_ROW-1) {
-					currentObjId = objidLeftBottom;
-					objC = piecec[objidLeftBottom];
-					
-					currentObjId = objid;
-					objB = pieceb[objid];
-					objBy = pieceby[objid];
-					objBmask = maskb[objid];
-				}
-				currentObjId = objid;
-				
 				if (objid == OBJID_BLOCK) { 
-					if (i<TILES_PER_ROW-1) {
-						int objidRight = objids[linearPos+1];
-						if (objidRight!=OBJID_BLOCK) {
-							objF = TILE_BLOCK_RIGHT;
-							objD = TILE_BLOCK_D_RIGHT;
-						}
+					int objIdRightOffset = isLastCol?neighborBlocksOffset[TILES_PER_ROW*2+ROWS+row]:screenOffset+linearPos+1;
+					int objidRight = objIdRightOffset>=0?type[objIdRightOffset] & 0x1F:0;
+					if (objidRight!=OBJID_BLOCK) {
+						objF = TILE_BLOCK_RIGHT;
+						objD = TILE_BLOCK_D_RIGHT;
 					}
-					if (i>0) {
-						int objidLeft = objids[linearPos-1];
-						if (objidLeft!=OBJID_BLOCK) {
-							objF = TILE_BLOCK_LEFT;
-							objD = TILE_BLOCK_D_LEFT;
-						}
+					int objIdLeftOffset = isFirstCol?neighborBlocksOffset[TILES_PER_ROW*2+row]:screenOffset+linearPos-1;
+					int objidLeft = objIdLeftOffset>=0?type[objIdLeftOffset] & 0x1F:0;
+					if (objidLeft!=OBJID_BLOCK) {
+						objF = TILE_BLOCK_LEFT;
+						objD = TILE_BLOCK_D_LEFT;
 					}
 				} else if (objid == OBJID_LOOSE) {
 					int trob = addTROB(screen, linearPos, objid);
@@ -269,13 +296,62 @@ public class Level {
 
 
 				int nextLeft = left + TILE_WIDTH;
+				currentObjId = objidC;
 				if (drawC) drawTileBaseBottom(screenView, bottom, nextLeft, objC);
+				currentObjId = objid;
 				if (drawB) drawTileBaseBottom(screenView, bottom + objBy, nextLeft, objB, objBmask, false);
 				if (drawD) drawTileBaseBottom(screenView, bottom, left, objD);
 				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
 				if (drawF) drawTileBaseBottom(screenView, bottom + objFy, left + objFx, objF, objFmask, objFmask==0);
 			}
 		}
+	}
+
+	// get address of neighbor blocks
+	private int[] getNeighborBlocksOffset(int screen) {
+		// returns neighbor blocks in this order: top, bottom, left, right, bottomLeft
+		int result[] = new int[TILES_PER_ROW*2 + ROWS*2 + 1];
+		int base = screen * 4;
+		int screenTop    = map[base + MAP_TOP] - 1;
+		int screenLeft   = map[base + MAP_LEFT] - 1;
+		int screenRight  = map[base + MAP_RIGHT] - 1;
+		int screenBottom = map[base + MAP_BOTTOM] - 1;
+		
+		// get screen at bottom left just to get the C part of the top right block
+		int screenBottomLeft = screenLeft>=0?map[screenLeft*4 + MAP_BOTTOM]:(screenBottom>=0?map[screenBottom*4 + MAP_LEFT]:-1);
+		
+		System.out.println("screenBottom " + screenBottom);
+		
+		int i=0;
+		// top screen
+		int offset = screenTop * TILES_PER_SCREEN;
+		for(int col=0; col<TILES_PER_ROW;col++) { // got bottom line
+			result[i++] = screenTop>=0? (offset + (ROWS-1) * TILES_PER_ROW + col) : -1;
+		}
+		
+		// bottom screen
+		offset = screenBottom * TILES_PER_SCREEN;
+		for(int col=0; col<TILES_PER_ROW;col++) {
+			result[i++] = screenBottom>=0? (offset +  col): -1;
+		}
+		
+		// left screen
+		offset = screenLeft * TILES_PER_SCREEN;
+		for(int row=0; row<ROWS;row++) {
+			result[i++] = screenLeft>=0? (offset + ((row+1) * TILES_PER_ROW) - 1) : -1;
+		}
+
+		// right screen
+		offset = screenRight * TILES_PER_SCREEN;
+		for(int row=0; row<ROWS;row++) {
+			result[i++] = screenRight>=0? (offset + ((row) * TILES_PER_ROW)) : -1;
+		}
+		
+		// top right block of bottom left screen.  Used to get the C block
+		offset = screenBottomLeft * TILES_PER_SCREEN;
+		result[i] = screenBottomLeft>=0?(offset + TILES_PER_ROW - 1): -1;
+		
+		return result;
 	}
 
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId) {
