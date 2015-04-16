@@ -3,6 +3,7 @@ package fcatrin.pop;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
@@ -22,7 +23,10 @@ public class MainWindow {
 	public MainWindow(Display display) {
 		shell = new Shell(display);
 	    shell.setText("Prince of Persia Testing");
-	    shell.setLayout(new GridLayout(1, true));
+	    GridLayout layout = new GridLayout(1, true);
+	    layout.marginWidth = 0;
+	    layout.marginHeight = 0;
+	    shell.setLayout(layout);
 	    
 	    changed = true;
 	    
