@@ -70,6 +70,7 @@ public class MainWindow {
 	}
 
 	protected void onKeyReleased(KeyEvent e) {
+		/*
 		if (e.keyCode == SWT.ARROW_LEFT) {
 			graphicsIndex --;
 		} else if (e.keyCode == SWT.ARROW_RIGHT) {
@@ -78,14 +79,17 @@ public class MainWindow {
 		if (graphicsIndex < 0) graphicsIndex = graphics.length-1;
 		if (graphicsIndex+1 > graphics.length) graphicsIndex = 0;
 		System.out.println("graphics " + (graphicsIndex+1));
+		*/
 		
-		if (e.keyCode == SWT.ARROW_UP) {
-			screenIndex --;
+		if (e.keyCode == SWT.ARROW_LEFT) {
+			level.moveLeft();
+		} else if (e.keyCode == SWT.ARROW_RIGHT) {
+			level.moveRight();
+		} else if (e.keyCode == SWT.ARROW_UP) {
+			level.moveUp();
 		} else if (e.keyCode == SWT.ARROW_DOWN) {
-			screenIndex++;
+			level.moveDown();
 		}
-		if (screenIndex < 0) screenIndex = 23;
-		if (screenIndex+1 > 24) screenIndex = 0;
 		
 		if (e.keyCode == 'a') level.drawA = !level.drawA;
 		if (e.keyCode == 'b') level.drawB = !level.drawB;
@@ -123,8 +127,7 @@ public class MainWindow {
 		    Image image = graphics[graphicsIndex];
 		    image.render(screenView, 0, 0);
 		    
-		    level.debugScreen(screenIndex);
-		    level.render(screenView, screenIndex);
+		    level.render(screenView);
 		}
 		changed = false;
 		return true;

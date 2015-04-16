@@ -105,7 +105,10 @@ public class Level {
 	public boolean drawD = true;
 	public boolean drawF = true;	
 	
+	int currentScreen = 0;
+	
 	public Level() {
+		
 	}
 	
 	public static void addTile(int position, File file) {
@@ -217,18 +220,21 @@ public class Level {
 	}
 	
 	int currentObjId = 0;
-	public void render(ScreenView screenView, int screen) {
-		int neighborBlocksOffset[] = getNeighborBlocksOffset(screen); 
-		int screenOffset = screen * TILES_PER_SCREEN;
+	public void render(ScreenView screenView) {
+		
+		debugScreen(currentScreen);
+		
+		int neighborBlocksOffset[] = getNeighborBlocksOffset(currentScreen); 
+		int screenOffset = currentScreen * TILES_PER_SCREEN;
 		for(int row = ROWS-1; row>=0; row--) {
 			boolean isLastRow = row == ROWS-1;
 			int linearPosBase = row*TILES_PER_ROW;
 			
 			// draw right side of left screen
 			int leftObjOffset = neighborBlocksOffset[TILES_PER_ROW*2 + row];
-			int leftObjId = leftObjOffset>=0?type[leftObjOffset] & 0x1F: 0;
+			int leftObjId = leftObjOffset>=0?type[leftObjOffset] & 0x1F: OBJID_BLOCK;
 			int leftDownObjOffset = isLastRow?neighborBlocksOffset[neighborBlocksOffset.length-1]:neighborBlocksOffset[TILES_PER_ROW*2 +row +1]; // top right block at bottom screen or just the object in this screen
-			int leftDownObjId = leftDownObjOffset>=0?(type[leftDownObjOffset] & 0x1F):0;
+			int leftDownObjId = leftDownObjOffset>=0?(type[leftDownObjOffset] & 0x1F):OBJID_BLOCK;
 			
 			int leftObjC = piecec[leftDownObjId];
 			int leftObjB = pieceb[leftObjId];
@@ -283,7 +289,7 @@ public class Level {
 						objD = TILE_BLOCK_D_LEFT;
 					}
 				} else if (objid == OBJID_LOOSE) {
-					int trob = addTROB(screen, linearPos, objid);
+					int trob = addTROB(currentScreen, linearPos, objid);
 					int direction = trDirection[trob];
 					if (direction > 0 ) {  // moving
 						direction &= 0x0f;
@@ -377,12 +383,24 @@ public class Level {
 		image.renderBottom(screenView, bottom, left, mask, autoMask);
 	}
 	
-	
-	private void drawTileBaseTop(ScreenView screenView, int top, int left, int objid) {
-		Image image = tiles.get(objid);
-		if (image == null) return;
-		
-		image.render(screenView, top, left);
+	public void moveLeft() {
+		int nextScreen   = map[currentScreen*4 + MAP_LEFT] - 1;
+		if (nextScreen>=0) currentScreen = nextScreen;
+	}
+
+	public void moveRight() {
+		int nextScreen  = map[currentScreen*4 + MAP_RIGHT] - 1;
+		if (nextScreen>=0) currentScreen = nextScreen;
+	}
+
+	public void moveUp() {
+		int nextScreen    = map[currentScreen*4 + MAP_TOP] - 1;
+		if (nextScreen>=0) currentScreen = nextScreen;
+	}
+
+	public void moveDown() {
+		int nextScreen = map[currentScreen*4 + MAP_BOTTOM] - 1;
+		if (nextScreen>=0) currentScreen = nextScreen;
 	}
 	
 	
