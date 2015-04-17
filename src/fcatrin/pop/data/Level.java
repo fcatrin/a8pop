@@ -92,6 +92,10 @@ public class Level {
 	
 	static final int looseFrames = 11; 
 	static final int looseb = 0x1b;
+	
+	private static final int DOOR_HEIGHT = 52;
+	private static final int DOOR_LINE_HEIGHT = 8;
+	
 	int looseby[] = {00,01,00,-1,-1,00,00,00,-1,-1,-1};
 	int loosea[] = {0x01,0x1e,0x01,0x1f,0x1f,0x01,0x01,0x01,0x1f,0x1f,0x1f};
 	int loosed[] = {0x15,0x2c,0x15,0x2d,0x2d,0x15,0x15,0x15,0x2d,0x2d,0x2d};
@@ -225,6 +229,9 @@ public class Level {
 	public void render(ScreenView screenView) {
 		
 		debugScreen(currentScreen);
+		boolean drawDoor = false;
+		int doorLeft = 0; // merge with previews as in flag?
+		int doorBase = 0;
 		
 		int neighborBlocksOffset[] = getNeighborBlocksOffset(currentScreen); 
 		int screenOffset = currentScreen * TILES_PER_SCREEN;
@@ -310,20 +317,32 @@ public class Level {
 				if (drawD) drawTileBaseBottom(screenView, bottom, left, objD);
 				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
 				if (objid == OBJID_GATE_RIGHT) {
-					drawTileBaseBottom(screenView, bottom-14, left+4, 0x6A, 0, false);
-					drawTileBaseBottom(screenView, bottom-15, left+5, 0x6C, 0, false);
+					drawTileBaseBottom(screenView, bottom-14, left+4, 0x6A, 0, false); // draw steps
+					drawDoor = true;
+					doorLeft = left+5;
+					doorBase = bottom-15;
 				}
 				if (drawF) drawTileBaseBottom(screenView, bottom + objFy, left + objFx, objF, objFmask, objFmask==0);
 			}
-			
-			// draw all D blocks of screen above
-			for(int i=0; i<TILES_PER_ROW; i++) {
-				int topOffset = neighborBlocksOffset[i];
-				int objid = topOffset>=0?type[topOffset] & 0x1F:OBJID_BLOCK;
-				int objD = pieced[objid];
-				int left = i * TILE_WIDTH;
-				if (drawD) drawTileBaseBottom(screenView, 3, left, objD);
+		}
+		if (drawDoor) {
+			int doorHeight = DOOR_HEIGHT;
+			while(doorHeight>=DOOR_LINE_HEIGHT) {
+				drawTileBaseBottom(screenView, doorBase, doorLeft, 0x6C, 0, false);
+				doorBase-=DOOR_LINE_HEIGHT;
+				doorHeight-=DOOR_LINE_HEIGHT;
 			}
+			if (doorHeight>0) drawTileBaseBottom(screenView, doorBase, doorLeft, 0x6C, 0, false, doorHeight);
+			drawDoor = false;
+		}
+		
+		// draw all D blocks of screen above
+		for(int i=0; i<TILES_PER_ROW; i++) {
+			int topOffset = neighborBlocksOffset[i];
+			int objid = topOffset>=0?type[topOffset] & 0x1F:OBJID_BLOCK;
+			int objD = pieced[objid];
+			int left = i * TILE_WIDTH;
+			if (drawD) drawTileBaseBottom(screenView, 3, left, objD);
 		}
 	}
 
@@ -375,14 +394,14 @@ public class Level {
 	}
 
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId) {
-		drawTileBaseBottom(screenView, bottom, left, tileId, 0, false);
+		drawTileBaseBottom(screenView, bottom, left, tileId, 0, false, 0);
 	}
 
-	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, boolean autoMask) {
-		drawTileBaseBottom(screenView, bottom, left, tileId, 0, autoMask);
-	}
-	
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, int tileMaskId, boolean autoMask) {
+		drawTileBaseBottom(screenView, bottom, left, tileId, tileMaskId, autoMask, 0);
+	}
+
+	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, int tileMaskId, boolean autoMask, int height) {
 		Image image = tiles.get(tileId);
 		if (image == null) {
 			if (tileId!=0) System.out.println(String.format("Tile %d not found for object id %d", tileId, currentObjId));
@@ -394,7 +413,7 @@ public class Level {
 			if (tileMaskId!=0 && tileMaskId!=0xff) System.out.println(String.format("Mask %d not found for object id %d", tileMaskId, currentObjId));
 		}
 		
-		image.renderBottom(screenView, bottom, left, mask, autoMask);
+		image.renderBottom(screenView, bottom, left, mask, autoMask, height);
 	}
 	
 	public void moveLeft() {

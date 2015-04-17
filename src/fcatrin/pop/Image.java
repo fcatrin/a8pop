@@ -71,20 +71,21 @@ public class Image {
 		}
 	}
 	
-	public void renderBottom(ScreenView screenView, int bottom, int left, Image mask, boolean autoMask) {
+	public void renderBottom(ScreenView screenView, int bottom, int left, Image mask, boolean autoMask, int heightMax) {
+		int tileHeight = heightMax>0?heightMax:height;
 		if (mode == Mode.Atari) {
 			if (mask == null || autoMask) {
-				for(int y=0; y<height; y++) {
-					int basey = bottom - height + y;
+				for(int y=0; y<tileHeight; y++) {
+					int basey = bottom - tileHeight + y;
 					for(int x=0; x<width; x++) {
 						int value = (int)data[width*y + x];
 						if (!autoMask || value!=0) screenView.setPixel(left+x, basey, value);
 					}
 				}
 			} else {
-				for(int y=0; y<height; y++) {
-					int basey = bottom - height + y;
-					int masky = mask.height - height + y;
+				for(int y=0; y<tileHeight; y++) {
+					int basey = bottom - tileHeight + y;
+					int masky = mask.height - tileHeight + y;
 					for(int x=0; x<width; x++) {
 						int value = (int)data[width*y + x];
 						if (masky>=0 && x<mask.width && (int)mask.data[mask.width*masky + x] != 0) {
