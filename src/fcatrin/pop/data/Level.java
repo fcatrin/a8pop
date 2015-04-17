@@ -18,12 +18,15 @@ public class Level {
 	private static final int TILE_HEIGHT = 63;
 	private static final int TILE_WIDTH = 16;
 	private static final int MAX_LINK = 256;
+	
 	byte type[] = new byte[DESCRIPTORS];
 	byte spec[] = new byte[DESCRIPTORS]; // TODO process patterns, state
 	byte linkMap[] = new byte[MAX_LINK];
 	byte linkLoc[] = new byte[MAX_LINK];
 	byte map[] = new byte[SCREENS*4];
 	byte info[] = new byte[256];
+	
+	private static final int MASK_AUTO = -1;
 	
 	private static final int MAP_LEFT = 0;
 	private static final int MAP_RIGHT = 1;
@@ -32,6 +35,7 @@ public class Level {
 	
 	// special cases
 	private static final int OBJID_SPACE = 0;
+	private static final int OBJID_SPIKE = 2;
 	private static final int OBJID_BLOCK = 20;
 	private static final int OBJID_LOOSE = 11;
 	private static final int OBJID_GATE_RIGHT = 17;
@@ -99,6 +103,10 @@ public class Level {
 	int looseby[] = {00,01,00,-1,-1,00,00,00,-1,-1,-1};
 	int loosea[] = {0x01,0x1e,0x01,0x1f,0x1f,0x01,0x01,0x01,0x1f,0x1f,0x1f};
 	int loosed[] = {0x15,0x2c,0x15,0x2d,0x2d,0x15,0x15,0x15,0x2d,0x2d,0x2d};
+	
+	int spikea[] = {00,0x22,0x24,0x26,0x28,0x2a,0x28,0x24,0x22,00};
+	int spikeb[] = {00,0x23,0x25,0x27,0x29,0x2b,0x29,0x25,0x23,00};
+	int spikeExtended = 5;
 	
 	// TODO verificar si rubble requiere pieza frontal: Tile 0x13. Por ahora se incluye
 	// TODO tile 0x19 es igual al 0x4c (unpressed floor)
@@ -218,6 +226,10 @@ public class Level {
 				markDirty(screen, position);
 				changed = true;
 				break;
+			} else if (objid == OBJID_SPIKE && (obj & 0xE0)!=0) {
+				trDirection[i] = 1;
+				markDirty(screen, position);
+				changed = true;
 			}
 		}
 		
@@ -247,8 +259,8 @@ public class Level {
 	}
 	
 	
-	public void moveFloor(int screen) {
-		int base = screen * TILES_PER_SCREEN;
+	public void moveFloor() {
+		int base = currentScreen * TILES_PER_SCREEN;
 		for(int i=0; i<TILES_PER_SCREEN; i++) {
 			if (type[base+i] == OBJID_LOOSE) {
 				type[base+i] = OBJID_LOOSE | 0x20; // turn on animation flag;
@@ -257,9 +269,20 @@ public class Level {
 		}
 	}
 	
+	public void moveSpike() {
+		int base = currentScreen * TILES_PER_SCREEN;
+		for(int i=0; i<TILES_PER_SCREEN; i++) {
+			if (type[base+i] == OBJID_SPIKE) {
+				type[base+i] = OBJID_SPIKE | 0x20; // turn on animation flag;
+				return;
+			}
+		}
+	}
+	
 	public void openDoor() {
 		if (!doorOpened) doorOpening = true;
 	}
+	
 	
 	private int dirtyIndex[] = new int[] { // lame but fast lookup table
 		20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
@@ -307,7 +330,7 @@ public class Level {
 		for(int i=0; i<drawBlocksExtraBackground.length; i++) {
 			DrawBlock drawBlock = drawBlocksExtraBackground[i];
 			if (drawBlock!=null && drawBlock.piece != 0) {
-				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, 0, false, drawBlock.height);
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false, drawBlock.height);
 			}
 		}
 		for(int i=0; drawF && i<drawBlocksF.length; i++) {
@@ -456,6 +479,18 @@ public class Level {
 						objA = loosea[direction];
 						objBy = looseby[direction];
 						objD = loosed[direction];
+					}
+				} else if (objid == OBJID_SPIKE) {
+					int trob = addTROB(currentScreen, linearPos, objid);
+					int direction = trDirection[trob];
+					if (direction > 0 ) {  // moving
+						direction &= 0x0f;
+						drawBlock = new DrawBlock();
+						drawBlock.piece = spikea[spikeExtended];
+						drawBlock.mask = MASK_AUTO;
+						drawBlock.bottom = bottom-4;
+						drawBlock.left = left+1;
+						drawBlocksExtraBackground[extraIndex++] = drawBlock;
 					}
 				}
 
@@ -619,15 +654,19 @@ public class Level {
 	}
 
 	private void drawTileBaseBottom(ScreenView screenView, int bottom, int left, int tileId, int tileMaskId, boolean autoMask, int height) {
+		autoMask = autoMask || tileMaskId == MASK_AUTO;
 		Image image = tiles.get(tileId);
 		if (image == null) {
 			if (tileId!=0) System.out.println(String.format("Tile %d not found for object id %d", tileId, currentObjId));
 			return;
 		}
 		
-		Image mask = tiles.get(tileMaskId);
-		if (mask == null) {
-			if (tileMaskId!=0 && tileMaskId!=0xff) System.out.println(String.format("Mask %d not found for object id %d", tileMaskId, currentObjId));
+		Image mask = null;
+		if (tileMaskId>0) {
+			mask = tiles.get(tileMaskId);
+			if (mask == null) {
+				System.out.println(String.format("Mask %d not found for object id %d", tileMaskId, currentObjId));
+			}
 		}
 		
 		image.renderBottom(screenView, bottom, left, mask, autoMask, height);

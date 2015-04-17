@@ -101,7 +101,8 @@ public class MainWindow {
 		if (e.keyCode == 'd') level.drawD = !level.drawD;
 		if (e.keyCode == 'f') level.drawF = !level.drawF;
 		
-		if (e.keyCode == 'l') level.moveFloor(screenIndex);
+		if (e.keyCode == 'l') level.moveFloor();
+		if (e.keyCode == 's') level.moveSpike();
 		if (e.keyCode == 'g') level.openDoor();
 		
 		
