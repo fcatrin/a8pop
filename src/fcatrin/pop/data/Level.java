@@ -491,6 +491,12 @@ public class Level {
 						drawBlock.bottom = bottom-4;
 						drawBlock.left = left+1;
 						drawBlocksExtraBackground[extraIndex++] = drawBlock;
+						drawBlock = new DrawBlock();
+						drawBlock.piece = spikeb[spikeExtended];
+						drawBlock.mask = MASK_AUTO;
+						drawBlock.bottom = bottom-9;
+						drawBlock.left = left+ TILE_WIDTH;
+						drawBlocksExtraBackground[extraIndex++] = drawBlock;
 					}
 				}
 
