@@ -227,7 +227,11 @@ public class Level {
 				changed = true;
 				break;
 			} else if (objid == OBJID_SPIKE && (obj & 0xE0)!=0) {
-				trDirection[i] = 1;
+				int frame = (direction & 0x0F) + 1;
+				trDirection[i] = frame;
+				if (frame == spikeExtended) {
+					type[linearLoc] = OBJID_SPIKE;
+				}
 				markDirty(screen, position);
 				changed = true;
 			}
@@ -486,7 +490,7 @@ public class Level {
 					if (direction > 0 ) {  // moving
 						direction &= 0x0f;
 						drawBlock = new DrawBlock();
-						drawBlock.piece = spikea[spikeExtended];
+						drawBlock.piece = spikea[direction];
 						drawBlock.mask = MASK_AUTO;
 						drawBlock.bottom = bottom-4;
 						drawBlock.left = left+1;

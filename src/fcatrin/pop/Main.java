@@ -47,6 +47,10 @@ public class Main {
 		Level.addTile(0x1F,  new File(baseDir, "tile_1F.bmp"));
 		Level.addTile(0x20,  new File(baseDir, "tile_20.bmp"));
 		Level.addTile(0x21,  new File(baseDir, "tile_21.bmp"));
+		Level.addTile(0x22,  new File(baseDir, "tile_22.bmp"));
+		Level.addTile(0x24,  new File(baseDir, "tile_24.bmp"));
+		Level.addTile(0x26,  new File(baseDir, "tile_26.bmp"));
+		Level.addTile(0x28,  new File(baseDir, "tile_28.bmp"));
 		Level.addTile(0x2A,  new File(baseDir, "tile_2A.bmp"));
 		Level.addTile(0x2B,  new File(baseDir, "tile_2B.bmp"));
 		Level.addTile(0x2C,  new File(baseDir, "tile_2C.bmp"));
