@@ -127,7 +127,6 @@ public class MainWindow {
 	private boolean render() {
 		if (!changed) return false;
 		synchronized (screenView) {
-		    screenView.clear();
 		    
 		    Image image = graphics[graphicsIndex];
 		    image.render(screenView, 0, 0);

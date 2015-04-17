@@ -101,7 +101,6 @@ public class Level {
 	int loosed[] = {0x15,0x2c,0x15,0x2d,0x2d,0x15,0x15,0x15,0x2d,0x2d,0x2d};
 	
 	// TODO verificar si rubble requiere pieza frontal: Tile 0x13. Por ahora se incluye
-	// TODO pieza rubble D se reemplazo por la de piso normal
 	// TODO tile 0x19 es igual al 0x4c (unpressed floor)
 	// TODO se cambian piezas para que objeto 11 (loose floor) quede normal al principio
 	
@@ -214,6 +213,7 @@ public class Level {
 					}
 				}
 				trDirection[i] = (times << 4) | frame;
+				markDirty(screen, position);
 				changed = true;
 				break;
 			}
@@ -230,6 +230,18 @@ public class Level {
 		return changed;
 	}
 	
+	private void markDirty(int screen, int position) {
+		boolean dirty = false;
+		boolean isLastCol = (position % 10) == 9;
+		if (screen == currentScreen) {
+			dirtyBlocks[position] = true;
+			if (!isLastCol) dirtyBlocks[position+1] = true; 
+			dirty = true;
+		}
+		if (dirty) buildDrawList();
+	}
+	
+	
 	public void moveFloor(int screen) {
 		int base = screen * TILES_PER_SCREEN;
 		for(int i=0; i<TILES_PER_SCREEN; i++) {
@@ -244,28 +256,43 @@ public class Level {
 		if (!doorOpened) doorOpening = true;
 	}
 	
+	private int dirtyIndex[] = new int[] { // lame but fast lookup table
+		20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+		10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+		0 ,  1,  2,  3,  4,  5,  6,  7,  8,  9,
+		30, 31, 32, 33, 34, 35, 36, 37, 38, 39
+	};
+	
 	int currentObjId = 0;
 	public void render(ScreenView screenView) {
 		for(int i=0; drawC && i<drawBlocksC.length; i++) {
+			if (!dirtyBlocks[dirtyIndex[i]]) continue;
+			
+			// erase block
 			DrawBlock drawBlock = drawBlocksC[i];
+			eraseBlock(screenView, drawBlock.bottom, drawBlock.left);
 			if (drawBlock.piece != 0) {
+				System.out.println("Draw C block " + i);
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece);
 			}
 		}
 		for(int i=0; drawB && i<drawBlocksB.length; i++) {
+			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksB[i];
 			if (drawBlock.piece != 0) {
-				//System.out.println("index: " + i + ", bottom:" + drawBlock.bottom + ", left:" + drawBlock.left);
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false);
 			}
 		}
 		for(int i=0; drawD && i<drawBlocksD.length; i++) {
+			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksD[i];
+			if (i>=TILES_PER_SCREEN) eraseBlock(screenView, drawBlock.bottom, drawBlock.left);
 			if (drawBlock.piece != 0) {
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece,drawBlock.mask, false);
 			}
 		}
 		for(int i=0; drawA && i<drawBlocksA.length; i++) {
+			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksA[i];
 			if (drawBlock.piece != 0) {
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false);
@@ -279,13 +306,29 @@ public class Level {
 			}
 		}
 		for(int i=0; drawF && i<drawBlocksF.length; i++) {
+			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksF[i];
 			if (drawBlock.piece != 0) {
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, drawBlock.mask==0);
 			}
 		}
+		for(int i=0; i<dirtyBlocks.length; i++) {
+			dirtyBlocks[i] = false;
+		}
 	}
 	
+	private void eraseBlock(ScreenView screenView, int bottom, int left) {
+		for(int y=0; y<TILE_HEIGHT; y++) {
+			int basey = bottom - y;
+			if (basey<0) return;
+			
+			for(int x=0; x<TILE_WIDTH; x++) {
+				screenView.setPixel(left+x, basey, 0);
+			}
+		}
+		
+	}
+
 	class DrawBlock {
 		int piece;
 		int mask;
@@ -301,7 +344,7 @@ public class Level {
 	private DrawBlock drawBlocksExtraBackground[] = new DrawBlock[TILES_PER_SCREEN];
 	private DrawBlock drawBlocksF[] = new DrawBlock[TILES_PER_SCREEN];
 	
-	private boolean dirtyBlocks[] = new boolean[TILES_PER_SCREEN + TILES_PER_ROW];
+	private boolean dirtyBlocks[] = new boolean[TILES_PER_SCREEN + TILES_PER_ROW]; // 0 = not dirty, 1 = full block, 2 = front only
 	
 	private void buildDrawList() {
 		debugScreen(currentScreen);
@@ -326,7 +369,7 @@ public class Level {
 			
 			DrawBlock drawBlock = null;
 			
-			if (dirtyBlocks[tileIndex]) {
+			if (dirtyBlocks[linearPosBase]) {
 				// draw right side of left screen
 				int leftObjOffset = neighborBlocksOffset[TILES_PER_ROW*2 + row];
 				int leftObjId = leftObjOffset>=0?type[leftObjOffset] & 0x1F: OBJID_BLOCK;
@@ -355,15 +398,14 @@ public class Level {
 			}
 			
 			for(int i=0; i<TILES_PER_ROW; i++) {
-				if (!dirtyBlocks[tileIndex]) {
+				int linearPos = linearPosBase+i;
+				if (!dirtyBlocks[linearPos]) {
 					tileIndex++;
 					continue;
 				}
-				dirtyBlocks[tileIndex] = false;
 				
 				boolean isLastCol = i == (TILES_PER_ROW-1);
 				boolean isFirstCol = i == 0;
-				int linearPos = linearPosBase+i;
 				int left = i * TILE_WIDTH;
 				int objid = type[screenOffset + linearPos] & 0x1F;
 				System.out.println(String.format("screenOffset: %d, linearPos:%d, objid:%d", screenOffset, linearPos, objid));
@@ -498,8 +540,7 @@ public class Level {
 		
 		// draw all D blocks of screen above
 		for(int i=0; i<TILES_PER_ROW; i++) {
-			if (!dirtyBlocks[tileIndex+i]) continue;
-			dirtyBlocks[tileIndex+i] = false;
+			if (!dirtyBlocks[TILES_PER_SCREEN+i]) continue;
 			
 			int topOffset = neighborBlocksOffset[i];
 			int objid = topOffset>=0?type[topOffset] & 0x1F:OBJID_BLOCK;
@@ -608,8 +649,12 @@ public class Level {
 	private void setCurrentScreen(int nextScreen) {
 		if (nextScreen == currentScreen) return;
 		currentScreen = nextScreen;
-		for(int i=0; i<dirtyBlocks.length; i++) dirtyBlocks[i] = true;
+		clearDirtyBlocks();
 		buildDrawList();
+	}
+	
+	private void clearDirtyBlocks() {
+		for(int i=0; i<dirtyBlocks.length; i++) dirtyBlocks[i] = true;
 	}
 	
 	
