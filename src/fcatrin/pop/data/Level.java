@@ -246,7 +246,48 @@ public class Level {
 	
 	int currentObjId = 0;
 	public void render(ScreenView screenView) {
+		buildDrawList();
+		for(int i=0; drawC && i<drawBlocksC.length; i++) {
+			DrawBlock drawBlock = drawBlocksC[i];
+			if (drawBlock.piece != 0) {
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece);
+			}
+		}
+		for(int i=0; drawB && i<drawBlocksB.length; i++) {
+			DrawBlock drawBlock = drawBlocksB[i];
+			if (drawBlock.piece != 0) {
+				//System.out.println("index: " + i + ", bottom:" + drawBlock.bottom + ", left:" + drawBlock.left);
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false);
+			}
+		}
+		for(int i=0; drawD && i<drawBlocksD.length; i++) {
+			DrawBlock drawBlock = drawBlocksD[i];
+			if (drawBlock.piece != 0) {
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece,drawBlock.mask, false);
+			}
+		}
+		for(int i=0; drawA && i<drawBlocksA.length; i++) {
+			DrawBlock drawBlock = drawBlocksA[i];
+			if (drawBlock.piece != 0) {
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false);
+			}
+		}
 		
+		for(int i=0; i<drawBlocksExtraBackground.length; i++) {
+			DrawBlock drawBlock = drawBlocksExtraBackground[i];
+			if (drawBlock!=null && drawBlock.piece != 0) {
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, 0, false, drawBlock.height);
+			}
+		}
+		for(int i=0; drawF && i<drawBlocksF.length; i++) {
+			DrawBlock drawBlock = drawBlocksF[i];
+			if (drawBlock.piece != 0) {
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, drawBlock.mask==0);
+			}
+		}
+
+
+/*		
 		debugScreen(currentScreen);
 		boolean drawDoor = false;
 		int doorLeft = 0; // merge with previews as in flag?
@@ -364,6 +405,221 @@ public class Level {
 			int left = i * TILE_WIDTH;
 			if (drawD) drawTileBaseBottom(screenView, 3, left, objD);
 		}
+		*/
+	}
+	
+	class DrawBlock {
+		int piece;
+		int mask;
+		int bottom;
+		int left;
+		int height;
+	}
+	
+	private DrawBlock drawBlocksC[] = new DrawBlock[TILES_PER_SCREEN];
+	private DrawBlock drawBlocksB[] = new DrawBlock[TILES_PER_SCREEN];
+	private DrawBlock drawBlocksD[] = new DrawBlock[TILES_PER_SCREEN + TILES_PER_ROW];
+	private DrawBlock drawBlocksA[] = new DrawBlock[TILES_PER_SCREEN];
+	private DrawBlock drawBlocksExtraBackground[] = new DrawBlock[TILES_PER_SCREEN];
+	private DrawBlock drawBlocksF[] = new DrawBlock[TILES_PER_SCREEN];
+	
+	private void buildDrawList() {
+		debugScreen(currentScreen);
+		
+		// clear transient background
+		for(int i=0; i<drawBlocksExtraBackground.length; i++) {
+			drawBlocksExtraBackground[i] = null;
+		}
+		
+		boolean drawDoor = false;
+		int doorLeft = 0; // merge with previews as in flag?
+		int doorBase = 0;
+		
+		int neighborBlocksOffset[] = getNeighborBlocksOffset(currentScreen); 
+		int screenOffset = currentScreen * TILES_PER_SCREEN;
+		int tileIndex = 0;
+		int extraIndex = 0;
+		for(int row = ROWS-1; row>=0; row--) {
+			boolean isLastRow = row == ROWS-1;
+			int linearPosBase = row*TILES_PER_ROW;
+			
+			// draw right side of left screen
+			int leftObjOffset = neighborBlocksOffset[TILES_PER_ROW*2 + row];
+			int leftObjId = leftObjOffset>=0?type[leftObjOffset] & 0x1F: OBJID_BLOCK;
+			int leftDownObjOffset = isLastRow?neighborBlocksOffset[neighborBlocksOffset.length-1]:neighborBlocksOffset[TILES_PER_ROW*2 +row +1]; // top right block at bottom screen or just the object in this screen
+			int leftDownObjId = leftDownObjOffset>=0?(type[leftDownObjOffset] & 0x1F):OBJID_BLOCK;
+			
+			int leftObjC = piecec[leftDownObjId];
+			int leftObjB = pieceb[leftObjId];
+			int leftObjBMask = maskb[leftObjId];
+			int leftObjBy = pieceby[leftObjId];
+			
+			int bottom = (row+1) * TILE_HEIGHT + 2;
+			
+			System.out.println("row " + row + " leftObjB " + leftObjB + " leftObjBMask " + leftObjBMask + " leftDownObjId " + leftDownObjId + " leftObjC " + leftObjC);
+
+			DrawBlock drawBlock = new DrawBlock();
+			drawBlock.piece = leftObjC;
+			drawBlock.bottom = bottom;
+			drawBlock.left = 0;
+			drawBlocksC[tileIndex] = drawBlock;
+			
+			drawBlock = new DrawBlock();
+			drawBlock.piece = leftObjB;
+			drawBlock.mask = leftObjBMask;
+			drawBlock.bottom = bottom + leftObjBy;
+			drawBlock.left = 0;
+			drawBlocksB[tileIndex] = drawBlock;
+			
+			for(int i=0; i<TILES_PER_ROW; i++) {
+				boolean isLastCol = i == (TILES_PER_ROW-1);
+				boolean isFirstCol = i == 0;
+				int linearPos = linearPosBase+i;
+				int left = i * TILE_WIDTH;
+				int objid = type[screenOffset + linearPos] & 0x1F;
+				
+				int objidLeftBottomOffset = isLastRow?
+						neighborBlocksOffset[TILES_PER_ROW + i]: // bottom screen
+						screenOffset + linearPos + TILES_PER_ROW; // next row
+				int objidC = (!isLastCol && objidLeftBottomOffset>=0)? type[objidLeftBottomOffset] & 0x1F:0;
+						
+				int objA = piecea[objid];
+				int objB = isLastCol?0:pieceb[objid];
+				int objC = piecec[objidC];
+				int objD = pieced[objid];
+				int objF = fronti[objid];
+				int objAmask = maska[objid];
+				int objBmask = maskb[objid];
+				int objFmask = maskFront[objid];
+				int objAy = pieceay[objid];
+				int objBy = pieceby[objid];
+				int objFy = fronty[objid];
+				int objFx = frontx[objid];
+
+				
+				if (objid == OBJID_BLOCK) { 
+					int objIdRightOffset = isLastCol?neighborBlocksOffset[TILES_PER_ROW*2+ROWS+row]:screenOffset+linearPos+1;
+					int objidRight = objIdRightOffset>=0?type[objIdRightOffset] & 0x1F:0;
+					if (objidRight!=OBJID_BLOCK) {
+						objF = TILE_BLOCK_RIGHT;
+						objD = TILE_BLOCK_D_RIGHT;
+					}
+					int objIdLeftOffset = isFirstCol?neighborBlocksOffset[TILES_PER_ROW*2+row]:screenOffset+linearPos-1;
+					int objidLeft = objIdLeftOffset>=0?type[objIdLeftOffset] & 0x1F:0;
+					if (objidLeft!=OBJID_BLOCK) {
+						objF = TILE_BLOCK_LEFT;
+						objD = TILE_BLOCK_D_LEFT;
+					}
+				} else if (objid == OBJID_LOOSE) {
+					int trob = addTROB(currentScreen, linearPos, objid);
+					int direction = trDirection[trob];
+					if (direction > 0 ) {  // moving
+						direction &= 0x0f;
+						objB = looseb;
+						objA = loosea[direction];
+						objBy = looseby[direction];
+						objD = loosed[direction];
+					}
+				}
+
+
+				int nextLeft = left + TILE_WIDTH;
+				if (!isLastCol) {
+					drawBlock = new DrawBlock();
+					drawBlock.piece = objC;
+					drawBlock.bottom = bottom;
+					drawBlock.left = nextLeft;
+					drawBlocksC[tileIndex+1] = drawBlock;
+					
+					drawBlock = new DrawBlock();
+					drawBlock.piece = objB;
+					drawBlock.mask = objBmask;
+					drawBlock.bottom = bottom + objBy;
+					drawBlock.left = nextLeft;
+					drawBlocksB[tileIndex+1] = drawBlock;
+				}
+				//currentObjId = objidC;
+				//if (drawC) drawTileBaseBottom(screenView, bottom, nextLeft, objC);
+				currentObjId = objid;
+				//if (drawB) drawTileBaseBottom(screenView, bottom + objBy, nextLeft, objB, objBmask, false);
+				drawBlock = new DrawBlock();
+				drawBlock.piece = objD;
+				drawBlock.bottom = bottom;
+				drawBlock.left = left;
+				drawBlocksD[tileIndex] = drawBlock;
+				//if (drawD) drawTileBaseBottom(screenView, bottom, left, objD);
+				drawBlock = new DrawBlock();
+				drawBlock.piece = objA;
+				drawBlock.mask = objAmask;
+				drawBlock.bottom = bottom-3 + objAy;
+				drawBlock.left = left;
+				drawBlocksA[tileIndex] = drawBlock;
+
+				//if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
+				if (objid == OBJID_GATE_RIGHT) {
+					drawBlock = new DrawBlock();
+					drawBlock.piece = 0x6A;
+					drawBlock.bottom = bottom-14;
+					drawBlock.left = left+4;
+					drawBlocksExtraBackground[extraIndex++] = drawBlock;
+					//drawTileBaseBottom(screenView, bottom-14, left+4, 0x6A, 0, false); // draw steps
+					drawDoor = !doorOpened;
+					doorLeft = left+5;
+					doorBase = bottom-15;
+				}
+				
+				drawBlock = new DrawBlock();
+				drawBlock.piece = objF;
+				drawBlock.mask = objFmask;
+				drawBlock.bottom = bottom + objFy;
+				drawBlock.left = left + objFx;
+				drawBlocksF[tileIndex] = drawBlock;
+				
+				//if (drawF) drawTileBaseBottom(screenView, bottom + objFy, left + objFx, objF, objFmask, objFmask==0);
+				
+				tileIndex++;
+			}
+		}
+		if (drawDoor) {
+			int doorHeight = DOOR_HEIGHT - doorPosition;
+			doorBase -= doorPosition;
+			while(doorHeight>=DOOR_LINE_HEIGHT) {
+				DrawBlock drawBlock = new DrawBlock();
+				drawBlock.piece = 0x6C;
+				drawBlock.bottom = doorBase;
+				drawBlock.left = doorLeft;
+				drawBlocksExtraBackground[extraIndex++] = drawBlock;
+				
+				//drawTileBaseBottom(screenView, doorBase, doorLeft, 0x6C, 0, false);
+				doorBase-=DOOR_LINE_HEIGHT;
+				doorHeight-=DOOR_LINE_HEIGHT;
+			}
+			if (doorHeight>0) {
+				DrawBlock drawBlock = new DrawBlock();
+				drawBlock.piece = 0x6C;
+				drawBlock.bottom = doorBase;
+				drawBlock.left = doorLeft;
+				drawBlock.height = doorHeight;
+				drawBlocksExtraBackground[extraIndex++] = drawBlock;
+				//drawTileBaseBottom(screenView, doorBase, doorLeft, 0x6C, 0, false, doorHeight);
+			}
+			drawDoor = false;
+		}
+		
+		// draw all D blocks of screen above
+		for(int i=0; i<TILES_PER_ROW; i++) {
+			int topOffset = neighborBlocksOffset[i];
+			int objid = topOffset>=0?type[topOffset] & 0x1F:OBJID_BLOCK;
+			int objD = pieced[objid];
+			int left = i * TILE_WIDTH;
+			DrawBlock drawBlock = new DrawBlock();
+			drawBlock.piece = objD;
+			drawBlock.bottom = 3;
+			drawBlock.left = left;
+			drawBlocksD[tileIndex+i] = drawBlock;
+			//drawTileBaseBottom(screenView, 3, left, objD);
+		}
+		
 	}
 
 	// get address of neighbor blocks
