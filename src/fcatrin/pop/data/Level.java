@@ -114,6 +114,8 @@ public class Level {
 	
 	boolean doorOpened = false;
 	boolean doorOpening = false;
+	int doorBottom = 0;
+	int doorScreen = 0;
 	int doorPosition = 0;
 	
 	public Level() {
@@ -220,10 +222,13 @@ public class Level {
 		}
 		
 		if (doorOpening) {
-			doorPosition++;
-			if (doorPosition>DOOR_HEIGHT) {
+			doorBottom++;
+			if (doorBottom>DOOR_HEIGHT) {
 				doorOpening = false;
 				doorOpened = true;
+			} else {
+				markDirty(doorScreen, doorPosition);
+				markDirty(doorScreen, doorPosition - TILES_PER_ROW);
 			}
 			changed = true;
 		}
@@ -498,6 +503,8 @@ public class Level {
 					drawDoor = !doorOpened;
 					doorLeft = left+5;
 					doorBase = bottom-15;
+					doorScreen = currentScreen;
+					doorPosition = linearPos;
 				}
 				
 				drawBlock = new DrawBlock();
@@ -513,8 +520,8 @@ public class Level {
 			}
 		}
 		if (drawDoor) {
-			int doorHeight = DOOR_HEIGHT - doorPosition;
-			doorBase -= doorPosition;
+			int doorHeight = DOOR_HEIGHT - doorBottom;
+			doorBase -= doorBottom;
 			while(doorHeight>=DOOR_LINE_HEIGHT) {
 				DrawBlock drawBlock = new DrawBlock();
 				drawBlock.piece = 0x6C;

@@ -129,7 +129,7 @@ public class MainWindow {
 		synchronized (screenView) {
 		    
 		    Image image = graphics[graphicsIndex];
-		    image.render(screenView, 0, 0);
+		    //image.render(screenView, 0, 0);
 		    
 		    level.render(screenView);
 		}
