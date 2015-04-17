@@ -113,6 +113,10 @@ public class Level {
 	
 	int currentScreen = 0;
 	
+	boolean doorOpened = false;
+	boolean doorOpening = false;
+	int doorPosition = 0;
+	
 	public Level() {
 		
 	}
@@ -186,6 +190,7 @@ public class Level {
 	}
 	
 	public boolean advanceFrame() {
+		boolean changed = false;
 		for(int i=0; i<trobs; i++) {
 			int direction = trDirection[i];
 			if (direction == -1) continue;
@@ -209,10 +214,20 @@ public class Level {
 					}
 				}
 				trDirection[i] = (times << 4) | frame;
-				return true;
+				changed = true;
+				break;
 			}
 		}
-		return false;
+		
+		if (doorOpening) {
+			doorPosition++;
+			if (doorPosition>DOOR_HEIGHT) {
+				doorOpening = false;
+				doorOpened = true;
+			}
+			changed = true;
+		}
+		return changed;
 	}
 	
 	public void moveFloor(int screen) {
@@ -223,6 +238,10 @@ public class Level {
 				return;
 			}
 		}
+	}
+	
+	public void openDoor() {
+		if (!doorOpened) doorOpening = true;
 	}
 	
 	int currentObjId = 0;
@@ -318,7 +337,7 @@ public class Level {
 				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
 				if (objid == OBJID_GATE_RIGHT) {
 					drawTileBaseBottom(screenView, bottom-14, left+4, 0x6A, 0, false); // draw steps
-					drawDoor = true;
+					drawDoor = !doorOpened;
 					doorLeft = left+5;
 					doorBase = bottom-15;
 				}
@@ -326,7 +345,8 @@ public class Level {
 			}
 		}
 		if (drawDoor) {
-			int doorHeight = DOOR_HEIGHT;
+			int doorHeight = DOOR_HEIGHT - doorPosition;
+			doorBase -= doorPosition;
 			while(doorHeight>=DOOR_LINE_HEIGHT) {
 				drawTileBaseBottom(screenView, doorBase, doorLeft, 0x6C, 0, false);
 				doorBase-=DOOR_LINE_HEIGHT;

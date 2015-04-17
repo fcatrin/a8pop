@@ -73,12 +73,13 @@ public class Image {
 	
 	public void renderBottom(ScreenView screenView, int bottom, int left, Image mask, boolean autoMask, int heightMax) {
 		int tileHeight = heightMax>0?heightMax:height;
+		int dy = height - tileHeight;
 		if (mode == Mode.Atari) {
 			if (mask == null || autoMask) {
 				for(int y=0; y<tileHeight; y++) {
 					int basey = bottom - tileHeight + y;
 					for(int x=0; x<width; x++) {
-						int value = (int)data[width*y + x];
+						int value = (int)data[width*(y+dy) + x];
 						if (!autoMask || value!=0) screenView.setPixel(left+x, basey, value);
 					}
 				}
@@ -87,7 +88,7 @@ public class Image {
 					int basey = bottom - tileHeight + y;
 					int masky = mask.height - tileHeight + y;
 					for(int x=0; x<width; x++) {
-						int value = (int)data[width*y + x];
+						int value = (int)data[width*(y+dy) + x];
 						if (masky>=0 && x<mask.width && (int)mask.data[mask.width*masky + x] != 0) {
 							
 						} else {

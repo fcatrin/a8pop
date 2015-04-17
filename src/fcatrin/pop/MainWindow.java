@@ -102,6 +102,7 @@ public class MainWindow {
 		if (e.keyCode == 'f') level.drawF = !level.drawF;
 		
 		if (e.keyCode == 'l') level.moveFloor(screenIndex);
+		if (e.keyCode == 'g') level.openDoor();
 		
 		
 		System.out.println(String.format("Screen Index %d", screenIndex));
