@@ -311,6 +311,7 @@ public class Level {
 				if (drawA) drawTileBaseBottom(screenView, bottom-3 + objAy, left, objA, objAmask, false);
 				if (objid == OBJID_GATE_RIGHT) {
 					drawTileBaseBottom(screenView, bottom-14, left+4, 0x6A, 0, false);
+					drawTileBaseBottom(screenView, bottom-15, left+5, 0x6C, 0, false);
 				}
 				if (drawF) drawTileBaseBottom(screenView, bottom + objFy, left + objFx, objF, objFmask, objFmask==0);
 			}
