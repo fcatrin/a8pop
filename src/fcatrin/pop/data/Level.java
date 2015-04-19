@@ -724,7 +724,7 @@ public class Level {
 	}
 
 	private static void writeTile(Integer index, Image tile) throws IOException {
-		String fileName = String.format("tile_%2x.pic", index);
+		String fileName = String.format("tile_%02x.pic", index);
 		int data[] = tile.getAtariData();
 		
 		File file = new File("asm/images/dungeon/" + fileName);

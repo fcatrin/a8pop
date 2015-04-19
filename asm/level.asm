@@ -1,6 +1,64 @@
 .bank
+
+SDLSTL = 560
+tileIndex = 210
+vramIndex = 212
+
 * = $600
-start	
+
+start
+		lda #<displayList
+		sta SDLSTL
+		
+		lda #>displayList
+		sta SDLSTL+1
+		
+		lda #<tiles
+		sta tileIndex
+		lda #>tiles
+		sta tileIndex+1
+
+		lda #<vram
+		sta vramIndex
+		lda #>vram
+		sta vramIndex+1
+		
+		ldy #0
+		lda (tileIndex),y
+		sta tileWidth
+		iny
+		lda (tileIndex),y
+		tax					; x = height
+		
+copyTileScan		
+		ldy #2
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		
+		clc
+		lda tileIndex
+		adc #2
+		sta tileIndex
+		lda tileIndex+1
+		adc #0
+		sta tileIndex+1
+		
+		clc
+		lda vramIndex
+		adc #40
+		sta vramIndex
+		lda vramIndex+1
+		adc #0
+		sta vramIndex+1
+		dex
+		bne copyTileScan
+		
+endCopy jmp endCopy		
+
+test	
 		lda 559
 		sta dma
 		
@@ -70,8 +128,10 @@ copyStrip
 halt
 		jmp halt
 
-dma		.byte 0
-frames	.byte 0, 0
+dma			.byte 0
+frames		.byte 0, 0
+tileWidth 	.byte 0
+
 
 .bank
 *		= $4000
@@ -95,6 +155,9 @@ displayList
 		.byte $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E 
 		.byte 65
 		.word displayList
+
+tiles
+		.incbin "images/dungeon/tile_01.pic"
 
 testBuffer
 		.byte $AA, $55, $FF, $55, $AA, $00, $FF, $00
