@@ -142,5 +142,26 @@ public class Image {
 		}
 	}
 
+	public int[] getAtariData() {
+		int byteWidth = ((width+3)/4);
+		int byteSize = height * byteWidth;
+		int result[] = new int[byteSize];
+		
+		for(int row = 0; row<height; row++) {
+			int value = 0;
+			int rot = 0;
+			for(int x=0; x<width; x++) {
+				if (x % 4 == 0) {
+					value = 0;
+					rot = 3;
+				}
+				int tmp = data[row * width + x] << rot;
+				value |= tmp;
+				result[row*byteWidth + x/4] = value;
+				rot--;
+			}
+		}
+		return result;
+	}
 
 }

@@ -84,6 +84,8 @@ public class Main {
 		Level.addTile(0xA6,  new File(baseDir, "tile_A6.bmp")); // presplate Mask
 		Level.addTile(0xA7,  new File(baseDir, "tile_A7.bmp")); // skeleton Mask
 		
+		Level.dumpTiles();
+		
 		
 		Level level = Level.load(new File("levels/level1"));
 		

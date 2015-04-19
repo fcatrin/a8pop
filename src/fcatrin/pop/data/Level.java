@@ -2,9 +2,12 @@ package fcatrin.pop.data;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import fcatrin.pop.Image;
 import fcatrin.pop.views.ScreenView;
@@ -711,6 +714,27 @@ public class Level {
 	
 	private void clearDirtyBlocks() {
 		for(int i=0; i<dirtyBlocks.length; i++) dirtyBlocks[i] = true;
+	}
+
+	public static void dumpTiles() throws IOException {
+		for(Entry<Integer, Image> tileEntry : tiles.entrySet()) {
+			writeTile(tileEntry.getKey(), tileEntry.getValue());
+			break;
+		}
+	}
+
+	private static void writeTile(Integer index, Image tile) throws IOException {
+		String fileName = String.format("tile_%2x.pic", index);
+		int data[] = tile.getAtariData();
+		
+		File file = new File("asm/images/dungeon/" + fileName);
+		FileOutputStream fos = new FileOutputStream(file);
+		fos.write((byte)((tile.width+7)/8));
+		fos.write((byte)tile.height);
+		for(int value : data) {
+			fos.write((byte)value);
+		}
+		fos.close();
 	}
 	
 	
