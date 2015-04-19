@@ -153,12 +153,12 @@ public class Image {
 			for(int x=0; x<width; x++) {
 				if (x % 4 == 0) {
 					value = 0;
-					rot = 3;
+					rot = 6;
 				}
 				int tmp = data[row * width + x] << rot;
 				value |= tmp;
 				result[row*byteWidth + x/4] = value;
-				rot--;
+				rot-=2;
 			}
 		}
 		return result;

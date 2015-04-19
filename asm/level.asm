@@ -37,10 +37,17 @@ copyTileScan
 		iny
 		lda (tileIndex),y
 		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
 		
 		clc
 		lda tileIndex
-		adc #2
+		adc #4
 		sta tileIndex
 		lda tileIndex+1
 		adc #0
