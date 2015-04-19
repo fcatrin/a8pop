@@ -36,8 +36,12 @@ start
 copyBlock		
 		ldy #0
 copyStrip		
-		lda (206),y
+		lda testBuffer
 		sta (210),y
+		iny
+		lda testBuffer+1
+		sta (210),y
+		
 		iny
 		cpy #8
 		bne copyStrip
