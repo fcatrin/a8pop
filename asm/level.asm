@@ -265,7 +265,7 @@ drawTileMasked
 		sta tileWidth
 		iny
 		lda (tileIndex),y
-		pha ; save height for later
+		sta tileHeight
 		
 		asl
 		tax
@@ -277,6 +277,21 @@ drawTileMasked
 		sbc heightLookup+1,x
 		sta vramIndex+1
 		
+		ldy #1
+		lda (maskIndex), y
+		sec
+		sbc tileHeight
+		sta tileMaskDiff		; tileMaskDiff = tileHeight - maskHeight
+		bmi tileMaskShorter
+		asl						; maskIndex += tileMaskDiff*4
+		asl
+		clc
+		adc maskIndex
+		sta maskIndex
+		lda maskIndex+1
+		adc #0
+		sta maskIndex+1
+tileMaskShorter		
 		clc
 		lda tileIndex
 		adc #2
@@ -293,11 +308,27 @@ drawTileMasked
 		adc #0
 		sta maskIndex+1
 		
-		pla
-		tax
+		ldx tileHeight
 		
 copyTileMaskedScan		
 		ldy #0
+		lda tileMaskDiff
+		cmp #0
+		bpl copyWithMask
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		jmp copyNextScanMask
+copyWithMask		
 		lda (vramIndex),y
 		and (maskIndex),y
 		ora (tileIndex),y
@@ -318,6 +349,8 @@ copyTileMaskedScan
 		ora (tileIndex),y
 		sta (vramIndex),y
 		iny
+copyNextScanMask
+		inc tileMaskDiff
 		
 		clc
 		lda tileIndex
@@ -374,6 +407,7 @@ clearLastBlock
 		rts
 
 tileWidth 	.byte 0
+tileMaskDiff .byte 0
 
 ; DATA
 
@@ -388,7 +422,7 @@ piecea	.byte $00, $01, $00, $07, $00, $00, $00, $00, $00, $00, $00, $00, $00, $0
 pieceb	.byte $00, $02, $00, $08, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		.byte $00, $00, $00, $51, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
-maska	.byte $00, $03, $00, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+maska	.byte $00, $03, $00, $A4, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		.byte $00, $00, $00, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
 maskb	.byte $00, $04, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -397,6 +431,10 @@ maskb	.byte $00, $04, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 testmap .byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 		.byte 19, 19, 1, 3, 0, 20, 20, 20, 20,20
 		.byte 20, 20, 20, 20, 14, 3, 11, 1, 1, 20
+
+xtestmap .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		.byte 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
 
 render_piecea 
 		.rept tiles_per_screen
