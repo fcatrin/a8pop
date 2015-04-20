@@ -5,6 +5,7 @@ COLOR0 = 708
 COLOR1 = 709
 COLOR2 = 710
 
+maskIndex = 208
 tileIndex = 210
 vramIndex = 212
 
@@ -58,6 +59,7 @@ renderNextBlock
 		sta vramOffset
 		lda render_pieceb_offset+1,y
 		sta vramOffset+1
+		ldy render_maskb,x
 		lda render_pieceb,x
 		jsr drawTile
 		
@@ -67,6 +69,7 @@ renderNextBlock
 		sta vramOffset
 		lda render_piecea_offset+1,y
 		sta vramOffset+1
+		ldy render_maska,x
 		lda render_piecea,x
 		jsr drawTile
 		
@@ -109,6 +112,8 @@ preRenderNextBlock
 		ldx preRenderBlockDst
 		lda piecea,y				; write piecea, pieceb for this block
 		sta render_piecea,x
+		lda maska,y
+		sta render_maska,x
 		
 		lda preRenderCols
 		cmp #0
@@ -160,6 +165,9 @@ preRenderLastCol
 drawTile
 		cmp #0
 		beq drawTileEnd
+		
+		cpy #0
+		bne drawTileMasked		; use slower version with masking
 		
 		asl
 		tax
@@ -230,7 +238,116 @@ copyTileScan
 		dex
 		bne copyTileScan
 drawTileEnd		
-		rts		
+		rts
+		
+		
+; draw tile using mask
+; A = tile
+; Y = mask		
+drawTileMasked
+		asl
+		tax
+		
+		lda tiles,x
+		sta tileIndex
+		lda tiles+1,x
+		sta tileIndex+1
+		
+		tya
+		asl
+		tax
+		lda tiles,x
+		sta maskIndex
+		lda tiles+1,x
+		sta maskIndex+1
+		ldy #0
+		lda (tileIndex),y
+		sta tileWidth
+		iny
+		lda (tileIndex),y
+		pha ; save height for later
+		
+		asl
+		tax
+		sec
+		lda vramOffset
+		sbc heightLookup,x
+		sta vramIndex
+		lda vramOffset+1
+		sbc heightLookup+1,x
+		sta vramIndex+1
+		
+		clc
+		lda tileIndex
+		adc #2
+		sta tileIndex
+		lda tileIndex+1
+		adc #0
+		sta tileIndex+1
+		
+		clc
+		lda maskIndex
+		adc #2
+		sta maskIndex
+		lda maskIndex+1
+		adc #0
+		sta maskIndex+1
+		
+		pla
+		tax
+		
+copyTileMaskedScan		
+		ldy #0
+		lda (vramIndex),y
+		and (maskIndex),y
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (vramIndex),y
+		and (maskIndex),y
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (vramIndex),y
+		and (maskIndex),y
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (vramIndex),y
+		and (maskIndex),y
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+		
+		clc
+		lda tileIndex
+		adc #4
+		sta tileIndex
+		lda tileIndex+1
+		adc #0
+		sta tileIndex+1
+		
+		clc
+		lda maskIndex
+		adc #4
+		sta maskIndex
+		lda maskIndex+1
+		adc #0
+		sta maskIndex+1
+		
+		clc
+		lda vramIndex
+		adc #40
+		sta vramIndex
+		lda vramIndex+1
+		adc #0
+		sta vramIndex+1
+		dex
+		bne copyTileMaskedScan
+drawTileMaskedEnd		
+		rts
+
+
 
 clearScreen
 		lda #<vram
@@ -267,6 +384,8 @@ blockOffset .word 0, 0, 10, 20
 
 piecea .byte 0, 1
 pieceb .byte 0, 2
+maska  .byte 0, 3
+maskb  .byte 0, 4
 
 testmap .byte 0, 0, 0, 0, 0, 0, 0, 1, 1, 1
 		.byte 0, 0, 0, 0, 1, 1, 1, 0, 0, 0
@@ -277,12 +396,21 @@ render_piecea
 		.byte 0
 		.endr
 
+render_maska 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+
 render_piecea_offset 
 		.rept tiles_per_screen
 		.word 0
 		.endr
 
 render_pieceb 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+render_maskb 
 		.rept tiles_per_screen
 		.byte 0
 		.endr
