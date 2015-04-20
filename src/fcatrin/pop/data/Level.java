@@ -719,7 +719,6 @@ public class Level {
 	public static void dumpTiles() throws IOException {
 		for(Entry<Integer, Image> tileEntry : tiles.entrySet()) {
 			writeTile(tileEntry.getKey(), tileEntry.getValue());
-			break;
 		}
 	}
 
