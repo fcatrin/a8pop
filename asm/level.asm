@@ -29,7 +29,7 @@ pieceb .byte 0, 2
 
 
 start
-		lda #dungeon_color0
+		lda #dungeon_color0		; setup colors
 		sta COLOR0
 		lda #dungeon_color1
 		sta COLOR1
@@ -37,15 +37,15 @@ start
 		sta COLOR2
 
 
-		lda #<displayList
+		lda #<displayList		; setup display list
 		sta SDLSTL
 		
 		lda #>displayList
 		sta SDLSTL+1
 		
-		ldx #6				; row
+		ldx #6					; start in third row
 		
-		clc
+		clc						; set vramOffset for row
 		lda vramOffsets,x
 		adc #<vram
 		sta vramOffset
@@ -55,7 +55,7 @@ start
 		
 		
 		lda #1
-		jsr drawTile
+		jsr drawTileA
 		
 		clc
 		lda vramOffset
@@ -69,6 +69,25 @@ start
 		jsr drawTile
 		
 halt	jmp halt		
+
+drawTileA
+		tax
+		clc
+		lda vramOffset
+		pha
+		sbc #scanbytes*3
+		sta vramOffset
+		lda vramOffset+1
+		pha
+		sbc #0
+		sta vramOffset+1
+		txa
+		jsr drawTile
+		pla
+		sta vramOffset+1
+		pla
+		sta vramOffset
+		rts
 
 ; draw a tile on screen (STA method)
 ; A = tile number
