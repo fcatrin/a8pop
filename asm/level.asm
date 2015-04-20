@@ -109,8 +109,13 @@ preRenderNextBlock
 		ldx preRenderBlockDst
 		lda piecea,y				; write piecea, pieceb for this block
 		sta render_piecea,x
+		
+		lda preRenderCols
+		cmp #0
+		beq preRenderLastCol
+		
 		lda pieceb,y
-		sta render_pieceb,x
+		sta render_pieceb+1,x
 		
 		txa								; write offsets. X = offset index
 		asl
@@ -128,12 +133,13 @@ preRenderNextBlock
 		lda vramOffset
 		adc #4
 		sta vramOffset
-		sta render_pieceb_offset,x
+		sta render_pieceb_offset+2,x
 		lda vramOffset+1
 		adc #0
 		sta vramOffset+1
-		sta render_pieceb_offset+1,x
+		sta render_pieceb_offset+3,x
 		
+preRenderLastCol		
 		inc preRenderBlockSrc
 		inc preRenderBlockDst
 		dec preRenderCols
