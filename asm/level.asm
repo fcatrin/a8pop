@@ -47,15 +47,6 @@ start
 		jsr preRenderMap
 		
 		ldx #0
-		stx renderBlockNumber
-				
-renderNextBlock		
-		txa
-		asl
-		tay
-		sty renderBlockOffset
-
-		ldx #0
 		ldy #0
 drawNextC		
 		stx renderBlockNumber
@@ -148,21 +139,21 @@ preRenderNextBlock
 		lda testmap,x
 		tay
 		ldx preRenderBlockDst
-		lda piecea,y				; write piecea, pieceb for this block
+		lda piecea,y				; write piecea, maska for this block
 		sta render_piecea,x
 		lda maska,y
 		sta render_maska,x
 		
-		lda preRenderCols
+		lda preRenderCols			; last column dont need pieceb and piecec (all pieces to the left)
 		cmp #1
 		beq skipPieceLeft
 		
-		lda pieceb,y
+		lda pieceb,y				; write pieceb, maskb for this block
 		sta render_pieceb+1,x
 		lda maskb,y
 		sta render_maskb+1,x
 		
-		lda preRenderCols
+		lda preRenderCols			; write piecec for this block only in rows 2 & 3
 		cmp #20
 		bpl skipPieceLeft
 		lda piecec,y
@@ -235,7 +226,7 @@ validTile
 		sta tileWidth
 		iny
 		lda (tileIndex),y
-		pha ; save height for later
+		sta tileHeight
 		
 		asl
 		tax
@@ -255,8 +246,7 @@ validTile
 		adc #0
 		sta tileIndex+1
 		
-		pla
-		tax
+		ldx tileHeight
 		
 copyTileScan		
 		ldy #0
@@ -277,17 +267,16 @@ copyTileScan
 		lda tileIndex
 		adc #4
 		sta tileIndex
-		lda tileIndex+1
-		adc #0
-		sta tileIndex+1
-		
+		bcc incVRAMIndex
+		inc tileIndex+1
 		clc
+incVRAMIndex		
 		lda vramIndex
 		adc #40
 		sta vramIndex
-		lda vramIndex+1
-		adc #0
-		sta vramIndex+1
+		bcc evalNextScan
+		inc vramIndex+1
+evalNextScan		
 		dex
 		bne copyTileScan
 drawTileEnd		
@@ -337,26 +326,24 @@ drawTileMasked
 		clc
 		adc maskIndex
 		sta maskIndex
-		lda maskIndex+1
-		adc #0
-		sta maskIndex+1
+		bcc tileMaskShorter
+		inc maskIndex+1
 tileMaskShorter		
 		clc
 		lda tileIndex
 		adc #2
 		sta tileIndex
-		lda tileIndex+1
-		adc #0
-		sta tileIndex+1
-		
+		bcc incMaskIndex
+		inc tileIndex+1
 		clc
+incMaskIndex		
 		lda maskIndex
 		adc #2
 		sta maskIndex
-		lda maskIndex+1
-		adc #0
-		sta maskIndex+1
-		
+		bcc beginCopy
+		inc maskIndex+1
+
+beginCopy		
 		ldx tileHeight
 		
 copyTileMaskedScan		
@@ -375,7 +362,6 @@ copyTileMaskedScan
 		iny
 		lda (tileIndex),y
 		sta (vramIndex),y
-		iny
 		jmp copyNextScanMask
 copyWithMask		
 		lda (vramIndex),y
@@ -397,17 +383,15 @@ copyWithMask
 		and (maskIndex),y
 		ora (tileIndex),y
 		sta (vramIndex),y
-		iny
 copyNextScanMask
-
 		clc
 		lda tileIndex
 		adc #4
 		sta tileIndex
-		lda tileIndex+1
-		adc #0
-		sta tileIndex+1
+		bcc checkTileMaskDiff
+		inc tileIndex+1
 		
+checkTileMaskDiff		
 		lda tileMaskDiff
 		cmp #0
 		bmi skipMaskScanline
@@ -416,9 +400,8 @@ copyNextScanMask
 		lda maskIndex
 		adc #4
 		sta maskIndex
-		lda maskIndex+1
-		adc #0
-		sta maskIndex+1
+		bcc skipMaskScanLine
+		inc maskIndex+1
 
 skipMaskScanline
 		inc tileMaskDiff
@@ -427,9 +410,9 @@ skipMaskScanline
 		lda vramIndex
 		adc #40
 		sta vramIndex
-		lda vramIndex+1
-		adc #0
-		sta vramIndex+1
+		bcc prepareNextMaskedScan
+		inc vramIndex+1
+prepareNextMaskedScan		
 		dex
 		bne copyTileMaskedScan
 drawTileMaskedEnd		
