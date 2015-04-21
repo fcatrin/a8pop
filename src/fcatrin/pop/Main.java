@@ -20,6 +20,9 @@ public class Main {
 		SWTUtils.display = display;
 		
 		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
+		for(int i=0; i<graphics.length; i++) {
+			AppleImageDumper.dump(graphics[i], i);
+		}
 		/*
 		graphics = new Image[] {
 				Image.loadBMP(new File("images/dungeon/tile_07.bmp"))		
