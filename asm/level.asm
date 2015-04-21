@@ -19,7 +19,7 @@ scanbytes = 40
 
 tileBaseOffset = 3*40
 tileHeight = 63
-tileScans = tileHeight*40
+tileScanBytes = tileHeight*40
 
 tiles_per_line		= 10
 tiles_per_screen	= 3*tiles_per_line
@@ -54,7 +54,32 @@ renderNextBlock
 		asl
 		tay
 		sty renderBlockOffset
-		
+
+		ldx #0
+		ldy #0
+drawNextC		
+		stx renderBlockNumber
+		sty renderBlockOffset
+		lda render_piecec_offset,y
+		sta vramOffset
+		lda render_piecec_offset+1,y
+		sta vramOffset+1
+		ldy #0
+		lda render_piecec,x
+		jsr drawTile
+		ldy renderBlockOffset
+		iny
+		iny
+		ldx renderBlockNumber
+		inx
+		cpx #tiles_per_screen
+		bne drawNextC
+
+		ldx #0
+		ldy #0		
+drawNextB		
+		stx renderBlockNumber
+		sty renderBlockOffset
 		lda render_pieceb_offset,y
 		sta vramOffset
 		lda render_pieceb_offset+1,y
@@ -62,9 +87,19 @@ renderNextBlock
 		ldy render_maskb,x
 		lda render_pieceb,x
 		jsr drawTile
-		
-		ldx renderBlockNumber
 		ldy renderBlockOffset
+		iny
+		iny
+		ldx renderBlockNumber
+		inx
+		cpx #tiles_per_screen
+		bne drawNextB
+		
+		ldx #0
+		ldy #0		
+drawNextA		
+		stx renderBlockNumber
+		sty renderBlockOffset
 		lda render_piecea_offset,y
 		sta vramOffset
 		lda render_piecea_offset+1,y
@@ -73,10 +108,13 @@ renderNextBlock
 		lda render_piecea,x
 		jsr drawTile
 		
-		inc renderBlockNumber
+		ldy renderBlockOffset
+		iny
+		iny
 		ldx renderBlockNumber
+		inx
 		cpx #tiles_per_screen
-		bne renderNextBlock
+		bne drawNextA
 		
 halt	jmp halt		
 
@@ -116,12 +154,19 @@ preRenderNextBlock
 		sta render_maska,x
 		
 		lda preRenderCols
-		cmp #0
-		beq preRenderLastCol
+		cmp #1
+		beq skipPieceLeft
 		
 		lda pieceb,y
 		sta render_pieceb+1,x
 		
+		lda preRenderCols
+		cmp #20
+		bpl skipPieceLeft
+		lda piecec,y
+		sta render_piecec+10,x
+		
+skipPieceLeft		
 		txa								; write offsets. X = offset index
 		asl
 		tax
@@ -134,27 +179,35 @@ preRenderNextBlock
 		sbc #0
 		sta render_piecea_offset+1,x
 		
+		lda preRenderCols
+		cmp #20
+		bpl preRenderNextLine
+				
 		clc								; offsetB = offset + 4 bytes (next tile col)
-		lda vramOffset
+		lda vramOffset					; offsetC = offsetB (for now)
 		adc #4
 		sta vramOffset
 		sta render_pieceb_offset+2,x
+		sta render_piecec_offset,x
 		lda vramOffset+1
 		adc #0
 		sta vramOffset+1
-		sta render_pieceb_offset+3,x
+		sta render_pieceb_offset+1,x
+		sta render_piecec_offset+1,x
 		
-preRenderLastCol		
 		inc preRenderBlockSrc
 		inc preRenderBlockDst
 		dec preRenderCols
-		bne preRenderNextBlock
-		
+		beq preRenderNextLine
+		jmp preRenderNextBlock
+preRenderNextLine		
 		ldx preRenderRow
 		dex
 		dex
 		stx preRenderRow
-		bne preRenderNextRow
+		beq preRenderEnd
+		jmp preRenderNextRow
+preRenderEnd		
 		rts
 
 
@@ -164,18 +217,16 @@ preRenderLastCol
 
 drawTile
 		cmp #0
-		beq drawTileEnd
+		bne validTile
+		rts
+validTile
 		
 		cpy #0
 		bne drawTileMasked		; use slower version with masking
-		
-		asl
-		tax
-		
-		lda tiles,x
+
+		jsr getTileAddress
 		sta tileIndex
-		lda tiles+1,x
-		sta tileIndex+1
+		sty tileIndex+1
 		
 		ldy #0
 		lda (tileIndex),y
@@ -245,21 +296,17 @@ drawTileEnd
 ; A = tile
 ; Y = mask		
 drawTileMasked
-		asl
-		tax
+		sty tileMaskTemp
 		
-		lda tiles,x
+		jsr getTileAddress
 		sta tileIndex
-		lda tiles+1,x
-		sta tileIndex+1
+		sty tileIndex+1
 		
-		tya
-		asl
-		tax
-		lda tiles,x
+		lda tileMaskTemp
+		jsr getTileAddress
 		sta maskIndex
-		lda tiles+1,x
-		sta maskIndex+1
+		sty maskIndex+1
+		
 		ldy #0
 		lda (tileIndex),y
 		sta tileWidth
@@ -380,6 +427,19 @@ copyNextScanMask
 drawTileMaskedEnd		
 		rts
 
+; Return tile address in a,y
+getTileAddress
+		asl
+		bcc getTileAddressNear
+		tax
+		lda tiles+256,x
+		ldy tiles+257,x
+		rts
+getTileAddressNear
+		tax
+		lda tiles,x
+		ldy tiles+1,x
+		rts		
 
 
 clearScreen
@@ -406,12 +466,13 @@ clearLastBlock
 		bne clearLastBlock
 		rts
 
-tileWidth 	.byte 0
-tileMaskDiff .byte 0
+tileWidth 		.byte 0
+tileMaskDiff	.byte 0
+tileMaskTemp	.byte 0
 
 ; DATA
 
-vramOffsets .word tileBaseOffset, tileBaseOffset+tileScans, tileBaseOffset+tileScans*2,tileBaseOffset+tileScans*3
+vramOffsets .word tileBaseOffset, tileBaseOffset+tileScanBytes, tileBaseOffset+tileScanBytes*2,tileBaseOffset+tileScanBytes*3
 vramOffset	.word 0
 
 blockOffset .word 0, 0, 10, 20
@@ -420,13 +481,16 @@ piecea	.byte $00, $01, $00, $07, $00, $00, $00, $00, $00, $00, $00, $00, $00, $0
 		.byte $00, $00, $00, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	
 pieceb	.byte $00, $02, $00, $08, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-		.byte $00, $00, $00, $51, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+		.byte $00, $00, $00, $51, $84, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
 maska	.byte $00, $03, $00, $A4, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		.byte $00, $00, $00, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
 maskb	.byte $00, $04, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		.byte $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+		
+piecec	.byte $00, $00, $00, $09, $0c, $00, $00, $9f, $00, $1d, $00, $00, $9f, $00, $00, $00
+		.byte $4f, $50, $00, $00, $85, $00, $00, $93, $94, $00, $00, $00, $00, $00, $00, $00
 
 testmap .byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 		.byte 19, 19, 1, 3, 0, 20, 20, 20, 20,20
@@ -434,7 +498,7 @@ testmap .byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 
 xtestmap .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 		.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		.byte 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
+		.byte 0,0, 0, 0, 0, 0, 0, 0, 0, 20
 
 render_piecea 
 		.rept tiles_per_screen
@@ -463,6 +527,16 @@ render_pieceb_offset
 		.rept tiles_per_screen
 		.word 0
 		.endr
+
+render_piecec 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+render_piecec_offset 
+		.rept tiles_per_screen
+		.word 0
+		.endr
+
 		
 renderBlockNumber	.byte 0
 renderBlockOffset	.byte 0
@@ -512,7 +586,7 @@ tiles   .word      0, tile01, tile02, tile03, tile04, tile05, tile06, tile07
 		.word      0,      0, tile6a,      0, tile6c,      0,      0,      0
 		.word      0,      0,      0,      0,      0,      0,      0,      0
 		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0, tile83, tile84, tile86, tile87,      0
+		.word      0,      0,      0, tile83, tile84, tile85, tile86, tile87
 		.word      0,      0,      0,      0,      0,      0,      0,      0
 		.word      0,      0,      0,      0,      0,      0, tile97,      0
 		.word      0,      0,      0,      0,      0,      0,      0,      0
