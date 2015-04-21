@@ -19,9 +19,10 @@ public class Main {
 		display = new Display();
 		SWTUtils.display = display;
 		
-		Image[] graphics = dumpGraphics(new File("images/IMG.BGTAB1.DUN"), 0x6000);
+		String imageFileName = "IMG.CHTAB7";
+		Image[] graphics = dumpGraphics(new File("images/" + imageFileName), 0x6000);
 		for(int i=0; i<graphics.length; i++) {
-			AppleImageDumper.dump(graphics[i], i);
+			AppleImageDumper.dump(graphics[i], i, imageFileName);
 		}
 		/*
 		graphics = new Image[] {

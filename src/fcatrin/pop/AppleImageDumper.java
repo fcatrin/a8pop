@@ -16,7 +16,7 @@ public class AppleImageDumper {
 		new Color(0, 0, 200)
 	};
 	
-	public static void dump(Image image, int index) {
+	public static void dump(Image image, int index, String dir) {
 		BufferedImage offscreenImage = new BufferedImage(image.width*7, image.height, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g2 = offscreenImage.createGraphics();
 		
@@ -37,7 +37,6 @@ public class AppleImageDumper {
 				}
 			} while (offset < image.width);
 			
-			int x = pixel.length-1;
 			for(int i=0; i<pixel.length; i++) {
 				boolean even = i % 2 == 0;
 				int v0 = i>0?pixel[i-1]:0;
@@ -65,7 +64,8 @@ public class AppleImageDumper {
 		
 		String fileName = String.format("tile_%03d.png", (index+1));
 		
-		File outputFile = new File("apple/" + fileName);
+		File outputFile = new File("apple/" + dir + "/" + fileName);
+		outputFile.getParentFile().mkdirs();
 		try {
 			ImageIO.write(offscreenImage, "bmp", outputFile);
 		} catch (IOException e) {
