@@ -26,6 +26,10 @@ tiles_per_screen	= 3*tiles_per_line
 
 * = $600
 
+frame0 .byte 0
+frame1 .byte 0
+frame2 .byte 0
+
 start
 
 		lda #dungeon_color0		; setup colors
@@ -44,7 +48,11 @@ start
 		
 		jsr clearScreen
 		
+		lda 20
+		sta frame0
 		jsr preRenderMap
+		lda 20
+		sta frame1
 		
 		ldx #0
 		ldy #0
@@ -106,6 +114,8 @@ drawNextA
 		inx
 		cpx #tiles_per_screen
 		bne drawNextA
+		lda 20
+		sta frame2
 		
 halt	jmp halt		
 
