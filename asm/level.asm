@@ -47,6 +47,7 @@ start
 		sta SDLSTL+1
 		
 		jsr clearScreen
+		jsr genAutoMaskTable
 		
 		lda 20
 		sta frame0
@@ -466,6 +467,8 @@ clearLastBlock
 		dey
 		bne clearLastBlock
 		rts
+		
+		.include "mask.asm"		
 
 tileWidth 		.byte 0
 tileHeight		.byte 0
