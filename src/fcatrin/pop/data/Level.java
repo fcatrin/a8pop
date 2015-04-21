@@ -728,7 +728,7 @@ public class Level {
 		
 		File file = new File("asm/images/dungeon/" + fileName);
 		FileOutputStream fos = new FileOutputStream(file);
-		fos.write((byte)((tile.width+7)/8));
+		fos.write((byte)((tile.width+3)/4));
 		fos.write((byte)tile.height);
 		for(int value : data) {
 			fos.write((byte)value);

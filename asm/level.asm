@@ -18,8 +18,8 @@ dungeon_color2 = $0C
 scanbytes = 40
 
 tileBaseOffset = 3*40
-tileHeight = 63
-tileScanBytes = tileHeight*40
+stdTileHeight = 63
+tileScanBytes = stdTileHeight*40
 
 tiles_per_line		= 10
 tiles_per_screen	= 3*tiles_per_line
@@ -159,6 +159,8 @@ preRenderNextBlock
 		
 		lda pieceb,y
 		sta render_pieceb+1,x
+		lda maskb,y
+		sta render_maskb+1,x
 		
 		lda preRenderCols
 		cmp #20
@@ -397,8 +399,7 @@ copyWithMask
 		sta (vramIndex),y
 		iny
 copyNextScanMask
-		inc tileMaskDiff
-		
+
 		clc
 		lda tileIndex
 		adc #4
@@ -407,6 +408,10 @@ copyNextScanMask
 		adc #0
 		sta tileIndex+1
 		
+		lda tileMaskDiff
+		cmp #0
+		bmi skipMaskScanline
+		
 		clc
 		lda maskIndex
 		adc #4
@@ -414,6 +419,9 @@ copyNextScanMask
 		lda maskIndex+1
 		adc #0
 		sta maskIndex+1
+
+skipMaskScanline
+		inc tileMaskDiff
 		
 		clc
 		lda vramIndex
@@ -467,6 +475,7 @@ clearLastBlock
 		rts
 
 tileWidth 		.byte 0
+tileHeight		.byte 0
 tileMaskDiff	.byte 0
 tileMaskTemp	.byte 0
 
@@ -487,7 +496,7 @@ maska	.byte $00, $03, $00, $A4, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		.byte $00, $00, $00, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
 maskb	.byte $00, $04, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-		.byte $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+		.byte $00, $00, $04, $04, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
 piecec	.byte $00, $00, $00, $09, $0c, $00, $00, $9f, $00, $1d, $00, $00, $9f, $00, $00, $00
 		.byte $4f, $50, $00, $00, $85, $00, $00, $93, $94, $00, $00, $00, $00, $00, $00, $00
@@ -497,8 +506,8 @@ testmap .byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 		.byte 20, 20, 20, 20, 14, 3, 11, 1, 1, 20
 
 xtestmap .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		.byte 0,0, 0, 0, 0, 0, 0, 0, 0, 20
+		.byte 19, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		.byte 20,0, 0, 0, 0, 0, 0, 0, 0, 0
 
 render_piecea 
 		.rept tiles_per_screen
