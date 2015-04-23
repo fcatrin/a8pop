@@ -115,6 +115,28 @@ drawNextA
 		inx
 		cpx #tiles_per_screen
 		bne drawNextA
+		
+		
+		ldx #0
+		ldy #0		
+drawNextD		
+		stx renderBlockNumber
+		sty renderBlockOffset
+		lda render_pieced_offset,y
+		sta vramOffset
+		lda render_pieced_offset+1,y
+		sta vramOffset+1
+		ldy #0
+		lda render_pieced,x
+		jsr drawTile
+		
+		ldy renderBlockOffset
+		iny
+		iny
+		ldx renderBlockNumber
+		inx
+		cpx #tiles_per_screen
+		bne drawNextD		
 		lda 20
 		sta frame2
 		
@@ -154,6 +176,8 @@ preRenderNextBlock
 		sta render_piecea,x
 		lda maska,y
 		sta render_maska,x
+		lda pieced,y
+		sta render_pieced,x
 		
 		lda preRenderCols			; last column dont need pieceb and piecec (all pieces to the left)
 		cmp #1
@@ -177,9 +201,11 @@ skipPieceLeft
 		
 		sec								; offsetA = offset - 3 scanlines
 		lda vramOffset
+		sta render_pieced_offset,x
 		sbc #3*scanbytes
 		sta render_piecea_offset,x
 		lda vramOffset+1
+		sta render_pieced_offset+1,x
 		sbc #0
 		sta render_piecea_offset+1,x
 		
@@ -496,6 +522,10 @@ maskb	.byte $00, $04, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
 piecec	.byte $00, $00, $00, $09, $0c, $00, $00, $9f, $00, $1d, $00, $00, $9f, $00, $00, $00
 		.byte $4f, $50, $00, $00, $85, $00, $00, $93, $94, $00, $00, $00, $00, $00, $00, $00
+		
+pieced	.byte $00, $15, $15, $15, $15, $18, $19, $16, $15, $00, $15, $15, $17, $15, $15, $4c
+		.byte $15, $15, $15, $15, $86, $15, $15, $15, $15, $15, $ab, $00, $00, $00, $00, $00
+		
 
 testmap .byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 		.byte 19, 19, 1, 3, 0, 20, 20, 20, 20,20
@@ -542,6 +572,14 @@ render_piecec_offset
 		.word 0
 		.endr
 
+render_pieced 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+render_pieced_offset 
+		.rept tiles_per_screen
+		.word 0
+		.endr
 		
 renderBlockNumber	.byte 0
 renderBlockOffset	.byte 0
