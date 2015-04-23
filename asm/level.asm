@@ -136,7 +136,29 @@ drawNextD
 		ldx renderBlockNumber
 		inx
 		cpx #tiles_per_screen
-		bne drawNextD		
+		bne drawNextD	
+		
+		ldx #0
+		ldy #0		
+drawNextF		
+		stx renderBlockNumber
+		sty renderBlockOffset
+		lda render_piecef_offset,y
+		sta vramOffset
+		lda render_piecef_offset+1,y
+		sta vramOffset+1
+		ldy render_maskf,x
+		lda render_piecef,x
+		jsr drawTile
+		
+		ldy renderBlockOffset
+		iny
+		iny
+		ldx renderBlockNumber
+		inx
+		cpx #tiles_per_screen
+		bne drawNextF		
+			
 		lda 20
 		sta frame2
 		
@@ -171,13 +193,17 @@ preRenderNextBlock
 		ldx preRenderBlockSrc		; load block number from map
 		lda testmap,x
 		tay
-		ldx preRenderBlockDst
+		ldx preRenderBlockDst		; y = block id, x = tile position
 		lda piecea,y				; write piecea, maska for this block
 		sta render_piecea,x
 		lda maska,y
 		sta render_maska,x
 		lda pieced,y
 		sta render_pieced,x
+		lda piecef,y
+		sta render_piecef,x
+		lda maskf,y
+		sta render_maskf,x
 		
 		lda preRenderCols			; last column dont need pieceb and piecec (all pieces to the left)
 		cmp #1
@@ -204,10 +230,12 @@ skipPieceLeft
 		sta render_pieced_offset,x
 		sbc #3*scanbytes
 		sta render_piecea_offset,x
+		sta render_piecef_offset,x
 		lda vramOffset+1
 		sta render_pieced_offset+1,x
 		sbc #0
 		sta render_piecea_offset+1,x
+		sta render_piecef_offset+1,x
 		
 		lda preRenderCols
 		cmp #20
@@ -318,12 +346,15 @@ evalNextScan
 		bne copyTileScan
 drawTileEnd		
 		rts
-		
-		
+
 ; draw tile using mask
 ; A = tile
 ; Y = mask		
 drawTileMasked
+		cpy #255
+		bne drawTileRegularMask
+		jmp drawTileAutoMasked
+drawTileRegularMask		
 		sty tileMaskTemp
 		
 		jsr getTileAddress
@@ -455,6 +486,90 @@ prepareNextMaskedScan
 drawTileMaskedEnd		
 		rts
 
+; draw tile in A using automasking
+drawTileAutoMasked
+		jsr getTileAddress
+		sta tileIndex
+		sty tileIndex+1
+		
+		ldy #0
+		lda (tileIndex),y
+		sta tileWidth
+		iny
+		lda (tileIndex),y
+		sta tileHeight
+		
+		asl
+		tax
+		sec
+		lda vramOffset
+		sbc heightLookup,x
+		sta vramIndex
+		lda vramOffset+1
+		sbc heightLookup+1,x
+		sta vramIndex+1
+		
+		clc
+		lda tileIndex
+		adc #2
+		sta tileIndex
+		bcc copyTileAutoMaskedScan
+		inc tileIndex+1
+	
+copyTileAutoMaskedScan		
+		ldy #0
+		lda (tileIndex),y
+		tax
+		lda (vramIndex),y
+		and autoMaskTable,x
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+
+		lda (tileIndex),y
+		tax
+		lda (vramIndex),y
+		and autoMaskTable,x
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+
+		lda (tileIndex),y
+		tax
+		lda (vramIndex),y
+		and autoMaskTable,x
+		ora (tileIndex),y
+		sta (vramIndex),y
+		iny
+
+		lda (tileIndex),y
+		tax
+		lda (vramIndex),y
+		and autoMaskTable,x
+		ora (tileIndex),y
+		sta (vramIndex),y
+
+		clc
+		lda tileIndex
+		adc #4
+		sta tileIndex
+		bcc nextScanAutoMask
+		inc tileIndex+1
+		
+		clc
+nextScanAutoMask		
+		lda vramIndex
+		adc #40
+		sta vramIndex
+		bcc prepareNextAutoMaskedScan
+		inc vramIndex+1
+prepareNextAutoMaskedScan		
+		dec tileHeight
+		bne copyTileAutoMaskedScan
+		rts
+
+
+
 ; Return tile address in a,y
 getTileAddress
 		asl
@@ -526,14 +641,19 @@ piecec	.byte $00, $00, $00, $09, $0c, $00, $00, $9f, $00, $1d, $00, $00, $9f, $0
 pieced	.byte $00, $15, $15, $15, $15, $18, $19, $16, $15, $00, $15, $15, $17, $15, $15, $4c
 		.byte $15, $15, $15, $15, $86, $15, $15, $15, $15, $15, $ab, $00, $00, $00, $00, $00
 		
+piecef	.byte $00, $00, $00, $45, $46, $00, $00, $46, $48, $49, $87, $00, $46, $0f, $13, $00
+		.byte $00, $00, $00, $00, $83, $00, $00, $00, $00, $a8, $00, $ae, $ae, $ae, $00, $00
+
+maskf	.byte $00, $00, $00, $a4, $00, $00, $00, $00, $00, $00, $a5, $00, $00, $00, $ff, $00
+		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00		
 
 testmap .byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 		.byte 19, 19, 1, 3, 0, 20, 20, 20, 20,20
 		.byte 20, 20, 20, 20, 14, 3, 11, 1, 1, 20
 
 xtestmap .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		.byte 19, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		.byte 20,0, 0, 0, 0, 0, 0, 0, 0, 0
+		.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		.byte 14,0, 0, 0, 0, 0, 0, 0, 0, 0
 
 render_piecea 
 		.rept tiles_per_screen
@@ -580,6 +700,19 @@ render_pieced_offset
 		.rept tiles_per_screen
 		.word 0
 		.endr
+		
+render_piecef 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+render_maskf 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+render_piecef_offset 
+		.rept tiles_per_screen
+		.word 0
+		.endr		
 		
 renderBlockNumber	.byte 0
 renderBlockOffset	.byte 0

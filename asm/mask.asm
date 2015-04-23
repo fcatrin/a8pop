@@ -16,6 +16,7 @@ nextAutoMask
 		and #$55
 		asl
 		ora autoMaskBuffer
+		eor #255
 		sta autoMaskTable,x
 		inx
 		bne nextAutoMask
