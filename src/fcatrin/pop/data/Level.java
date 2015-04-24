@@ -189,13 +189,22 @@ public class Level {
 		}
 		return objid;
 	}
+
+	public byte[] getScreenExtra(int screen) {
+		int base = screen * TILES_PER_SCREEN;
+		byte objid[] = new byte[TILES_PER_SCREEN];
+		for(int i=0; i<TILES_PER_SCREEN; i++) {
+			objid[i] = (byte)(type[i+base] & 0xFF);
+		}
+		return objid;
+	}
 	
 	public void debugScreen(int screen) {
-		byte objids[] = getScreen(screen);
+		byte objids[] = getScreenExtra(screen);
 		for(int row = 0; row<ROWS; row++) {
 			String s = "";
 			for(int i=0; i<TILES_PER_ROW; i++) {
-				s+= String.format("%d, ", objids[row*TILES_PER_ROW+i]);
+				s+= String.format("%x, ", objids[row*TILES_PER_ROW+i]);
 			}
 			System.out.println(s);
 		}
