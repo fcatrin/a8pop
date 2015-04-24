@@ -56,7 +56,7 @@ start
 		jsr changeLevel
 		
 		
-		lda #4
+		lda #0
 		sta levelScreen
 		
 		jsr changeScreen
@@ -85,7 +85,7 @@ wait
 		cmp 20
 		bne wait
 		
-halt	jmp halt		
+;halt	jmp halt		
 		
 		inc levelScreen
 		jsr changeScreen
