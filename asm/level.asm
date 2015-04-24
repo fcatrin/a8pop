@@ -1,5 +1,7 @@
 .bank
 
+.include "utilsdef.asm"
+
 SDLSTL = 560
 COLOR0 = 708
 COLOR1 = 709
@@ -8,6 +10,7 @@ COLOR2 = 710
 maskIndex = 208
 tileIndex = 210
 vramIndex = 212
+tileMask = $1F
 
 vramSize = 40*192
 
@@ -47,12 +50,24 @@ start
 		sta SDLSTL+1
 		
 		jsr genAutoMaskTable
+		
+		lda #1
+		sta levelNumber
+		jsr changeLevel
+		
+		
+		lda #1
+		sta levelScreen
+renderAgain
+		
+		jsr changeScreen
+		
 		jsr preRenderMap
+		
 		lda 20
 		sta frame0
 		jsr preRenderOffsets
 
-renderAgain
 		lda #0
 		sta 559
 		sta 54272
@@ -70,6 +85,7 @@ renderAgain
 wait		
 		cmp 20
 		bne wait
+		inc levelScreen
 		jmp renderAgain
 		
 		
@@ -178,7 +194,8 @@ preRenderNextRow
 
 preRenderNextBlock
 		ldx preRenderBlockSrc		; load block number from map
-		lda testmap,x
+		lda screenData,x
+		and #tileMask
 		tay
 		ldx preRenderBlockDst		; y = block id, x = tile position
 		lda piecea,y				; write piecea, maska for this block
@@ -743,9 +760,52 @@ evalNextScanC
 drawTileCEnd	
 		rts
 		
+changeScreen
+		lda levelScreen
+		asl
+		tax
+		lda levelScreenLookup,x
+		sta levelScreenOffset+1
+		lda levelScreenLookup+1,x
+		sta levelScreenOffset+2
+		
+		ldy #0
+levelScreenOffset
+		lda $FFFF,y
+		sta screenData,y
+		iny
+		cpy #levelTilesPerScreen
+		bne levelScreenOffset
+		rts
+		
+changeLevel
+		lda #<levelData
+		sta memcpyDst
+		lda #>levelData
+		sta memcpyDst+1
+		
+		lda levelNumber
+		asl
+		tax
+		lda levelDataOffsets,x
+		sta memcpySrc
+		lda levelDataOffsets+1,x
+		sta memcpySrc+1
+		
+		lda #<levelSize
+		sta memcpyLen
+		lda #>levelSize+1
+		sta memcpyLen+1
+		
+		lda #0
+		sta levelScreen
+		
+		jmp memcpy
+		
 		
 		.include "mask.asm"
 		.include "bgdata.asm"
+		.include "utils.asm"
 
 .bank
 *		= $4000
@@ -763,6 +823,47 @@ displayList
 		.endr 
 		.byte 65
 		.word displayList
+		
+
+levelDataOffsets .word levelData0, levelData1
+		
+levelSize = 2304		
+levelData
+		.rept levelSize
+		.byte
+		.endr
+		
+levelData0 .incbin "../levels/LEVEL0"
+levelData1 .incbin "../levels/LEVEL1"
+
+levelTilesPerScreen = 30
+levelScreens = 24
+levelDescriptors = levelTilesPerScreen*levelScreens
+levelLinks = 256;
+
+levelTypes = levelData
+levelSpecs = levelData + levelDescriptors
+levelLinkMap = levelSpecs + levelDescriptors
+levelLinkLoc = levelLinkMap + levelLinks
+levelMap = levelLinkLoc + levelLinks
+levelInfo = levelMap + levelScreens*4
+
+levelScreenLookup
+		.rept levelScreens
+		.word levelData+([*-levelScreenLookup]/2*levelTilesPerScreen)
+		.endr
+
+levelScreen	.byte 0
+levelNumber	.byte 0
+ 
+
+; origin struct
+;	byte type[] = new byte[DESCRIPTORS];
+;	byte spec[] = new byte[DESCRIPTORS];
+;	byte linkMap[] = new byte[MAX_LINK];
+;	byte linkLoc[] = new byte[MAX_LINK];
+;	byte map[] = new byte[SCREENS*4];
+;	byte info[] = new byte[256];
 
 vram2	= $b000
 vram    = vram2 - (96*40)
