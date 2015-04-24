@@ -56,7 +56,6 @@ renderAgain
 		lda #0
 		sta 559
 		sta 54272
-		;jsr clearScreen
 
 		lda 20
 		sta frame1
@@ -88,15 +87,13 @@ drawNextBlock
 		bne noShortCut
 		jmp noDrawB
 noShortCut
-		lda render_piecec,x
-		beq noDrawC
 		lda render_piecec_offset,y
 		sta vramIndex
 		lda render_piecec_offset+1,y
 		sta vramIndex+1
 		ldy #0
 		lda render_piecec,x
-		jsr drawTile
+		jsr drawTileC
 		ldy renderBlockOffset
 		ldx renderBlockNumber
 noDrawC
@@ -407,6 +404,7 @@ evalNextScan
 drawTileEnd		
 		rts
 
+
 ; draw tile using mask
 ; A = tile
 ; Y = mask		
@@ -628,6 +626,123 @@ clearLastBlock
 		dey
 		bne clearLastBlock
 		rts
+		
+; special drawing for C tile + clearing
+
+drawTileC
+		cmp #0
+		bne clearAndDrawC
+		
+		ldx #stdTileHeight
+clearOnlyNextScanC		
+		ldy #0
+		lda #0
+		sta (vramIndex),y
+		iny
+		sta (vramIndex),y
+		iny
+		sta (vramIndex),y
+		iny
+		sta (vramIndex),y
+		sec
+		lda vramIndex
+		sbc #scanBytes
+		sta vramIndex
+		lda vramIndex+1
+		sbc #0
+		sta vramIndex+1
+		dex
+		bne clearOnlyNextScanC
+		rts
+		
+clearAndDrawC		
+		tax
+		lda tilesL,x
+		sta tileIndex
+		lda tilesH,x
+		sta tileIndex+1
+		
+		ldy #1
+		sec
+		lda #stdTileHeight
+		sbc (tileIndex),y
+		beq tileCIsFullSize
+
+		sta tileHeight
+		lda vramIndex
+		pha
+		lda vramIndex+1
+		pha
+clearNextScanC		
+		sec
+		lda vramIndex
+		sbc #scanBytes
+		sta vramIndex
+		lda vramIndex+1
+		sbc #0
+		sta vramIndex+1
+		
+		lda #0
+		ldy #0
+		sta (vramIndex),y
+		iny
+		sta (vramIndex),y
+		iny
+		sta (vramIndex),y
+		iny
+		sta (vramIndex),y
+		dec tileHeight
+		bne clearNextScanC
+		pla
+		sta vramIndex+1
+		pla
+		sta vramIndex
+		ldy #1
+		
+tileCIsFullSize		
+		lda (tileIndex),y
+		tax
+		clc
+		lda tileIndex
+		adc #2
+		sta tileIndex
+		bcc copyTileCScan
+		inc tileIndex+1
+		
+copyTileCScan
+		ldy #0
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		lda (tileIndex),y
+		sta (vramIndex),y
+		iny
+		
+		clc
+		lda tileIndex
+		adc #4
+		sta tileIndex
+		bcc incVRAMIndexC
+		inc tileIndex+1
+		clc
+incVRAMIndexC		
+		lda vramIndex
+		adc #40
+		sta vramIndex
+		bcc evalNextScanC
+		inc vramIndex+1
+evalNextScanC
+		dex
+		bne copyTileCScan
+drawTileCEnd	
+		rts
+		
 		
 		.include "mask.asm"
 		.include "bgdata.asm"
