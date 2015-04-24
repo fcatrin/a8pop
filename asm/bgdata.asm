@@ -119,28 +119,50 @@ heightLookup
 		.word [*-heightLookup]/2*scanbytes
 		.endr
 
-tiles   .word      0, tile01, tile02, tile03, tile04, tile05, tile06, tile07
-		.word tile08, tile09, tile0a, tile0b, tile0c,      0,      0,      0
-		.word      0,      0,      0, tile13,      0, tile15,      0,      0
-		.word      0, tile19,      0, tile1b,      0,      0, tile1e, tile1f
-		.word tile20, tile21, tile22,      0, tile24,      0, tile26,      0
-		.word tile28,      0, tile2a, tile2b, tile2c, tile2d,      0,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0,      0,      0, tile45, tile46,      0
-		.word      0,      0,      0, tile4b, tile4c, tile4d, tile4e, tile4f
-		.word tile50, tile51,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0, tile6a,      0, tile6c,      0,      0,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0, tile83, tile84, tile85, tile86, tile87
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word      0,      0,      0,      0,      0,      0, tile97,      0
-		.word      0,      0,      0,      0,      0,      0,      0,      0
-		.word tilea0, tilea1, tilea2, tilea3, tilea4, tilea5, tilea6, tilea7
+tilesL  .byte       0, <tile01, <tile02, <tile03, <tile04, <tile05, <tile06, <tile07
+		.byte <tile08, <tile09, <tile0a, <tile0b, <tile0c,       0,       0,       0
+		.byte       0,       0,       0, <tile13,       0, <tile15,       0,       0
+		.byte       0, <tile19,       0, <tile1b,       0,       0, <tile1e, <tile1f
+		.byte <tile20, <tile21, <tile22,       0, <tile24,       0, <tile26,       0
+		.byte <tile28,       0, <tile2a, <tile2b, <tile2c, <tile2d,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0, <tile45, <tile46,       0
+		.byte       0,       0,       0, <tile4b, <tile4c, <tile4d, <tile4e, <tile4f
+		.byte <tile50, <tile51,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0, <tile6a,       0, <tile6c,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0, <tile83, <tile84, <tile85, <tile86, <tile87
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0, <tile97,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte <tilea0, <tilea1, <tilea2, <tilea3, <tilea4, <tilea5, <tilea6, <tilea7
 		
+tilesH	.byte       0, >tile01, >tile02, >tile03, >tile04, >tile05, >tile06, >tile07
+		.byte >tile08, >tile09, >tile0a, >tile0b, >tile0c,       0,       0,       0
+		.byte       0,       0,       0, >tile13,       0, >tile15,       0,       0
+		.byte       0, >tile19,       0, >tile1b,       0,       0, >tile1e, >tile1f
+		.byte >tile20, >tile21, >tile22,       0, >tile24,       0, >tile26,       0
+		.byte >tile28,       0, >tile2a, >tile2b, >tile2c, >tile2d,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0, >tile45, >tile46,       0
+		.byte       0,       0,       0, >tile4b, >tile4c, >tile4d, >tile4e, >tile4f
+		.byte >tile50, >tile51,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0, >tile6a,       0, >tile6c,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0, >tile83, >tile84, >tile85, >tile86, >tile87
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte       0,       0,       0,       0,       0,       0, >tile97,       0
+		.byte       0,       0,       0,       0,       0,       0,       0,       0
+		.byte >tilea0, >tilea1, >tilea2, >tilea3, >tilea4, >tilea5, >tilea6, >tilea7
+
 
 tile01	.incbin "images/dungeon/tile_01.pic"
 tile02	.incbin "images/dungeon/tile_02.pic"

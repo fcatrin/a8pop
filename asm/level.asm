@@ -55,11 +55,11 @@ start
 renderAgain
 		lda #0
 		sta 559
-		jsr clearScreen
+		sta 54272
+		;jsr clearScreen
 
 		lda 20
 		sta frame1
-		
 		jsr drawAll
 		lda 20
 		sta frame2
@@ -81,6 +81,8 @@ drawAll
 		ldx #0
 		ldy #0
 drawNextC		
+		lda render_piecec,x
+		beq noDrawC
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecec_offset,y
@@ -91,9 +93,10 @@ drawNextC
 		lda render_piecec,x
 		jsr drawTile
 		ldy renderBlockOffset
-		iny
-		iny
 		ldx renderBlockNumber
+noDrawC		
+		iny
+		iny
 		inx
 		cpx #tiles_per_screen
 		bne drawNextC
@@ -101,6 +104,8 @@ drawNextC
 		ldx #0
 		ldy #0		
 drawNextB		
+		lda render_pieceb,x
+		beq noDrawB
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_pieceb_offset,y
@@ -111,9 +116,10 @@ drawNextB
 		lda render_pieceb,x
 		jsr drawTile
 		ldy renderBlockOffset
-		iny
-		iny
 		ldx renderBlockNumber
+noDrawB		
+		iny
+		iny
 		inx
 		cpx #tiles_per_screen
 		bne drawNextB
@@ -121,6 +127,8 @@ drawNextB
 		ldx #0
 		ldy #0		
 drawNextA		
+		lda render_piecea,x
+		beq noDrawA
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecea_offset,y
@@ -130,18 +138,21 @@ drawNextA
 		ldy render_maska,x
 		lda render_piecea,x
 		jsr drawTile
-		
 		ldy renderBlockOffset
-		iny
-		iny
 		ldx renderBlockNumber
+noDrawA		
+		iny
+		iny
 		inx
 		cpx #tiles_per_screen
 		bne drawNextA
 		
 		ldx #0
 		ldy #0		
-drawNextD		
+drawNextD
+		lda render_pieced,x
+		beq noDrawD
+
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_pieced_offset,y
@@ -151,18 +162,21 @@ drawNextD
 		ldy #0
 		lda render_pieced,x
 		jsr drawTile
-		
 		ldy renderBlockOffset
-		iny
-		iny
 		ldx renderBlockNumber
+		
+noDrawD		
+		iny
+		iny
 		inx
 		cpx #tiles_per_screen
-		bne drawNextD	
+		bne drawNextD
 		
 		ldx #0
 		ldy #0		
 drawNextF		
+		lda render_piecef,x
+		beq noDrawF
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecef_offset,y
@@ -172,11 +186,12 @@ drawNextF
 		ldy render_maskf,x
 		lda render_piecef,x
 		jsr drawTile
-		
 		ldy renderBlockOffset
-		iny
-		iny
 		ldx renderBlockNumber
+
+noDrawF		
+		iny
+		iny
 		inx
 		cpx #tiles_per_screen
 		bne drawNextF		
@@ -346,9 +361,11 @@ preRenderOffsetEnd
 ; return first position in screen for tile in A
 ; tileOffset Y = LSB, A = MSB
 getBlockVramOffset
-		jsr getTileAddress
+		tax
+		lda tilesL,x
 		sta tileIndex
-		sty tileIndex+1
+		lda tilesH,x
+		sta tileIndex+1
 		
 		ldy #1
 		lda (tileIndex),y		; get tile height
@@ -362,10 +379,6 @@ getBlockVramOffset
 		sbc heightLookup+1,x
 		rts
 		
-		
-		
-
-
 ; draw a tile on screen (STA method)
 ; A = tile number
 ; vramIndex = vram position of first scan
@@ -379,23 +392,22 @@ validTile
 		cpy #0
 		bne drawTileMasked		; use slower version with masking
 
-		jsr getTileAddress
+		tax
+		lda tilesL,x
 		sta tileIndex
-		sty tileIndex+1
+		lda tilesH,x
+		sta tileIndex+1
 		
 		ldy #1
 		lda (tileIndex),y
-		sta tileHeight
+		tax
 		
 		clc
 		lda tileIndex
 		adc #2
 		sta tileIndex
-		lda tileIndex+1
-		adc #0
-		sta tileIndex+1
-		
-		ldx tileHeight
+		bcc copyTileScan
+		inc tileIndex+1
 		
 copyTileScan		
 		ldy #0
@@ -439,16 +451,17 @@ drawTileMasked
 		bne drawTileRegularMask
 		jmp drawTileAutoMasked
 drawTileRegularMask		
-		sty tileMaskTemp
-		
-		jsr getTileAddress
+	
+		tax
+		lda tilesL,x
 		sta tileIndex
-		sty tileIndex+1
+		lda tilesH,x
+		sta tileIndex+1
 		
-		lda tileMaskTemp
-		jsr getTileAddress
+		lda tilesL,y
 		sta maskIndex
-		sty maskIndex+1
+		lda tilesH,y
+		sta maskIndex+1
 		
 		ldy #1
 		lda (tileIndex),y
@@ -488,7 +501,6 @@ beginCopy
 copyTileMaskedScan		
 		ldy #0
 		lda tileMaskDiff
-		cmp #0
 		bpl copyWithMask
 		lda (tileIndex),y
 		sta (vramIndex),y
@@ -502,7 +514,7 @@ copyTileMaskedScan
 		lda (tileIndex),y
 		sta (vramIndex),y
 		jmp copyNextScanMask
-copyWithMask		
+copyWithMask
 		lda (vramIndex),y
 		and (maskIndex),y
 		ora (tileIndex),y
@@ -559,9 +571,11 @@ drawTileMaskedEnd
 
 ; draw tile in A using automasking
 drawTileAutoMasked
-		jsr getTileAddress
+		tax
+		lda tilesL,x
 		sta tileIndex
-		sty tileIndex+1
+		lda tilesH,x
+		sta tileIndex+1
 		
 		ldy #1
 		lda (tileIndex),y
@@ -625,22 +639,6 @@ prepareNextAutoMaskedScan
 		dec tileHeight
 		bne copyTileAutoMaskedScan
 		rts
-
-
-
-; Return tile address in a,y
-getTileAddress
-		asl
-		bcc getTileAddressNear
-		tax
-		lda tiles+256,x
-		ldy tiles+257,x
-		rts
-getTileAddressNear
-		tax
-		lda tiles,x
-		ldy tiles+1,x
-		rts		
 
 
 clearScreen
