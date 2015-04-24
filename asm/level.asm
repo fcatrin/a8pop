@@ -56,13 +56,12 @@ start
 		jsr changeLevel
 		
 		
-		lda #1
+		lda #3
 		sta levelScreen
-renderAgain
 		
 		jsr changeScreen
-		
 		jsr preRenderMap
+renderAgain
 		
 		lda 20
 		sta frame0
@@ -81,15 +80,20 @@ renderAgain
 		sta 559
 		
 		lda 20
-		adc #180
+		adc #90
 wait		
 		cmp 20
 		bne wait
+		
+halt	jmp halt		
+		
 		inc levelScreen
+		jsr changeScreen
+		jsr preRenderMap
 		jmp renderAgain
 		
 		
-halt	jmp halt		
+haltx	jmp haltx		
 	
 		
 drawAll		
