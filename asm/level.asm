@@ -794,7 +794,7 @@ changeLevel
 		
 		lda #<levelSize
 		sta memcpyLen
-		lda #>levelSize+1
+		lda #>levelSize
 		sta memcpyLen+1
 		
 		lda #0
@@ -830,7 +830,7 @@ levelDataOffsets .word levelData0, levelData1
 levelSize = 2304		
 levelData
 		.rept levelSize
-		.byte
+		.byte 0
 		.endr
 		
 levelData0 .incbin "../levels/LEVEL0"

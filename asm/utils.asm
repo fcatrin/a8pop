@@ -1,29 +1,36 @@
 
+; Generic memcpy optimized for speed. No overlapping 
+; fcatrin@gmail.com
+;
+; Copy operation is divided in two parts.  N is the total length 
+; * memcpyLong  for N / 256 blocks
+; * memcpyShort for N % 256 remaining bytes
+
 memcpy
 		ldy #0
-		lda memcpyLen+1
-		beq memcpyShort
+		ldx memcpyLen+1
+		beq memcpyShort		; we need only the short version for <1 pages
 		
-memcpyLoopLong		
+memcpyLoopLong				; copy X pages
 		lda (memcpySrc),y
 		sta (memcpyDst),y
 		iny
 		bne memcpyLoopLong
-		dec memcpyLen+1
+		dex
 		beq memcpyShort
 		inc memcpySrc+1
 		inc memcpyDst+1
 		jmp memcpyLoopLong			
 		
-memcpyShort
-		lda memcpyLen
+memcpyShort					; short copy if N % 256 != 0
+		ldx memcpyLen
 		beq memcpyEnd
 
-memcpyLoopShort	
+memcpyLoopShort				; copy X bytes
 		lda (memcpySrc),y
 		sta (memcpyDst),y
 		iny
-		cpy memcpyLen
+		dex
 		bne memcpyLoopShort
 		
 memcpyEnd
