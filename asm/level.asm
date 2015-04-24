@@ -80,11 +80,16 @@ halt	jmp halt
 drawAll		
 		ldx #0
 		ldy #0
-drawNextC		
-		lda render_piecec,x
-		beq noDrawC
+drawNextBlock
 		stx renderBlockNumber
 		sty renderBlockOffset
+		lda render_piecef,x
+		cmp #$83
+		bne noShortCut
+		jmp noDrawB
+noShortCut
+		lda render_piecec,x
+		beq noDrawC
 		lda render_piecec_offset,y
 		sta vramIndex
 		lda render_piecec_offset+1,y
@@ -94,20 +99,9 @@ drawNextC
 		jsr drawTile
 		ldy renderBlockOffset
 		ldx renderBlockNumber
-noDrawC		
-		iny
-		iny
-		inx
-		cpx #tiles_per_screen
-		bne drawNextC
-
-		ldx #0
-		ldy #0		
-drawNextB		
+noDrawC
 		lda render_pieceb,x
 		beq noDrawB
-		stx renderBlockNumber
-		sty renderBlockOffset
 		lda render_pieceb_offset,y
 		sta vramIndex
 		lda render_pieceb_offset+1,y
@@ -117,20 +111,10 @@ drawNextB
 		jsr drawTile
 		ldy renderBlockOffset
 		ldx renderBlockNumber
-noDrawB		
-		iny
-		iny
-		inx
-		cpx #tiles_per_screen
-		bne drawNextB
-		
-		ldx #0
-		ldy #0		
-drawNextA		
+
+noDrawB
 		lda render_piecea,x
 		beq noDrawA
-		stx renderBlockNumber
-		sty renderBlockOffset
 		lda render_piecea_offset,y
 		sta vramIndex
 		lda render_piecea_offset+1,y
@@ -140,21 +124,11 @@ drawNextA
 		jsr drawTile
 		ldy renderBlockOffset
 		ldx renderBlockNumber
-noDrawA		
-		iny
-		iny
-		inx
-		cpx #tiles_per_screen
-		bne drawNextA
-		
-		ldx #0
-		ldy #0		
-drawNextD
+
+noDrawA
 		lda render_pieced,x
 		beq noDrawD
 
-		stx renderBlockNumber
-		sty renderBlockOffset
 		lda render_pieced_offset,y
 		sta vramIndex
 		lda render_pieced_offset+1,y
@@ -166,19 +140,8 @@ drawNextD
 		ldx renderBlockNumber
 		
 noDrawD		
-		iny
-		iny
-		inx
-		cpx #tiles_per_screen
-		bne drawNextD
-		
-		ldx #0
-		ldy #0		
-drawNextF		
 		lda render_piecef,x
 		beq noDrawF
-		stx renderBlockNumber
-		sty renderBlockOffset
 		lda render_piecef_offset,y
 		sta vramIndex
 		lda render_piecef_offset+1,y
@@ -188,13 +151,14 @@ drawNextF
 		jsr drawTile
 		ldy renderBlockOffset
 		ldx renderBlockNumber
-
 noDrawF		
 		iny
 		iny
 		inx
 		cpx #tiles_per_screen
-		bne drawNextF		
+		beq drawEnd
+		jmp drawNextBlock
+drawEnd		
 		rts
 			
 
