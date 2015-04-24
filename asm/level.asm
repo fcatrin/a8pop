@@ -46,24 +46,47 @@ start
 		lda #>displayList
 		sta SDLSTL+1
 		
-		jsr clearScreen
 		jsr genAutoMaskTable
-		
+		jsr preRenderMap
 		lda 20
 		sta frame0
-		jsr preRenderMap
+		jsr preRenderOffsets
+
+renderAgain
+		lda #0
+		sta 559
+		jsr clearScreen
+
 		lda 20
 		sta frame1
 		
+		jsr drawAll
+		lda 20
+		sta frame2
+		lda #34
+		sta 559
+		
+		lda 20
+		adc #180
+wait		
+		cmp 20
+		bne wait
+		jmp renderAgain
+		
+		
+halt	jmp halt		
+	
+		
+drawAll		
 		ldx #0
 		ldy #0
 drawNextC		
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecec_offset,y
-		sta vramOffset
+		sta vramIndex
 		lda render_piecec_offset+1,y
-		sta vramOffset+1
+		sta vramIndex+1
 		ldy #0
 		lda render_piecec,x
 		jsr drawTile
@@ -81,9 +104,9 @@ drawNextB
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_pieceb_offset,y
-		sta vramOffset
+		sta vramIndex
 		lda render_pieceb_offset+1,y
-		sta vramOffset+1
+		sta vramIndex+1
 		ldy render_maskb,x
 		lda render_pieceb,x
 		jsr drawTile
@@ -101,9 +124,9 @@ drawNextA
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecea_offset,y
-		sta vramOffset
+		sta vramIndex
 		lda render_piecea_offset+1,y
-		sta vramOffset+1
+		sta vramIndex+1
 		ldy render_maska,x
 		lda render_piecea,x
 		jsr drawTile
@@ -116,16 +139,15 @@ drawNextA
 		cpx #tiles_per_screen
 		bne drawNextA
 		
-		
 		ldx #0
 		ldy #0		
 drawNextD		
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_pieced_offset,y
-		sta vramOffset
+		sta vramIndex
 		lda render_pieced_offset+1,y
-		sta vramOffset+1
+		sta vramIndex+1
 		ldy #0
 		lda render_pieced,x
 		jsr drawTile
@@ -144,9 +166,9 @@ drawNextF
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecef_offset,y
-		sta vramOffset
+		sta vramIndex
 		lda render_piecef_offset+1,y
-		sta vramOffset+1
+		sta vramIndex+1
 		ldy render_maskf,x
 		lda render_piecef,x
 		jsr drawTile
@@ -158,11 +180,8 @@ drawNextF
 		inx
 		cpx #tiles_per_screen
 		bne drawNextF		
+		rts
 			
-		lda 20
-		sta frame2
-		
-halt	jmp halt		
 
 ; Pre Render Map
 ; Create lookup tables for each tile pieces with screen offset
@@ -177,17 +196,9 @@ preRenderMap
 preRenderNextRow		
 		lda blockOffset,x
 		sta preRenderBlockSrc
-		
+
 		lda #10
 		sta preRenderCols
-		
-		clc						; set vramOffset for row on x
-		lda vramOffsets,x
-		adc #<vram
-		sta vramOffset
-		lda vramOffsets+1,x
-		adc #>vram
-		sta vramOffset+1
 
 preRenderNextBlock
 		ldx preRenderBlockSrc		; load block number from map
@@ -214,59 +225,145 @@ preRenderNextBlock
 		lda maskb,y
 		sta render_maskb+1,x
 		
-		lda preRenderCols			; write piecec for this block only in rows 2 & 3
+		lda preRenderBlockDst	    ; write piecec for this block only in rows 2 & 3
 		cmp #20
 		bpl skipPieceLeft
 		lda piecec,y
-		sta render_piecec+10,x
-		
+		sta render_piecec+11,x
 skipPieceLeft		
-		txa								; write offsets. X = offset index
-		asl
-		tax
-		
-		sec								; offsetA = offset - 3 scanlines
-		lda vramOffset
-		sta render_pieced_offset,x
-		sbc #3*scanbytes
-		sta render_piecea_offset,x
-		sta render_piecef_offset,x
-		lda vramOffset+1
-		sta render_pieced_offset+1,x
-		sbc #0
-		sta render_piecea_offset+1,x
-		sta render_piecef_offset+1,x
-		
-		lda preRenderCols
-		cmp #20
-		bpl preRenderNextLine
-				
-		clc								; offsetB = offset + 4 bytes (next tile col)
-		lda vramOffset					; offsetC = offsetB (for now)
-		adc #4
-		sta vramOffset
-		sta render_pieceb_offset+2,x
-		sta render_piecec_offset,x
-		lda vramOffset+1
-		adc #0
-		sta vramOffset+1
-		sta render_pieceb_offset+1,x
-		sta render_piecec_offset+1,x
-		
 		inc preRenderBlockSrc
 		inc preRenderBlockDst
 		dec preRenderCols
-		beq preRenderNextLine
-		jmp preRenderNextBlock
+		bne preRenderNextBlock
 preRenderNextLine		
 		ldx preRenderRow
 		dex
 		dex
 		stx preRenderRow
-		beq preRenderEnd
-		jmp preRenderNextRow
-preRenderEnd		
+		bne preRenderNextRow
 		rts
+
+preRenderOffsets
+		lda #0
+		sta preRenderOffsetBlock
+		sta preRenderBlockDst
+		
+		ldx #6					; start in third row
+		
+preRenderOffsetRow		
+		stx preRenderRow
+		lda #10
+		sta preRenderCols
+
+		clc						; set vramOffset for row on x
+		lda vramOffsets,x
+		adc #<vram
+		sta vramOffset
+		lda vramOffsets+1,x
+		adc #>vram
+		sta vramOffset+1
+
+preRenderOffsetNextCol
+		lda vramOffset
+		sta vramOffsetTemp
+		lda vramOffset+1
+		sta vramOffsetTemp+1
+
+		ldx preRenderBlockDst
+		lda render_pieced,x
+		jsr getBlockVramOffset
+		ldx preRenderOffsetBlock
+		sta render_pieced_offset+1,x
+		tya
+		sta render_pieced_offset,x
+		
+		ldx preRenderBlockDst
+		lda render_pieceb,x
+		jsr getBlockVramOffset
+		ldx preRenderOffsetBlock
+		sta render_pieceb_offset+1,x
+		tya
+		sta render_pieceb_offset,x
+		
+		ldx preRenderBlockDst
+		lda render_piecec,x
+		jsr getBlockVramOffset
+		ldx preRenderOffsetBlock
+		sta render_piecec_offset+1,x
+		tya
+		sta render_piecec_offset,x
+		
+		
+		sec								; offsetF = offsetA = offset - 3 scanlines
+		lda vramOffset
+		sbc #3*scanbytes
+		sta vramOffsetTemp
+		lda vramOffset+1
+		sbc #0
+		sta vramOffsetTemp+1
+
+		ldx preRenderBlockDst
+		lda render_piecea,x
+		jsr getBlockVramOffset
+		ldx preRenderOffsetBlock
+		sta render_piecea_offset+1,x
+		tya
+		sta render_piecea_offset,x
+
+		ldx preRenderBlockDst
+		lda render_piecef,x
+		jsr getBlockVramOffset
+		ldx preRenderOffsetBlock
+		sta render_piecef_offset+1,x
+		tya
+		sta render_piecef_offset,x
+
+		clc								; offsetB = offset + 4 bytes (next tile col)
+		lda vramOffset					; offsetC = offsetB (for now)
+		adc #4
+		sta vramOffset
+		bcc vramOffsetNoOverflow
+		inc vramOffset+1
+vramOffsetNoOverflow		
+		
+		inc preRenderBlockDst
+		inc preRenderOffsetBlock
+		inc preRenderOffsetBlock
+		
+		dec preRenderCols
+		beq preRenderOffsetNextRow
+		jmp preRenderOffsetNextCol
+preRenderOffsetNextRow		
+		ldx preRenderRow
+		dex
+		dex
+		beq preRenderOffsetEnd
+		jmp preRenderOffsetRow
+preRenderOffsetEnd		
+		rts
+		
+		
+; return first position in screen for tile in A
+; tileOffset Y = LSB, A = MSB
+getBlockVramOffset
+		jsr getTileAddress
+		sta tileIndex
+		sty tileIndex+1
+		
+		ldy #1
+		lda (tileIndex),y		; get tile height
+		asl
+		tax
+		sec
+		lda vramOffsetTemp
+		sbc heightLookup,x
+		tay
+		lda vramOffsetTemp+1
+		sbc heightLookup+1,x
+		rts
+		
+		
+		
 
 
 ; draw a tile on screen (STA method)
@@ -286,22 +383,9 @@ validTile
 		sta tileIndex
 		sty tileIndex+1
 		
-		ldy #0
-		lda (tileIndex),y
-		sta tileWidth
-		iny
+		ldy #1
 		lda (tileIndex),y
 		sta tileHeight
-		
-		asl
-		tax
-		sec
-		lda vramOffset
-		sbc heightLookup,x
-		sta vramIndex
-		lda vramOffset+1
-		sbc heightLookup+1,x
-		sta vramIndex+1
 		
 		clc
 		lda tileIndex
@@ -366,22 +450,9 @@ drawTileRegularMask
 		sta maskIndex
 		sty maskIndex+1
 		
-		ldy #0
-		lda (tileIndex),y
-		sta tileWidth
-		iny
+		ldy #1
 		lda (tileIndex),y
 		sta tileHeight
-		
-		asl
-		tax
-		sec
-		lda vramOffset
-		sbc heightLookup,x
-		sta vramIndex
-		lda vramOffset+1
-		sbc heightLookup+1,x
-		sta vramIndex+1
 		
 		ldy #1
 		lda (maskIndex), y
@@ -492,22 +563,9 @@ drawTileAutoMasked
 		sta tileIndex
 		sty tileIndex+1
 		
-		ldy #0
-		lda (tileIndex),y
-		sta tileWidth
-		iny
+		ldy #1
 		lda (tileIndex),y
 		sta tileHeight
-		
-		asl
-		tax
-		sec
-		lda vramOffset
-		sbc heightLookup,x
-		sta vramIndex
-		lda vramOffset+1
-		sbc heightLookup+1,x
-		sta vramIndex+1
 		
 		clc
 		lda tileIndex

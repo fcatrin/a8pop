@@ -6,8 +6,9 @@ tileMaskDiff	.byte 0
 tileMaskTemp	.byte 0
 
 
-vramOffsets .word tileBaseOffset, tileBaseOffset+tileScanBytes, tileBaseOffset+tileScanBytes*2,tileBaseOffset+tileScanBytes*3
-vramOffset	.word 0
+vramOffsets		.word tileBaseOffset, tileBaseOffset+tileScanBytes, tileBaseOffset+tileScanBytes*2,tileBaseOffset+tileScanBytes*3
+vramOffset		.word 0
+vramOffsetTemp	.word 0
 
 blockOffset .word 0, 0, 10, 20
 
@@ -102,13 +103,16 @@ render_piecef_offset
 		.word 0
 		.endr		
 		
-renderBlockNumber	.byte 0
-renderBlockOffset	.byte 0
-preRenderBlockDst	.byte 0
-preRenderBlockSrc	.byte 0
-preRenderRow		.byte 0
-preRenderCols		.byte 0
+renderBlockNumber		.byte 0
+renderBlockOffset		.byte 0
+preRenderBlockDst		.byte 0
+preRenderBlockSrc		.byte 0
+preRenderRow			.byte 0
+preRenderCols			.byte 0
+preRenderOffsetBlock	.byte 0
 
+tmpSaveX			.byte 0
+tmpSaveY			.byte 0
 
 heightLookup 
 		.rept 64
