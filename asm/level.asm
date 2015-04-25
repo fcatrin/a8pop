@@ -71,6 +71,12 @@ renderAgain
 		sta 559
 		sta 54272
 
+waitvsync
+		lda $D40B
+		cmp #130
+		bne waitvsync
+
+
 		lda 20
 		sta frame1
 		jsr drawAll
@@ -87,7 +93,13 @@ wait
 		
 ;halt	jmp halt		
 		
-		inc levelScreen
+		ldx levelScreen
+		inx
+		cpx #levelScreens
+		bne renderNextScreen
+		ldx #0
+renderNextScreen		
+		stx levelScreen
 		jsr changeScreen
 		jsr preRenderMap
 		jmp renderAgain
