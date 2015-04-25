@@ -3,7 +3,7 @@ package fcatrin.pop;
 import java.util.Arrays;
 
 public class LZ {
-	private static int WINDOW = 256;
+	private static int WINDOW = 128;
 	
 	public static class LZData {
 		public int compressed[];
@@ -30,7 +30,7 @@ public class LZ {
 				int currentString = src;
 				int currentSize = 0;
 				
-				while (lookBack<src && currentString<data.length) {
+				while (lookBack<src && currentString<data.length && currentSize<8) {
 					//System.out.println("lookBack " + lookBack + ", currentString:" + currentString + ", src:" + src);
 					if (data[lookBack] == data[currentString]) {
 						currentSize++;

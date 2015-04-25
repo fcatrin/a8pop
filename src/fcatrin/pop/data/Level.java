@@ -790,10 +790,10 @@ public class Level {
 		System.out.println("original: " + type.length + ", compress:" + size);
 		
 
-		int data[] = new int[type.length];
-		for(i=0; i<type.length; i++) {
+		int data[] = new int[info.length];
+		for(i=0; i<info.length; i++) {
 			//data[i] = Utils.b2i((byte)(type[i] & 0xfF));
-			data[i] = Utils.b2i(type[i]);
+			data[i] = Utils.b2i(info[i]);
 		}
 		
 		LZData lz = LZ.compress(data);
@@ -832,10 +832,9 @@ public class Level {
 			} else {
 				int literal[] = new int[1];
 				literal[0] = lz.compressed[dataIndex];
-				String compressed = h.compress(literal);
-				literalBits += compressed.length();
 				dataIndex += 2;
-				compressedBytes +=1;
+				literalBits += 4;
+				literalBits += 7;
 			}
 		}
 		
