@@ -2,14 +2,19 @@ package fcatrin.pop.data;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import fcatrin.pop.Huffman;
 import fcatrin.pop.Image;
+import fcatrin.pop.LZ;
+import fcatrin.pop.LZ.LZData;
+import fcatrin.pop.Utils;
 import fcatrin.pop.views.ScreenView;
 
 public class Level {
@@ -152,6 +157,7 @@ public class Level {
 			fis.read(level.map);
 			fis.read(level.info);
 			level.setCurrentScreen(0);
+			level.compress();
 			return level;
 		} finally {
 			if (fis!=null) fis.close();
@@ -744,6 +750,109 @@ public class Level {
 			fos.write((byte)value);
 		}
 		fos.close();
+	}
+	
+	private void compress() {
+		/*
+		fis.read(level.type);
+		fis.read(level.spec);
+		fis.read(level.linkLoc);
+		fis.read(level.linkMap);
+		fis.read(level.map);
+		fis.read(level.info);
+		*/
+		
+		int i=0;
+		int size = 0;
+		Map<Integer, Integer> symbols = new HashMap<Integer, Integer>();
+		List<Integer> rleData = new ArrayList<Integer>();
+		while (i<type.length) {
+			byte blkid = (byte)(type[i] & 0xfF);
+			int times = 0;
+			i++;
+			while (i<type.length) {
+				byte thisblkid = (byte)(type[i] & 0xfF);
+				if (blkid!=thisblkid) break;
+				times++;
+				i++;
+			}
+			Integer n = symbols.get((int)blkid);
+			if (n==null) n = 1;
+			symbols.put((int)blkid, times+n+1);
+			System.out.println("blkid:" + blkid +", times:" + times);
+			rleData.add((int)blkid);
+			rleData.add(times);
+			System.out.println(symbols);
+			size++;
+		}
+		System.out.println(symbols.size());
+		System.out.println(symbols);
+		System.out.println("original: " + type.length + ", compress:" + size);
+		
+
+		int data[] = new int[type.length];
+		for(i=0; i<type.length; i++) {
+			//data[i] = Utils.b2i((byte)(type[i] & 0xfF));
+			data[i] = Utils.b2i(type[i]);
+		}
+		
+		LZData lz = LZ.compress(data);
+		
+		int literalCount = 0;
+		for(int l=0; l<lz.literal.length; l++) {
+			if (lz.literal[l]) literalCount++;
+		}
+		
+		int literalData[] = new int[literalCount];
+		int literalIndex = 0;
+		int lzIndex = 0;
+		for(int l=0; l<lz.literal.length; l++) {
+			if (lz.literal[l]) literalData[literalIndex++] = lz.compressed[lzIndex++];
+			else lzIndex+=2;
+		}
+		
+		Huffman h = new Huffman(literalData);
+		int dataIndex = 0;
+		int literalBits = 0;
+		int compressedBytes = 0;
+		for(int lzi=0; lzi<lz.literal.length; lzi++) {
+			if (lz.literal[lzi]) {
+				int n = 1;
+				while (lzi+n<lz.literal.length) {
+					if (!lz.literal[lzi+n]) break;
+					n++;
+				}
+				int literal[] = new int[n];
+				for(int l=0; l<n; l++) literal[l] = lz.compressed[dataIndex+l];
+				String compressed = h.compress(literal);
+				literalBits += compressed.length();
+				System.out.println(compressed);
+				lzi+=n-1;
+				dataIndex+=n;
+			} else {
+				int literal[] = new int[1];
+				literal[0] = lz.compressed[dataIndex];
+				String compressed = h.compress(literal);
+				literalBits += compressed.length();
+				dataIndex += 2;
+				compressedBytes +=1;
+			}
+		}
+		
+		int sizeTotal = (literalBits +7 )/8 + compressedBytes + (lz.literal.length+7)/8;
+		System.out.println("compressed total:" + sizeTotal + ", " + ((literalBits +7 )/8 ) + ", " + (compressedBytes) + ", " + ((lz.literal.length+7)/8));
+		/*
+		int data[] = new int[rleData.size()];
+		for(i=0; i<rleData.size(); i++) {
+			data[i] = rleData.get(i);
+		}
+		
+		Huffman h = new Huffman(data);
+		String compressed = h.compress(data);
+*/
+		
+		//System.out.println(compressed);
+		//System.out.println("compressed bits:" + compressed.length() + ", bytes:" + ((compressed.length()+7)/8));
 	}
 	
 	
