@@ -69,7 +69,6 @@ renderAgain
 
 		lda #0
 		sta 559
-		sta 54272
 
 waitvsync
 		lda $D40B
