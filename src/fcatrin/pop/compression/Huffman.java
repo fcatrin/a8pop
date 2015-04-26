@@ -1,6 +1,7 @@
 package fcatrin.pop.compression;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import fcatrin.pop.utils.BitStream;
 import fcatrin.pop.utils.Utils;
 
 public class Huffman {
+	private final int MAX_BITS_PER_CODE = 4;  // codes can be up to 16 bits
 	int nodeId = 0;
 	class Node {
 		int id;
@@ -48,13 +50,14 @@ public class Huffman {
 	public Huffman() {
 	}
 	
-	private void buildTree(int[] values) {
+	private void buildTree(byte[] values) {
 		Map<Integer, Integer> codes = new HashMap<Integer, Integer>();
-		for(int value: values) {
-			Integer n = codes.get(value);
+		for(byte value: values) {
+			int intValue = Utils.b2i(value);
+			Integer n = codes.get(intValue);
 			if (n == null) n = 0;
 			n++;
-			codes.put(value, n);
+			codes.put(intValue, n);
 		}
 		
 		for(Entry<Integer, Integer> code : codes.entrySet()) {
@@ -160,14 +163,15 @@ public class Huffman {
 		}
 	}
 
-	public byte[] compress(int values[]) {
+	public byte[] compress(byte values[]) {
 		buildTree(values);
 		
 		BitStream bitData = new BitStream();
 		bitData.append(values.length % 0x100, 8);
 		bitData.append(values.length / 0x100, 8);
-		for(int value : values) {
-			bitData.append(tableCompress.get(value));
+		for(byte value : values) {
+			int b = Utils.b2i(value);
+			bitData.append(tableCompress.get(b));
 		}
 
 		byte[] tree = dumpTree();
@@ -195,7 +199,7 @@ public class Huffman {
 		int symbols = Utils.b2i(bitTree.readByte());
 		for(int i=0; i<symbols; i++) {
 			int symbol = Utils.b2i(bitTree.readByte());
-			int bitLen = Utils.b2i(bitTree.readBits(3));
+			int bitLen = Utils.b2i(bitTree.readBits(MAX_BITS_PER_CODE));
 			String code = bitTree.readStringBits(bitLen);
 			tableDecompress.put(code, symbol);
 		}
@@ -244,7 +248,7 @@ public class Huffman {
 				bitStream.append(node.value, 8);
 				String bits = node.bits;
 				int size = bits.length();
-				bitStream.append(size, 3);
+				bitStream.append(size, MAX_BITS_PER_CODE);
 				bitStream.append(bits);
 				n++;
 			}
@@ -255,5 +259,24 @@ public class Huffman {
 		bitStreamTree.append(bitStream.asBytes());
 		
 		return bitStreamTree.asBytes();
+	}
+	
+	
+	public static void main(String args[]) throws Exception {
+		byte data[] = new byte[] { -1, -1, 0x05, 0x05, 0x05, 0x05, 0x01 };
+		
+		Huffman h = new Huffman();
+		byte compressed[] = h.compress(data);
+		BitStream bitCompressed = new BitStream(compressed);
+		System.out.println(bitCompressed.dump());
+		
+		System.out.println(Arrays.toString(compressed));
+		
+		Huffman h2 = new Huffman();
+		byte decompressed[] = h2.decompress(compressed);
+		BitStream bitDecompressed = new BitStream(decompressed);
+		System.out.println(bitDecompressed.dump());
+		
+		System.out.println(Arrays.toString(decompressed));
 	}
 }

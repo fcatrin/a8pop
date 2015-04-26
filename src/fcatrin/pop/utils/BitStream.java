@@ -62,9 +62,7 @@ public class BitStream {
 	}
 
 	public byte readBits(int n) {
-		byte result = Utils.string2bits(readStringBits(n), n);
-		readPosition += n;
-		return result;
+		return Utils.string2bits(readStringBits(n), n);
 	}
 
 	public String readStringBits(int n) {

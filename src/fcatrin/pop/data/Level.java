@@ -763,15 +763,27 @@ public class Level {
 		fis.read(level.info);
 		*/
 		
-		int originalData[] = new int[spec.length];
-		for(int i=0; i<spec.length; i++) {
-			originalData[i] = spec[i];
-		}
-		Huffman h2 = new Huffman();
-		byte compressed[] = h2.compress(originalData);
+		Huffman h = new Huffman();
+		byte compressed[] = h.compress(spec);
 		System.out.println(Arrays.toString(compressed));
 		
-		System.out.println("compressed huffman" + compressed.length);
+		System.out.println(String.format("compressed huffman %d/%d %f%%", 
+				compressed.length, spec.length, 
+				compressed.length*100.0f/spec.length));
+		Huffman h2 = new Huffman();
+		byte decompressed[] = h2.decompress(compressed);
+		
+		if (spec.length != decompressed.length) {
+			System.err.println("Different length");
+			System.exit(0);
+		}
+		
+		for(int i=0; i<spec.length; i++) {
+			if (spec[i]!=decompressed[i]) {
+				System.err.println("Different data at " + i);
+				System.exit(0);	
+			}
+		}
 
 	}
 	
