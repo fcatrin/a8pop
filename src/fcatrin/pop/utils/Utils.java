@@ -32,4 +32,8 @@ public class Utils {
 		} while (pow>0 && s.length()>0);
 		return (byte)(value & 0xFF);
 	}
+
+	public static byte int2byte(int symbol) {
+		return (byte)(symbol & 0xFF);
+	}
 }

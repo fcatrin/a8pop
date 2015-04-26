@@ -164,6 +164,8 @@ public class Huffman {
 		buildTree(values);
 		
 		BitStream bitData = new BitStream();
+		bitData.append(values.length % 0x100, 8);
+		bitData.append(values.length / 0x100, 8);
 		for(int value : values) {
 			bitData.append(tableCompress.get(value));
 		}
@@ -182,6 +184,36 @@ public class Huffman {
 		return bitCompress.asBytes();
 	}
 	
+	public byte[] decompress(byte compressed[]) {
+		BitStream bitCompressed = new BitStream(compressed);
+		int treeSize = bitCompressed.readWord();
+		int dataSize = bitCompressed.readWord();
+		byte tree[] = bitCompressed.readBytes(treeSize);
+		byte data[] = bitCompressed.readBytes(dataSize);
+		
+		BitStream bitTree = new BitStream(tree);
+		int symbols = Utils.b2i(bitTree.readByte());
+		for(int i=0; i<symbols; i++) {
+			int symbol = Utils.b2i(bitTree.readByte());
+			int bitLen = Utils.b2i(bitTree.readBits(3));
+			String code = bitTree.readStringBits(bitLen);
+			tableDecompress.put(code, symbol);
+		}
+		BitStream bitData = new BitStream(data);
+		int valueSize = bitData.readWord();
+		byte values[] = new byte[valueSize];
+		String code = "";
+		int valueIndex = 0;
+		while (valueIndex<values.length) {
+			code += bitData.readStringBits(1);
+			Integer symbol = tableDecompress.get(code);
+			if (symbol == null) continue;
+			values[valueIndex++] = Utils.int2byte(symbol);
+			code = "";
+		}
+		return values;
+	}
+	
 	private void enqueue(List<Node> q, Node node) {
 		q.add(node);
 	}
@@ -195,6 +227,7 @@ public class Huffman {
 	
 	/*
 	 * format:
+	 * 8 bits: # of symbols. Then for each symbol
 	 * 8 bits: symbol
 	 * 4 bits: huffman code size (n)
 	 * n bits: huffman code
@@ -203,6 +236,7 @@ public class Huffman {
 	public byte[] dumpTree() {
 		BitStream bitStream = new BitStream();
 		int id = 0;
+		int n = 0;
 		do {
 			Node node = nodes.get(id++);
 			if (node == null) break;
@@ -212,8 +246,14 @@ public class Huffman {
 				int size = bits.length();
 				bitStream.append(size, 3);
 				bitStream.append(bits);
+				n++;
 			}
 		} while (true);
-		return bitStream.asBytes();
+		
+		BitStream bitStreamTree = new BitStream();
+		bitStreamTree.append(n, 8);
+		bitStreamTree.append(bitStream.asBytes());
+		
+		return bitStreamTree.asBytes();
 	}
 }

@@ -2,6 +2,7 @@ package fcatrin.pop.utils;
 
 public class BitStream {
 	StringBuffer data = new StringBuffer();
+	int readPosition = 0;
 	
 	public BitStream() {
 		
@@ -40,6 +41,39 @@ public class BitStream {
 		}
 		return result;
 	}
+
+	public int readWord() {
+		if (readPosition + 16 > data.length()) return 0;
+		int lsb = Utils.b2i(readByte());
+		int msb = Utils.b2i(readByte());
+		return lsb + 256 * msb;
+	}
+
+	public byte readByte() {
+		return readBits(8);
+	}
+
+	public byte[] readBytes(int size) {
+		byte result[] = new byte[size];
+		for(int i=0; i<size; i++) {
+			result[i] = readByte();
+		}
+		return result;
+	}
+
+	public byte readBits(int n) {
+		byte result = Utils.string2bits(readStringBits(n), n);
+		readPosition += n;
+		return result;
+	}
+
+	public String readStringBits(int n) {
+		if (readPosition + n > data.length()) return "";
+		String s = data.substring(readPosition, readPosition +n);
+		readPosition += n;
+		return s;
+	}
+	
 	
 	/*
 	public static void main(String args[]) throws Exception {
