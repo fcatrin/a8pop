@@ -21,4 +21,15 @@ public class Utils {
 		} while (pow>0);
 		return buf.toString();
 	}
+
+	public static byte string2bits(String s, int nbits) {
+		int pow = (int)Math.pow(2, nbits-1);
+		int value = 0;
+		do {
+			if (s.substring(0,1).equals("1")) value += pow;
+			pow = pow / 2;
+			s = s.substring(1);
+		} while (pow>0 && s.length()>0);
+		return (byte)(value & 0xFF);
+	}
 }
