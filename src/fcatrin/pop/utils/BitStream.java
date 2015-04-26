@@ -8,9 +8,7 @@ public class BitStream {
 	}
 	
 	public BitStream(byte[] data) {
-		for(byte b : data) {
-			append(Utils.b2i(b), 8);
-		}
+		append(data);
 	}
 	
 	public void append(int value, int nbits) {
@@ -20,7 +18,13 @@ public class BitStream {
 	public void append(String sBits) {
 		data.append(sBits);
 	}
-	
+
+	public void append(byte[] data) {
+		for(byte b : data) {
+			append(Utils.b2i(b), 8);
+		}
+	}
+
 	public String dump() {
 		return data.toString();
 	}
@@ -37,6 +41,7 @@ public class BitStream {
 		return result;
 	}
 	
+	/*
 	public static void main(String args[]) throws Exception {
 		BitStream bs = new BitStream();
 		bs.append(255, 8);
@@ -44,12 +49,12 @@ public class BitStream {
 		bs.append(15, 8);
 		bs.append(0x55, 8);
 		bs.append(0xAA, 8);
-		bs.append(0x05, 3);
+		bs.append(0x80, 8);
 		System.out.println(bs.dump());
 		
 		byte[] bytes = bs.asBytes();
 		BitStream bs2 = new BitStream(bytes);
 		System.out.println(bs2.dump());
 	}
-
+	 */
 }

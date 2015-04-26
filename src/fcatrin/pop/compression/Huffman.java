@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import fcatrin.pop.utils.BitStream;
 import fcatrin.pop.utils.Utils;
 
 public class Huffman {
@@ -44,7 +45,10 @@ public class Huffman {
 	Map<String, Integer> tableDecompress = new HashMap<String, Integer>();
 	Map<Integer, String> tableCompress = new HashMap<Integer, String>();
 
-	public Huffman(int[] values) {
+	public Huffman() {
+	}
+	
+	private void buildTree(int[] values) {
 		Map<Integer, Integer> codes = new HashMap<Integer, Integer>();
 		for(int value: values) {
 			Integer n = codes.get(value);
@@ -52,14 +56,6 @@ public class Huffman {
 			n++;
 			codes.put(value, n);
 		}
-		buildTree(codes);
-	}
-	
-	public Huffman(Map<Integer, Integer> codes) {
-		buildTree(codes);
-	}
-	
-	private void buildTree(Map<Integer, Integer> codes) {
 		
 		for(Entry<Integer, Integer> code : codes.entrySet()) {
 			Node node = new Node();
@@ -164,12 +160,26 @@ public class Huffman {
 		}
 	}
 
-	public String compress(int values[]) {
-		StringBuffer compressed = new StringBuffer();
+	public byte[] compress(int values[]) {
+		buildTree(values);
+		
+		BitStream bitData = new BitStream();
 		for(int value : values) {
-			compressed.append(tableCompress.get(value));
+			bitData.append(tableCompress.get(value));
 		}
-		return compressed.toString();
+
+		byte[] tree = dumpTree();
+		byte[] data = bitData.asBytes();
+		
+		BitStream bitCompress = new BitStream();
+		bitCompress.append(tree.length % 0x100, 8);
+		bitCompress.append(tree.length / 0x100, 8);
+		bitCompress.append(data.length % 0x100, 8);
+		bitCompress.append(data.length / 0x100, 8);
+		bitCompress.append(tree);
+		bitCompress.append(data);
+		
+		return bitCompress.asBytes();
 	}
 	
 	private void enqueue(List<Node> q, Node node) {
@@ -190,21 +200,20 @@ public class Huffman {
 	 * n bits: huffman code
 	 */
 	
-	public String dumpTree() {
-		StringBuffer bitTree = new StringBuffer();
+	public byte[] dumpTree() {
+		BitStream bitStream = new BitStream();
 		int id = 0;
 		do {
 			Node node = nodes.get(id++);
 			if (node == null) break;
 			if (node.isLeaf()) {
-				String value = Utils.bits2string(node.value, 8);
+				bitStream.append(node.value, 8);
 				String bits = node.bits;
 				int size = bits.length();
-				String bitSize = Utils.bits2string(size, 3);
-				
-				bitTree.append(value).append(bitSize).append(bits);
+				bitStream.append(size, 3);
+				bitStream.append(bits);
 			}
 		} while (true);
-		return bitTree.toString();
+		return bitStream.asBytes();
 	}
 }
