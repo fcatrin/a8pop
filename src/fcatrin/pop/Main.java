@@ -11,6 +11,7 @@ import xtvapps.core.swt.AsyncTask;
 import xtvapps.core.swt.SWTUtils;
 import fcatrin.pop.Image.Mode;
 import fcatrin.pop.data.Level;
+import fcatrin.pop.utils.Utils;
 
 public class Main {
 	public static Display display;

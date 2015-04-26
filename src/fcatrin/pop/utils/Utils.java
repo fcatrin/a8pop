@@ -1,4 +1,4 @@
-package fcatrin.pop;
+package fcatrin.pop.utils;
 
 public class Utils {
 	public static int word(byte l, byte h) {

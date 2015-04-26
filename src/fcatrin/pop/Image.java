@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import fcatrin.pop.utils.Utils;
 import fcatrin.pop.views.ScreenView;
 
 public class Image {

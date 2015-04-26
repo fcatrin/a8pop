@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import fcatrin.pop.Huffman;
 import fcatrin.pop.Image;
-import fcatrin.pop.LZ;
-import fcatrin.pop.LZ.LZData;
-import fcatrin.pop.Utils;
+import fcatrin.pop.compression.Huffman;
+import fcatrin.pop.compression.LZ;
+import fcatrin.pop.compression.LZ.LZData;
+import fcatrin.pop.utils.Utils;
 import fcatrin.pop.views.ScreenView;
 
 public class Level {

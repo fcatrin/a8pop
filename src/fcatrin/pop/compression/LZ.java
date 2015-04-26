@@ -1,4 +1,4 @@
-package fcatrin.pop;
+package fcatrin.pop.compression;
 
 import java.util.Arrays;
 

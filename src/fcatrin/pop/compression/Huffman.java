@@ -1,4 +1,4 @@
-package fcatrin.pop;
+package fcatrin.pop.compression;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import fcatrin.pop.utils.Utils;
 
 public class Huffman {
 	int nodeId = 0;
