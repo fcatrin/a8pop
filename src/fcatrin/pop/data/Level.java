@@ -766,12 +766,13 @@ public class Level {
 		int size = 0;
 		Map<Integer, Integer> symbols = new HashMap<Integer, Integer>();
 		List<Integer> rleData = new ArrayList<Integer>();
-		while (i<type.length) {
-			byte blkid = (byte)(type[i] & 0xfF);
+		List<Integer> valueData = new ArrayList<Integer>();
+		while (i<spec.length) {
+			byte blkid = (byte)(spec[i] & 0xfF);
 			int times = 0;
 			i++;
-			while (i<type.length) {
-				byte thisblkid = (byte)(type[i] & 0xfF);
+			while (i<spec.length && times<7) {
+				byte thisblkid = (byte)(spec[i] & 0xfF);
 				if (blkid!=thisblkid) break;
 				times++;
 				i++;
@@ -782,6 +783,7 @@ public class Level {
 			System.out.println("blkid:" + blkid +", times:" + times);
 			rleData.add((int)blkid);
 			rleData.add(times);
+			valueData.add((int)blkid);
 			System.out.println(symbols);
 			size++;
 		}
@@ -790,10 +792,42 @@ public class Level {
 		System.out.println("original: " + type.length + ", compress:" + size);
 		
 
-		int data[] = new int[info.length];
-		for(i=0; i<info.length; i++) {
-			//data[i] = Utils.b2i((byte)(type[i] & 0xfF));
-			data[i] = Utils.b2i(info[i]);
+
+		int data[] = new int[rleData.size()];
+		for(i=0; i<rleData.size(); i+=2) {
+			data[i] = rleData.get(i)*10 + rleData.get(i+1);
+		}
+		
+		Huffman h = new Huffman(data);
+		int bits = 0;
+		for(int r=0; r<rleData.size(); r+=2) {
+			int value = rleData.get(r);
+			int repeat = rleData.get(r+1);
+			String svalue = h.compress(new int[]{value*10 + repeat});
+			System.out.println("value:" + value +", repeat:" + repeat + ", h:" + svalue);
+			bits += svalue.length();
+			if (repeat == 0) bits+=1;
+			else bits += 4;
+		}
+		
+		System.out.println("compressed rle+huffman:" + ((bits +7 )/8 ));
+		
+		
+		int originalData[] = new int[spec.length];
+		for(i=0; i<spec.length; i++) {
+			originalData[i] = spec[i];
+		}
+		Huffman h2 = new Huffman(originalData);
+		System.out.println(h2.dumpTree());
+		String compressed = h2.compress(originalData);
+		System.out.println(compressed);
+		
+		System.out.println("compressed huffman" + ((compressed.length()+7 )/8 ));
+
+		/*
+		int data[] = new int[type.length];
+		for(i=0; i<type.length; i++) {
+			data[i] = Utils.b2i(type[i]);
 		}
 		
 		LZData lz = LZ.compress(data);
@@ -833,13 +867,15 @@ public class Level {
 				int literal[] = new int[1];
 				literal[0] = lz.compressed[dataIndex];
 				dataIndex += 2;
-				literalBits += 4;
+				literalBits += 3;
 				literalBits += 7;
 			}
 		}
 		
 		int sizeTotal = (literalBits +7 )/8 + compressedBytes + (lz.literal.length+7)/8;
 		System.out.println("compressed total:" + sizeTotal + ", " + ((literalBits +7 )/8 ) + ", " + (compressedBytes) + ", " + ((lz.literal.length+7)/8));
+		*/
+		
 		/*
 		int data[] = new int[rleData.size()];
 		for(i=0; i<rleData.size(); i++) {

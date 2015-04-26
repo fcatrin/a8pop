@@ -181,5 +181,28 @@ public class Huffman {
 		return node;
 	}
 	
+	/*
+	 * format:
+	 * 8 bits: symbol
+	 * 4 bits: huffman code size (n)
+	 * n bits: huffman code
+	 */
 	
+	public String dumpTree() {
+		StringBuffer bitTree = new StringBuffer();
+		int id = 0;
+		do {
+			Node node = nodes.get(id++);
+			if (node == null) break;
+			if (node.isLeaf()) {
+				String value = Utils.bits2string(node.value, 8);
+				String bits = node.bits;
+				int size = bits.length();
+				String bitSize = Utils.bits2string(size, 3);
+				
+				bitTree.append(value).append(bitSize).append(bits);
+			}
+		} while (true);
+		return bitTree.toString();
+	}
 }
