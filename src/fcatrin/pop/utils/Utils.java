@@ -36,4 +36,20 @@ public class Utils {
 	public static byte int2byte(int symbol) {
 		return (byte)(symbol & 0xFF);
 	}
+	
+	public static byte[] join(byte arrays[][]) {
+		int totalSize = 0;
+		for(int i=0; i<arrays.length; i++) {
+			totalSize += arrays[i].length;
+		}
+		
+		byte joined[] = new byte[totalSize];
+		int index = 0;
+		for(int i=0; i<arrays.length; i++) {
+			for(int j=0; j<arrays[i].length; j++) {
+				joined[index++] = arrays[i][j];
+			}
+		}
+		return joined;
+	}
 }
