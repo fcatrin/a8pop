@@ -1,5 +1,8 @@
 package fcatrin.pop.compression;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -9,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import fcatrin.pop.data.Level;
 import fcatrin.pop.utils.BitStream;
 import fcatrin.pop.utils.Utils;
 
@@ -164,7 +168,7 @@ public class Huffman {
 	}
 
 	public byte[] compress(byte values[]) {
-		buildTree(values);
+		if (tableCompress.size() == 0) buildTree(values); // build tree only the first time
 		
 		BitStream bitData = new BitStream();
 		bitData.append(values.length % 0x100, 8);
@@ -184,8 +188,14 @@ public class Huffman {
 		bitCompress.append(data.length / 0x100, 8);
 		bitCompress.append(tree);
 		bitCompress.append(data);
+		System.out.println("header size:" + tree.length);
 		
 		return bitCompress.asBytes();
+	}
+	
+	public String compressByte(byte value) {
+		int b = Utils.b2i(value);
+		return tableCompress.get(b);
 	}
 	
 	public byte[] decompress(byte compressed[]) {
@@ -262,7 +272,91 @@ public class Huffman {
 	}
 	
 	
+	private static byte[] load(File file) throws IOException {
+		/*
+		 * 	byte linkMap[] = new byte[MAX_LINK];
+	byte linkLoc[] = new byte[MAX_LINK];
+	byte map[] = new byte[SCREENS*4];
+	byte info[] = new byte[256];
+		 */
+		byte data[] = new byte[256];
+		FileInputStream fis = null;
+		try {
+			fis = new FileInputStream(file);
+			fis.skip(24*30);
+			fis.skip(24*30);
+			fis.skip(256);
+			fis.skip(256);
+			fis.skip(24*4);
+			fis.read(data);
+			return data;
+		} finally {
+			if (fis!=null) fis.close();
+		}
+	}
+	
+	private static void testLevels() throws IOException {
+		/*
+		byte dataLevel[][] = new byte[15][];
+		for(int i=0; i<15; i++) {
+			dataLevel[i] = load(new File("levels/LEVEL" + i));
+			Huffman h = new Huffman();
+			byte compressed[] = h.compress(dataLevel[i]);
+			String format = "Data len:%d, compressed %d, percent:%f";
+			System.out.println(String.format(format, dataLevel[i].length, compressed.length, compressed.length*100.0f/dataLevel[i].length));
+
+		}
+		*/
+		/*
+		byte data[] = Utils.join(dataLevel);
+		Huffman h = new Huffman();
+		byte compressed[] = h.compress(data);
+		String format = "Data len:%d, compressed %d, percent:%f";
+		System.out.println(String.format(format, data.length, compressed.length, compressed.length*100.0f/data.length));
+		*/
+		
+		byte datal1[] = load(new File("levels/LEVEL2"));
+		
+		RLE rle = new RLE();
+		rle.compress(datal1);
+		
+		Huffman h1 = new Huffman();
+		h1.compress(rle.values);  // build tree with literal values
+		
+		BitStream bs = new BitStream();
+		int indexSrc = 0;
+		int indexData = 0;
+		while (indexSrc<rle.literal.length) {
+			boolean isLiteral = rle.literal[indexSrc++];
+			bs.append(isLiteral?1:0, 1);
+			bs.append(h1.compressByte(rle.compressed[indexData++]));
+			if (!isLiteral) {
+				bs.append(rle.compressed[indexData++], 3);
+			}
+		}
+		
+		BitStream result = new BitStream();
+		byte tree[] = h1.dumpTree();
+		byte data[] = bs.asBytes();
+		result.append(tree.length, 8);
+		result.append(data.length, 8);
+		result.append(tree);
+		result.append(data);
+		
+		byte compressed[] = result.asBytes();
+		String format = "Data len:%d, compressed %d, percent:%f";
+		System.out.println(String.format(format, datal1.length, compressed.length, compressed.length*100.0f/datal1.length));
+		
+	}
+	
+	
+	
+	
 	public static void main(String args[]) throws Exception {
+		
+		testLevels();
+		
+		/*
 		byte data[] = new byte[] { -1, -1, 0x05, 0x05, 0x05, 0x05, 0x01 };
 		
 		Huffman h = new Huffman();
@@ -278,5 +372,6 @@ public class Huffman {
 		System.out.println(bitDecompressed.dump());
 		
 		System.out.println(Arrays.toString(decompressed));
+		*/
 	}
 }
