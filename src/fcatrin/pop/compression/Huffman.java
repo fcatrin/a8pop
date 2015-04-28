@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import fcatrin.pop.compression.LZ.LZData;
 import fcatrin.pop.data.Level;
 import fcatrin.pop.utils.BitStream;
 import fcatrin.pop.utils.Utils;
@@ -54,7 +55,7 @@ public class Huffman {
 	public Huffman() {
 	}
 	
-	private void buildTree(byte[] values) {
+	public void buildTree(byte[] values) {
 		Map<Integer, Integer> codes = new HashMap<Integer, Integer>();
 		for(byte value: values) {
 			int intValue = Utils.b2i(value);
@@ -306,17 +307,22 @@ public class Huffman {
 	byte map[] = new byte[SCREENS*4];
 	byte info[] = new byte[256];
 		 */
-		byte data[] = new byte[256];
+		byte type[] = new byte[24*30];
+		byte spec[] = new byte[24*30];
+		byte linkMap[] = new byte[256];
+		byte linkLoc[] = new byte[256];
+		byte map[] = new byte[24*4];
+		byte info[] = new byte[256];
 		FileInputStream fis = null;
 		try {
 			fis = new FileInputStream(file);
-			fis.skip(24*30);
-			fis.skip(24*30);
-			fis.skip(256);
-			fis.skip(256);
-			fis.skip(24*4);
-			fis.read(data);
-			return data;
+			fis.read(type);
+			fis.read(spec);
+			fis.read(linkMap);
+			fis.read(linkLoc);
+			fis.read(map);
+			fis.read(info);
+			return info;
 		} finally {
 			if (fis!=null) fis.close();
 		}
@@ -342,13 +348,72 @@ public class Huffman {
 		System.out.println(String.format(format, data.length, compressed.length, compressed.length*100.0f/data.length));
 		*/
 		
-		byte datal1[] = load(new File("levels/LEVEL2"));
+		byte datal0[] = load(new File("levels/LEVEL0"));
+		byte datal1[] = load(new File("levels/LEVEL1"));
+		byte datal2[] = load(new File("levels/LEVEL2"));
+		byte datal3[] = load(new File("levels/LEVEL3"));
+		byte datal4[] = load(new File("levels/LEVEL4"));
+		byte datal5[] = load(new File("levels/LEVEL5"));
+		byte datal6[] = load(new File("levels/LEVEL6"));
+		byte datal7[] = load(new File("levels/LEVEL7"));
+		byte datal8[] = load(new File("levels/LEVEL8"));
+		byte datal9[] = load(new File("levels/LEVEL9"));
+		byte datal10[] = load(new File("levels/LEVEL10"));
+		byte datal11[] = load(new File("levels/LEVEL11"));
+		byte datal12[] = load(new File("levels/LEVEL12"));
+		byte datal13[] = load(new File("levels/LEVEL13"));
+		byte datal14[] = load(new File("levels/LEVEL14"));
+		
+		byte datal[] = Utils.join(new byte[][] {datal0, datal1, datal2, datal3, datal4,
+				datal5, datal6, datal7, datal8, datal9,
+				datal10, datal11, datal12, datal13, datal14});
+		
+		LZData lz = LZ.compress(datal);
+		
+		Huffman hLZ = new Huffman();
+		hLZ.buildTree(lz.compressed);
+		
+		Huffman hLiteral = new Huffman();
+		hLiteral.buildTree(lz.literals);
+		
+		
+		BitStream lzData = new BitStream();
+		int indexCompressed = 0;
+		int indexLiteral = 0;
+		for(int i=0; i<lz.literalFlags.length; i++) {
+			if (lz.literalFlags[i] == 1) {
+				lzData.append("1");
+				lzData.append(hLiteral.compressByte(lz.literals[indexLiteral++]));
+			} else {
+				lzData.append("0");
+				lzData.append(hLZ.compressByte(lz.compressed[indexCompressed++]));
+				lzData.append(hLZ.compressByte(lz.compressed[indexCompressed++]));
+			}
+		}
+		
+		BitStream result = new BitStream();
+		byte tree1[] = hLZ.dumpTree();
+		byte tree2[] = hLiteral.dumpTree();
+		byte data[] = lzData.asBytes();
+		result.append(tree1.length, 8);
+		result.append(tree2.length, 8);
+		result.append(data.length, 8);
+		result.append(tree1);
+		result.append(tree2);
+		result.append(data);
+		byte compressed[] = result.asBytes();
+		System.out.println(String.format("parts tree1:%d, tree2:%d, data:%d", tree1.length, tree2.length, data.length));
+		String format = "Data len:%d, compressed %d, percent:%f";
+		System.out.println(String.format(format, datal.length, compressed.length, compressed.length*100.0f/datal.length));
+		
+		
+		/*
 		
 		RLE rle = new RLE();
 		rle.compress(datal1);
 		
 		Huffman h1 = new Huffman();
-		h1.compress(rle.values);  // build tree with literal values
+		h1.buildTree(rle.values);  // build tree with literal values
 		
 		BitStream bs = new BitStream();
 		int indexSrc = 0;
@@ -373,6 +438,7 @@ public class Huffman {
 		byte compressed[] = result.asBytes();
 		String format = "Data len:%d, compressed %d, percent:%f";
 		System.out.println(String.format(format, datal1.length, compressed.length, compressed.length*100.0f/datal1.length));
+		*/
 		
 	}
 	
