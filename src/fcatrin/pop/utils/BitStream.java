@@ -13,11 +13,14 @@ public class BitStream {
 	}
 	
 	public void append(int value, int nbits) {
-		data.append(Utils.bits2string(value, nbits));
+		String s = Utils.bits2string(value, nbits);
+		data.append(s);
+		System.out.println("append " + s);
 	}
 	
 	public void append(String sBits) {
 		data.append(sBits);
+		System.out.println("append " + sBits);
 	}
 
 	public void append(byte[] data) {

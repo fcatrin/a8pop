@@ -248,25 +248,52 @@ public class Huffman {
 	 */
 	
 	public byte[] dumpTree() {
-		BitStream bitStream = new BitStream();
+		List<String> codes = new ArrayList<String>();
+		List<Integer> symbols = new ArrayList<Integer>();
+			
 		int id = 0;
-		int n = 0;
 		do {
 			Node node = nodes.get(id++);
 			if (node == null) break;
 			if (node.isLeaf()) {
+				symbols.add(0, node.value);
+				codes.add(0, node.bits);
+				/*
 				bitStream.append(node.value, 8);
 				String bits = node.bits;
 				int size = bits.length();
 				bitStream.append(size, MAX_BITS_PER_CODE);
 				bitStream.append(bits);
-				n++;
+				*/
 			}
 		} while (true);
 		
+		List<Integer> lengths = new ArrayList<Integer>();
+		int matchLen = 1;
+		int n = 0;
+		for(String code: codes) {
+			do  {
+				if (matchLen==code.length()) {
+					n++;
+					break;
+				} else {
+					lengths.add(n);
+					matchLen++;
+					n = 0;
+				}
+			} while (true);
+		}
+		if (n>0) lengths.add(n);
+		
 		BitStream bitStreamTree = new BitStream();
-		bitStreamTree.append(n, 8);
-		bitStreamTree.append(bitStream.asBytes());
+		bitStreamTree.append(lengths.size(), 8);
+		for(int i=0; i<lengths.size(); i++) {
+			bitStreamTree.append(lengths.get(i), MAX_BITS_PER_CODE);
+		}
+		for(int i=0; i<symbols.size(); i++) {
+			bitStreamTree.append(symbols.get(i), 8);
+			bitStreamTree.append(codes.get(i));
+		}
 		
 		return bitStreamTree.asBytes();
 	}
