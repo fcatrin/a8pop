@@ -322,7 +322,7 @@ public class Huffman {
 			fis.read(linkLoc);
 			fis.read(map);
 			fis.read(info);
-			return info;
+			return map;
 		} finally {
 			if (fis!=null) fis.close();
 		}
@@ -364,9 +364,15 @@ public class Huffman {
 		byte datal13[] = load(new File("levels/LEVEL13"));
 		byte datal14[] = load(new File("levels/LEVEL14"));
 		
+		// TODO 
+		// Test combined compressiont types
+		
 		byte datal[] = Utils.join(new byte[][] {datal0, datal1, datal2, datal3, datal4,
 				datal5, datal6, datal7, datal8, datal9,
 				datal10, datal11, datal12, datal13, datal14});
+		
+		Huffman hAll = new Huffman();
+		byte[] hCompressed = hAll.compress(datal);
 		
 		LZData lz = LZ.compress(datal);
 		
@@ -402,6 +408,7 @@ public class Huffman {
 		result.append(tree2);
 		result.append(data);
 		byte compressed[] = result.asBytes();
+		System.out.println("Huffmnan compressed:" + hCompressed.length);
 		System.out.println(String.format("parts tree1:%d, tree2:%d, data:%d", tree1.length, tree2.length, data.length));
 		String format = "Data len:%d, compressed %d, percent:%f";
 		System.out.println(String.format(format, datal.length, compressed.length, compressed.length*100.0f/datal.length));
