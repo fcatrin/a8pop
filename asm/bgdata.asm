@@ -18,6 +18,9 @@ piecea	.byte $00, $01, $05, $07, $0a, $01, $01, $0a, $10, $00, $01, $01, $00, $1
 pieceb	.byte $00, $02, $06, $08, $0b, $1b, $02, $9e, $1a, $1c, $02, $02, $9e, $4a, $21, $1b
 		.byte $4d, $4e, $02, $51, $84, $98, $02, $91, $92, $02, $00, $00, $00, $00, $00, $00
 
+pieceay	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
 pieceby	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 		
@@ -57,12 +60,25 @@ render_maska
 		.byte 0
 		.endr
 
-render_piecea_offset 
+render_piecea_offsetL 
 		.rept tiles_per_screen
-		.word 0
+		.byte 0
+		.endr
+render_piecea_offsetH 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+
+render_pieceay 
+		.rept tiles_per_screen
+		.byte 0
 		.endr
 
 render_pieceb 
+		.rept tiles_per_screen
+		.byte 0
+		.endr
+render_pieceby 
 		.rept tiles_per_screen
 		.byte 0
 		.endr
@@ -70,27 +86,39 @@ render_maskb
 		.rept tiles_per_screen
 		.byte 0
 		.endr
-render_pieceb_offset 
+render_pieceb_offsetL 
 		.rept tiles_per_screen
-		.word 0
+		.byte 0
+		.endr
+render_pieceb_offsetH 
+		.rept tiles_per_screen
+		.byte 0
 		.endr
 
 render_piecec 
 		.rept tiles_per_screen
 		.byte 0
 		.endr
-render_piecec_offset 
+render_piecec_offsetL 
 		.rept tiles_per_screen
-		.word 0
+		.byte 0
+		.endr
+render_piecec_offsetH
+		.rept tiles_per_screen
+		.byte 0
 		.endr
 
 render_pieced 
 		.rept tiles_per_screen
 		.byte 0
 		.endr
-render_pieced_offset 
+render_pieced_offsetL 
 		.rept tiles_per_screen
-		.word 0
+		.byte 0
+		.endr
+render_pieced_offsetH
+		.rept tiles_per_screen
+		.byte 0
 		.endr
 		
 render_piecef 
@@ -101,9 +129,13 @@ render_maskf
 		.rept tiles_per_screen
 		.byte 0
 		.endr
-render_piecef_offset 
+render_piecef_offsetL 
 		.rept tiles_per_screen
-		.word 0
+		.byte 0
+		.endr		
+render_piecef_offsetH
+		.rept tiles_per_screen
+		.byte 0
 		.endr		
 		
 renderBlockNumber		.byte 0
@@ -113,6 +145,7 @@ preRenderBlockSrc		.byte 0
 preRenderRow			.byte 0
 preRenderCols			.byte 0
 preRenderOffsetBlock	.byte 0
+preYPos					.byte 0
 
 tmpSaveX			.byte 0
 tmpSaveY			.byte 0

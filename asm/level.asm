@@ -83,6 +83,8 @@ waitvsync
 		sta frame2
 		lda #34
 		sta 559
+
+halt	jmp halt		
 		
 		lda 20
 		adc #90
@@ -90,7 +92,6 @@ wait
 		cmp 20
 		bne wait
 		
-;halt	jmp halt		
 		
 		ldx levelScreen
 		inx
@@ -118,9 +119,9 @@ drawNextBlock
 		bne noShortCut
 		jmp noDrawB
 noShortCut
-		lda render_piecec_offset,y
+		lda render_piecec_offsetL,y
 		sta vramIndex
-		lda render_piecec_offset+1,y
+		lda render_piecec_offsetH,y
 		sta vramIndex+1
 		ldy #0
 		lda render_piecec,x
@@ -130,9 +131,9 @@ noShortCut
 noDrawC
 		lda render_pieceb,x
 		beq noDrawB
-		lda render_pieceb_offset,y
+		lda render_pieceb_offsetL,y
 		sta vramIndex
-		lda render_pieceb_offset+1,y
+		lda render_pieceb_offsetH,y
 		sta vramIndex+1
 		ldy render_maskb,x
 		lda render_pieceb,x
@@ -143,9 +144,9 @@ noDrawC
 noDrawB
 		lda render_piecea,x
 		beq noDrawA
-		lda render_piecea_offset,y
+		lda render_piecea_offsetL,y
 		sta vramIndex
-		lda render_piecea_offset+1,y
+		lda render_piecea_offsetH,y
 		sta vramIndex+1
 		ldy render_maska,x
 		lda render_piecea,x
@@ -157,9 +158,9 @@ noDrawA
 		lda render_pieced,x
 		beq noDrawD
 
-		lda render_pieced_offset,y
+		lda render_pieced_offsetL,y
 		sta vramIndex
-		lda render_pieced_offset+1,y
+		lda render_pieced_offsetH,y
 		sta vramIndex+1
 		ldy #0
 		lda render_pieced,x
@@ -170,9 +171,9 @@ noDrawA
 noDrawD		
 		lda render_piecef,x
 		beq noDrawF
-		lda render_piecef_offset,y
+		lda render_piecef_offsetL,y
 		sta vramIndex
-		lda render_piecef_offset+1,y
+		lda render_piecef_offsetH,y
 		sta vramIndex+1
 		ldy render_maskf,x
 		lda render_piecef,x
@@ -180,7 +181,6 @@ noDrawD
 		ldy renderBlockOffset
 		ldx renderBlockNumber
 noDrawF		
-		iny
 		iny
 		inx
 		cpx #tiles_per_screen
@@ -215,6 +215,8 @@ preRenderNextBlock
 		ldx preRenderBlockDst		; y = block id, x = tile position
 		lda piecea,y				; write piecea, maska for this block
 		sta render_piecea,x
+		lda pieceay,y
+		sta render_pieceay,x
 		lda maska,y
 		sta render_maska,x
 		lda pieced,y
@@ -232,6 +234,8 @@ preRenderNextBlock
 		sta render_pieceb+1,x
 		lda maskb,y
 		sta render_maskb+1,x
+		lda pieceby,y
+		sta render_pieceby+1,x
 		
 		lda preRenderBlockDst	    ; write piecec for this block only in rows 2 & 3
 		cmp #20
@@ -279,28 +283,30 @@ preRenderOffsetNextCol
 
 		ldx preRenderBlockDst
 		lda render_pieced,x
+		ldy #0
 		jsr getBlockVramOffset
 		ldx preRenderOffsetBlock
-		sta render_pieced_offset+1,x
+		sta render_pieced_offsetH,x
 		tya
-		sta render_pieced_offset,x
+		sta render_pieced_offsetL,x
 		
 		ldx preRenderBlockDst
 		lda render_pieceb,x
+		ldy render_pieceby,x
 		jsr getBlockVramOffset
 		ldx preRenderOffsetBlock
-		sta render_pieceb_offset+1,x
+		sta render_pieceb_offsetH,x
 		tya
-		sta render_pieceb_offset,x
+		sta render_pieceb_offsetL,x
 		
 		ldx preRenderBlockDst
 		lda render_piecec,x
+		ldy #0
 		jsr getBlockVramOffset
 		ldx preRenderOffsetBlock
-		sta render_piecec_offset+1,x
+		sta render_piecec_offsetH,x
 		tya
-		sta render_piecec_offset,x
-		
+		sta render_piecec_offsetL,x
 		
 		sec								; offsetF = offsetA = offset - 3 scanlines
 		lda vramOffset
@@ -312,19 +318,20 @@ preRenderOffsetNextCol
 
 		ldx preRenderBlockDst
 		lda render_piecea,x
+		ldy render_pieceay,x
 		jsr getBlockVramOffset
 		ldx preRenderOffsetBlock
-		sta render_piecea_offset+1,x
+		sta render_piecea_offsetH,x
 		tya
-		sta render_piecea_offset,x
-
+		sta render_piecea_offsetL,x
 		ldx preRenderBlockDst
 		lda render_piecef,x
+		ldy #0
 		jsr getBlockVramOffset
 		ldx preRenderOffsetBlock
-		sta render_piecef_offset+1,x
+		sta render_piecef_offsetH,x
 		tya
-		sta render_piecef_offset,x
+		sta render_piecef_offsetL,x
 
 		clc								; offsetB = offset + 4 bytes (next tile col)
 		lda vramOffset					; offsetC = offsetB (for now)
@@ -335,7 +342,6 @@ preRenderOffsetNextCol
 vramOffsetNoOverflow		
 		
 		inc preRenderBlockDst
-		inc preRenderOffsetBlock
 		inc preRenderOffsetBlock
 		
 		dec preRenderCols
@@ -355,6 +361,7 @@ preRenderOffsetEnd
 ; tileOffset Y = LSB, A = MSB
 getBlockVramOffset
 		tax
+		sty preYPos
 		lda tilesL,x
 		sta tileIndex
 		lda tilesH,x
@@ -362,6 +369,8 @@ getBlockVramOffset
 		
 		ldy #1
 		lda (tileIndex),y		; get tile height
+		sec
+		sbc preYPos
 		asl
 		tax
 		sec
