@@ -56,7 +56,7 @@ start
 		jsr changeLevel
 		
 		
-		lda #0
+		lda #4
 		sta levelScreen
 		
 		jsr changeScreen

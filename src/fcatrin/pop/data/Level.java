@@ -158,7 +158,6 @@ public class Level {
 			fis.read(level.map);
 			fis.read(level.info);
 			level.setCurrentScreen(0);
-			level.compress();
 			return level;
 		} finally {
 			if (fis!=null) fis.close();
@@ -211,7 +210,7 @@ public class Level {
 		for(int row = 0; row<ROWS; row++) {
 			String s = "";
 			for(int i=0; i<TILES_PER_ROW; i++) {
-				s+= String.format("%x, ", objids[row*TILES_PER_ROW+i]);
+				s+= String.format("%x, ", objids[row*TILES_PER_ROW+i] & 0x1F);
 			}
 			System.out.println(s);
 		}
@@ -323,7 +322,7 @@ public class Level {
 			DrawBlock drawBlock = drawBlocksC[i];
 			eraseBlock(screenView, drawBlock.bottom, drawBlock.left);
 			if (drawBlock.piece != 0) {
-				System.out.println("Draw C block " + i);
+				//System.out.println("Draw C block " + i);
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece);
 			}
 		}
@@ -346,7 +345,7 @@ public class Level {
 			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksA[i];
 			if (drawBlock.piece != 0) {
-				System.out.println("Draw F block " + i + ",bottom:" + drawBlock.bottom + ", height:" + drawBlock.height);
+				//System.out.println("Draw F block " + i + ",bottom:" + drawBlock.bottom + ", height:" + drawBlock.height);
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false);
 			}
 		}
@@ -433,7 +432,7 @@ public class Level {
 				int leftObjBMask = maskb[leftObjId];
 				int leftObjBy = pieceby[leftObjId];
 				
-				System.out.println("row " + row + " leftObjB " + leftObjB + " leftObjBMask " + leftObjBMask + " leftDownObjId " + leftDownObjId + " leftObjC " + leftObjC);
+				//System.out.println("row " + row + " leftObjB " + leftObjB + " leftObjBMask " + leftObjBMask + " leftDownObjId " + leftDownObjId + " leftObjC " + leftObjC);
 	
 				drawBlock = new DrawBlock();
 				drawBlock.piece = leftObjC;
@@ -460,7 +459,7 @@ public class Level {
 				boolean isFirstCol = i == 0;
 				int left = i * TILE_WIDTH;
 				int objid = type[screenOffset + linearPos] & 0x1F;
-				System.out.println(String.format("screenOffset: %d, linearPos:%d, objid:%d", screenOffset, linearPos, objid));
+				//System.out.println(String.format("screenOffset: %d, linearPos:%d, objid:%d", screenOffset, linearPos, objid));
 				
 				int objidLeftBottomOffset = isLastRow?
 						neighborBlocksOffset[TILES_PER_ROW + i]: // bottom screen
@@ -641,7 +640,7 @@ public class Level {
 		// get screen at bottom left just to get the C part of the top right block
 		int screenBottomLeft = screenLeft>=0?map[screenLeft*4 + MAP_BOTTOM]:(screenBottom>=0?map[screenBottom*4 + MAP_LEFT]:-1);
 		
-		System.out.println("screenBottom " + screenBottom);
+		//System.out.println("screenBottom " + screenBottom);
 		
 		int i=0;
 		// top screen
@@ -752,58 +751,6 @@ public class Level {
 		}
 		fos.close();
 	}
-	
-	private void compress() {
-		/*
-		fis.read(level.type);
-		fis.read(level.spec);
-		fis.read(level.linkLoc);
-		fis.read(level.linkMap);
-		fis.read(level.map);
-		fis.read(level.info);
-		*/
-		
-/*		
-		byte data[] = Utils.join(new byte[][] {
-				type, spec, linkLoc, linkMap, map, info
-		});
-*/
-		byte data1[] = Utils.join(new byte[][] {
-				spec, linkMap
-		});
-
-		byte data2[] = Utils.join(new byte[][] {
-				info, map
-		});
-		
-		byte data[] = Utils.join(new byte[][] {
-				type, linkLoc
-		});
-		
-		Huffman h = new Huffman();
-		byte compressed[] = h.compress(data);
-		System.out.println(Arrays.toString(compressed));
-		
-		System.out.println(String.format("compressed huffman %d/%d %f%%", 
-				compressed.length, data.length, 
-				compressed.length*100.0f/data.length));
-		Huffman h2 = new Huffman();
-		byte decompressed[] = h2.decompress(compressed);
-		
-		if (data.length != decompressed.length) {
-			System.err.println("Different length");
-			System.exit(0);
-		}
-		
-		for(int i=0; i<data.length; i++) {
-			if (data[i]!=decompressed[i]) {
-				System.err.println("Different data at " + i);
-				System.exit(0);	
-			}
-		}
-
-	}
-	
 	
 	/*
 	 * *-------------------------------
