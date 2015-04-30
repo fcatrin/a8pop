@@ -103,11 +103,26 @@ public class MainWindow {
 			level.moveDown();
 		}
 		
-		if (e.keyCode == 'a') level.drawA = !level.drawA;
-		if (e.keyCode == 'b') level.drawB = !level.drawB;
-		if (e.keyCode == 'c') level.drawC = !level.drawC;
-		if (e.keyCode == 'd') level.drawD = !level.drawD;
-		if (e.keyCode == 'f') level.drawF = !level.drawF;
+		if (e.keyCode == 'a') {
+			level.drawA = !level.drawA;
+			level.redrawAll();
+		}
+		if (e.keyCode == 'b') {
+			level.drawB = !level.drawB;
+			level.redrawAll();
+		}
+		if (e.keyCode == 'c') {
+			level.drawC = !level.drawC;
+			level.redrawAll();
+		}
+		if (e.keyCode == 'd') {
+			level.drawD = !level.drawD;
+			level.redrawAll();
+		}
+		if (e.keyCode == 'f') {
+			level.drawF = !level.drawF;
+			level.redrawAll();
+		}
 		
 		if (e.keyCode == 'l') level.moveFloor();
 		if (e.keyCode == 's') level.moveSpike();

@@ -757,6 +757,10 @@ public class Level {
 	private void setCurrentScreen(int nextScreen) {
 		if (nextScreen == currentScreen) return;
 		currentScreen = nextScreen;
+		redrawAll();
+	}
+	
+	public void redrawAll() {
 		clearDirtyBlocks();
 		buildDrawList();
 	}
