@@ -39,7 +39,7 @@ pieced	.byte $00, $15, $15, $15, $15, $18, $19, $16, $15, $00, $15, $15, $17, $1
 piecef	.byte $00, $00, $00, $45, $46, $00, $00, $46, $48, $49, $87, $00, $46, $0f, $13, $00
 		.byte $00, $00, $00, $00, $83, $00, $00, $00, $00, $a8, $00, $ae, $ae, $ae, $00, $00
 
-maskf	.byte $00, $00, $00, $a4, $ff, $00, $00, $00, $00, $00, $a5, $00, $00, $00, $ff, $00
+maskf	.byte $00, $00, $00, $a8, $ff, $00, $00, $00, $00, $00, $a5, $00, $00, $00, $ff, $00
 		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00		
 
 screenData	.byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
@@ -194,6 +194,7 @@ tilesL  .byte       0, <tile01, <tile02, <tile03, <tile04, <tile05, <tile06, <ti
 		.byte       0,       0,       0,       0,       0,       0, <tile97,       0
 		.byte       0,       0,       0,       0,       0,       0,       0,       0
 		.byte <tilea0, <tilea1, <tilea2, <tilea3, <tilea4, <tilea5, <tilea6, <tilea7
+		.byte <tilea8,       0,       0,       0,       0,       0,       0,       0
 		
 tilesH	.byte       0, >tile01, >tile02, >tile03, >tile04, >tile05, >tile06, >tile07
 		.byte >tile08, >tile09, >tile0a, >tile0b, >tile0c,       0,       0,       0
@@ -216,6 +217,7 @@ tilesH	.byte       0, >tile01, >tile02, >tile03, >tile04, >tile05, >tile06, >til
 		.byte       0,       0,       0,       0,       0,       0, >tile97,       0
 		.byte       0,       0,       0,       0,       0,       0,       0,       0
 		.byte >tilea0, >tilea1, >tilea2, >tilea3, >tilea4, >tilea5, >tilea6, >tilea7
+		.byte >tilea8,       0,       0,       0,       0,       0,       0,       0
 
 
 tile01	.incbin "images/dungeon/tile_01.pic"
@@ -271,4 +273,5 @@ tilea4	.incbin "images/dungeon/tile_a4.pic"
 tilea5	.incbin "images/dungeon/tile_a5.pic"
 tilea6	.incbin "images/dungeon/tile_a6.pic"
 tilea7	.incbin "images/dungeon/tile_a7.pic"
+tilea8	.incbin "images/dungeon/tile_a8.pic"
 
