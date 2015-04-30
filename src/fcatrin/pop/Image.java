@@ -78,7 +78,7 @@ public class Image {
 		if (mode == Mode.Atari) {
 			if (mask == null || autoMask) {
 				for(int y=0; y<tileHeight; y++) {
-					int basey = bottom - tileHeight + y;
+					int basey = bottom - tileHeight + y+1;
 					for(int x=0; x<width; x++) {
 						int value = (int)data[width*(y+dy) + x];
 						if (!autoMask || value!=0) screenView.setPixel(left+x, basey, value);
@@ -86,7 +86,7 @@ public class Image {
 				}
 			} else {
 				for(int y=0; y<tileHeight; y++) {
-					int basey = bottom - tileHeight + y;
+					int basey = bottom - tileHeight + y+1;
 					int masky = mask.height - tileHeight + y;
 					for(int x=0; x<width; x++) {
 						int value = (int)data[width*(y+dy) + x];

@@ -53,7 +53,14 @@ public class MainWindow {
 			public void run() {
 				while (!shell.isDisposed()) {
 					long t0 = System.currentTimeMillis();
-					if (level == null) continue;
+					if (level == null) {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						continue;
+					}
 					if (level.advanceFrame()) changed = true;
 					
 					if (render()) {

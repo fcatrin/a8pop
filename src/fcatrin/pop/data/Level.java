@@ -323,23 +323,25 @@ public class Level {
 			
 			// erase block
 			DrawBlock drawBlock = drawBlocksC[i];
+			if (drawBlock == null) continue;
 			eraseBlock(screenView, drawBlock.bottom, drawBlock.left);
 			if (drawBlock.piece != 0) {
-				//System.out.println("Draw C block " + i);
-				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece);
+				System.out.println(String.format("Draw c[%d] piece %d bottom %d height %d", i, drawBlock.piece, drawBlock.bottom, drawBlock.height));
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, 0, false, drawBlock.height);
 			}
 		}
 		for(int i=0; drawB && i<drawBlocksB.length; i++) {
 			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksB[i];
+			if (drawBlock==null) continue;
 			if (drawBlock.piece != 0) {
-				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false);
+				System.out.println(String.format("Draw b[%d] piece %d bottom %d height %d", i, drawBlock.piece, drawBlock.bottom, drawBlock.height));
+				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false, drawBlock.height);
 			}
 		}
 		for(int i=0; drawD && i<drawBlocksD.length; i++) {
 			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksD[i];
-			if (i>=TILES_PER_SCREEN) eraseBlock(screenView, drawBlock.bottom, drawBlock.left);
 			if (drawBlock.piece != 0) {
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece,drawBlock.mask, false);
 			}
@@ -363,7 +365,6 @@ public class Level {
 			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksF[i];
 			if (drawBlock.piece != 0) {
-				System.out.println(String.format("Draw d[%d] piece %d bottom %d height %d", i, drawBlock.piece, drawBlock.bottom, drawBlock.height));
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, drawBlock.mask==0xFF);
 			}
 		}
@@ -392,8 +393,8 @@ public class Level {
 		int height;
 	}
 	
-	private DrawBlock drawBlocksC[] = new DrawBlock[TILES_PER_SCREEN];
-	private DrawBlock drawBlocksB[] = new DrawBlock[TILES_PER_SCREEN];
+	private DrawBlock drawBlocksC[] = new DrawBlock[TILES_PER_SCREEN + TILES_PER_ROW];
+	private DrawBlock drawBlocksB[] = new DrawBlock[TILES_PER_SCREEN + TILES_PER_ROW];
 	private DrawBlock drawBlocksD[] = new DrawBlock[TILES_PER_SCREEN + TILES_PER_ROW];
 	private DrawBlock drawBlocksA[] = new DrawBlock[TILES_PER_SCREEN];
 	private DrawBlock drawBlocksExtraBackground[] = new DrawBlock[TILES_PER_SCREEN];
@@ -612,6 +613,24 @@ public class Level {
 			}
 			drawDoor = false;
 		}
+
+		// draw all C blocks on top row
+		for(int i=1; i<TILES_PER_ROW; i++) {
+			if (!dirtyBlocks[TILES_PER_SCREEN+i]) continue;
+			
+			int objid = type[screenOffset+i-1] & 0x1F;
+			int objC = piecec[objid];
+			int left = i * TILE_WIDTH;
+			DrawBlock drawBlock = new DrawBlock();
+			drawBlock.piece = objC;
+			System.out.println("draw on top piecec " + objid + "/" + objC);
+			drawBlock.bottom = 2;
+			drawBlock.left = left;
+			drawBlock.height = 3;
+			drawBlocksC[tileIndex+i] = drawBlock;
+			//drawTileBaseBottom(screenView, 3, left, objD);
+		}
+
 		
 		// draw all D blocks of screen above
 		for(int i=0; i<TILES_PER_ROW; i++) {
@@ -621,12 +640,22 @@ public class Level {
 			int objid = topOffset>=0?type[topOffset] & 0x1F:OBJID_BLOCK;
 			int objD = pieced[objid];
 			int left = i * TILE_WIDTH;
+			System.out.println("draw on top pieced " + objid + "/" + objD);
 			DrawBlock drawBlock = new DrawBlock();
 			drawBlock.piece = objD;
-			drawBlock.bottom = 3;
+			drawBlock.bottom = 2;
 			drawBlock.left = left;
 			drawBlocksD[tileIndex+i] = drawBlock;
-			//drawTileBaseBottom(screenView, 3, left, objD);
+			if (i<TILES_PER_ROW-1) {
+				int objB = pieceb[objid];
+				drawBlock = new DrawBlock();
+				drawBlock.piece = objB;
+				drawBlock.bottom = 2;
+				drawBlock.left = left + TILE_WIDTH;
+				drawBlock.height = 3;
+				drawBlock.mask = maskb[objid];
+				drawBlocksB[tileIndex+i+1] = drawBlock;
+			}
 		}
 		
 	}
