@@ -45,98 +45,116 @@ maskf	.byte $00, $00, $00, $a4, $ff, $00, $00, $00, $00, $00, $a5, $00, $00, $00
 screenData	.byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
 			.byte 19, 19, 1, 3, 0, 20, 20, 20, 20,20
 			.byte 20, 20, 20, 20, 14, 3, 11, 1, 1, 20
+screenDataTop
+		.rept levelTilesPerRow
+		.byte 0
+		.endr			
 
 xtestmap .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 		.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 		.byte 14,0, 0, 0, 0, 0, 0, 0, 0, 0
 
 render_piecea 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 
 render_maska 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 
 render_piecea_offsetL 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_piecea_offsetH 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 
 render_pieceay 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 
 render_pieceb 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_pieceby 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_maskb 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_pieceb_offsetL 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_pieceb_offsetH 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 
 render_piecec 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_piecec_offsetL 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_piecec_offsetH
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 
 render_pieced 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_pieced_offsetL 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_pieced_offsetH
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 		
 render_piecef 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_maskf 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr
 render_piecef_offsetL 
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
 		.endr		
 render_piecef_offsetH
-		.rept tiles_per_screen
+		.rept levelTilesPerScreen
 		.byte 0
-		.endr		
+		.endr	
+
+render_pieced_top
+		.rept levelTilesPerRow
+		.byte 0
+		.endr
+render_pieced_top_offsetL
+		.rept levelTilesPerRow
+		.byte 0
+		.endr
+render_pieced_top_offsetH
+		.rept levelTilesPerRow
+		.byte 0
+		.endr
+
 		
 renderBlockNumber		.byte 0
 renderBlockOffset		.byte 0

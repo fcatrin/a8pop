@@ -1,6 +1,6 @@
 
-genAutoMaskTable
-		ldx #0
+genAutoMaskTable ldx #0
+		
 nextAutoMask		
 		txa
 		and #$AA

@@ -11,6 +11,7 @@ maskIndex = 208
 tileIndex = 210
 vramIndex = 212
 tileMask = $1F
+TILE_BLOCK = 20
 
 vramSize = 40*192
 
@@ -24,8 +25,22 @@ tileBaseOffset = 3*40
 stdTileHeight = 63
 tileScanBytes = stdTileHeight*40
 
-tiles_per_line		= 10
-tiles_per_screen	= 3*tiles_per_line
+levelTilesPerRow	= 10
+levelTilesPerScreen = 3*levelTilesPerRow
+levelScreens = 24
+levelDescriptors = levelTilesPerScreen*levelScreens
+levelLinks = 256;
+
+; avoid asm overflow errors
+levelTypes   = levelData
+levelSpecs   = levelData + 720
+levelLinkMap = levelData + 720 + 720
+levelLinkLoc = levelData + 720 + 720 + 256
+levelMap     = levelData + 720 + 720 + 256 + 256
+levelInfo    = levelData + 720 + 720 + 256 + 256 + 96
+
+levelMapTop = 2
+
 
 * = $600
 
@@ -34,7 +49,6 @@ frame1 .byte 0
 frame2 .byte 0
 
 start
-
 		lda #dungeon_color0		; setup colors
 		sta COLOR0
 		lda #dungeon_color1
@@ -56,7 +70,7 @@ start
 		jsr changeLevel
 		
 		
-		lda #4
+		lda #3
 		sta levelScreen
 		
 		jsr changeScreen
@@ -183,10 +197,24 @@ noDrawD
 noDrawF		
 		iny
 		inx
-		cpx #tiles_per_screen
-		beq drawEnd
+		cpx #levelTilesPerScreen
+		beq drawTop
 		jmp drawNextBlock
-drawEnd		
+drawTop	
+		ldx #0
+renderNextTopTile		
+		stx renderBlockNumber
+		lda render_pieced_top_offsetL,x
+		sta vramIndex
+		lda render_pieced_top_offsetH,x
+		sta vramIndex+1
+		ldy #0
+		lda render_pieced_top,x
+		jsr drawTile
+		ldx renderBlockNumber
+		inx
+		cpx #levelTilesPerRow
+		bne renderNextTopTile
 		rts
 			
 
@@ -253,6 +281,17 @@ preRenderNextLine
 		dex
 		stx preRenderRow
 		bne preRenderNextRow
+		
+; now go for the top row
+preNextTopTile
+		lda screenDataTop,x
+		and #$1F
+		tay
+		lda pieced,y
+		sta render_pieced_top,x
+		inx
+		cpx #levelTilesPerRow
+		bne preNextTopTile		
 		rts
 
 preRenderOffsets
@@ -353,7 +392,29 @@ preRenderOffsetNextRow
 		dex
 		beq preRenderOffsetEnd
 		jmp preRenderOffsetRow
-preRenderOffsetEnd		
+preRenderOffsetEnd
+
+; calc offsets for first row.  Constant for now
+		clc						; set vramOffset for row on x
+		lda #<vram
+		sta vramOffset
+		lda #>vram
+		sta vramOffset+1
+		ldx #0
+nextTopOffset
+		lda vramOffset+1		
+		sta render_pieced_top_offsetH,x
+		lda vramOffset
+		sta render_pieced_top_offsetL,x
+		clc
+		adc #4
+		sta vramOffset
+		bcc noOverflowTop
+		inc vramOffset+1
+noOverflowTop
+		inx
+		cpx #levelTilesPerRow
+		bne nextTopOffset
 		rts
 		
 		
@@ -800,7 +861,8 @@ levelScreenOffset
 		iny
 		cpy #levelTilesPerScreen
 		bne levelScreenOffset
-		rts
+		
+		jmp getScreenTopRow
 		
 changeLevel
 		lda #<levelData
@@ -824,6 +886,44 @@ changeLevel
 		lda #0
 		sta levelScreen
 		
+		jmp memcpy
+
+getScreenTopRow
+		lda levelScreen
+		asl
+		asl
+		tax
+		inx
+		inx                  ; TODO workaround assembler bug levelMap+2
+		lda levelMap,x
+		bne hasScreenTopRow
+		lda #TILE_BLOCK
+		ldx #levelTilesPerRow
+setScreenTopBlock		
+		sta screenDataTop,x
+		dex
+		bpl setScreenTopBlock
+		rts
+hasScreenTopRow
+		sec
+		sbc #1
+		asl
+		tax		
+		clc
+		lda levelScreenLookup,x
+		adc #2*levelTilesPerRow		; last row
+		sta memcpySrc
+		lda levelScreenLookup+1,x
+		adc #0
+		sta memcpySrc+1
+		lda #<screenDataTop
+		sta memcpyDst
+		lda #>screenDataTop
+		sta memcpyDst+1
+		lda #levelTilesPerRow
+		sta memcpyLen
+		lda #0
+		sta memcpyLen+1
 		jmp memcpy
 		
 		
@@ -859,18 +959,6 @@ levelData
 		
 levelData0 .incbin "../levels/LEVEL0"
 levelData1 .incbin "../levels/LEVEL1"
-
-levelTilesPerScreen = 30
-levelScreens = 24
-levelDescriptors = levelTilesPerScreen*levelScreens
-levelLinks = 256;
-
-levelTypes = levelData
-levelSpecs = levelData + levelDescriptors
-levelLinkMap = levelSpecs + levelDescriptors
-levelLinkLoc = levelLinkMap + levelLinks
-levelMap = levelLinkLoc + levelLinks
-levelInfo = levelMap + levelScreens*4
 
 levelScreenLookup
 		.rept levelScreens
