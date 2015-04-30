@@ -53,6 +53,7 @@ public class MainWindow {
 			public void run() {
 				while (!shell.isDisposed()) {
 					long t0 = System.currentTimeMillis();
+					if (level == null) continue;
 					if (level.advanceFrame()) changed = true;
 					
 					if (render()) {
