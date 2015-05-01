@@ -70,7 +70,7 @@ start
 		jsr changeLevel
 		
 		
-		lda #3
+		lda #0
 		sta levelScreen
 		
 		jsr changeScreen
@@ -98,7 +98,7 @@ waitvsync
 		lda #34
 		sta 559
 
-halt	jmp halt		
+;halt	jmp halt		
 		
 		lda 20
 		adc #90
