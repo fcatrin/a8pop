@@ -46,7 +46,12 @@ public class Image {
 					if (hex.equals("ffbc7854")) color = 2;
 					else if (hex.equals("ffbbbbbc")) color = 3;
 					else if (hex.equals("ff80280c")) color = 1;
-					else if (!hex.equals("000000"))	color = 3;
+					else if (hex.equals("796700")) color = 1; // verify
+					else if (hex.equals("fffeb66c")) color = 2; // verify
+					else if (hex.equals("ffd1d1d2")) color = 3; // verify
+					else if (!hex.equals("000000")) {
+						color = 3;
+					}
 					image.data[y*width + x] = (byte)color;
 					x++;
 				}

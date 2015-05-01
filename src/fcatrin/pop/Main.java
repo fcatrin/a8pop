@@ -31,6 +31,16 @@ public class Main {
 		};
 		*/
 		
+		System.out.println("load sprite start");
+		File kidDir = new File("images/kid");
+		Sprite kid = new Sprite();
+		for(int i=34; i<=44; i++) {
+			String format = "kid_%d.bmp";
+			System.out.println("Load " + String.format(format, i));
+			kid.addFrame(i, new File(kidDir, String.format(format, i)));
+		}
+		System.out.println("load sprite end");
+		
 		File baseDir = new File("images/dungeon");
 		Level.addTile(1,  new File(baseDir, "tile_01.bmp"));
 		Level.addTile(2,  new File(baseDir, "tile_02.bmp"));
