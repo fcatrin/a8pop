@@ -273,9 +273,28 @@ public class Level {
 			}
 			changed = true;
 		}
+		
+		kid.advanceFrame();
+		Bounds dirtyBounds = kid.getBounds();
+		markDirty(currentScreen, dirtyBounds);
+		changed = true;
+		
 		return changed;
 	}
 	
+	private void markDirty(int screen, Bounds dirtyBounds) {
+		int px1 = dirtyBounds.x1 / TILE_WIDTH;
+		int px2 = dirtyBounds.x2 / TILE_WIDTH;
+		int py1 = (dirtyBounds.y1-3) / TILE_HEIGHT;
+		int py2 = (dirtyBounds.y2-3) / TILE_HEIGHT;
+		for(int py = py1; py<=py2; py++) {
+			for(int px = px1; px<=px2; px++) {
+				dirtyBlocks[py*TILES_PER_ROW + px] = true;
+			}			
+		}
+		buildDrawList();
+	}
+
 	private void markDirty(int screen, int position) {
 		boolean dirty = false;
 		boolean isLastCol = (position % 10) == 9;
@@ -367,7 +386,7 @@ public class Level {
 		}
 		
 		Frame kidFrame = kid.getFrame();
-		kidFrame.image.renderBottom(screenView, 120 + kidFrame.dy, 20 + kidFrame.dx, null, true, 0);
+		kidFrame.image.renderBottom(screenView, kid.y + kidFrame.dy, kid.x + kidFrame.dx, null, true, 0);
 		kid.advanceFrame();
 		
 		for(int i=0; drawF && i<drawBlocksF.length; i++) {
@@ -796,6 +815,14 @@ public class Level {
 			fos.write((byte)value);
 		}
 		fos.close();
+	}
+
+	public void moveKidX(int dx) {
+		kid.x +=dx;
+	}
+
+	public void moveKidY(int dy) {
+		kid.y +=dy;
 	}
 	
 	/*

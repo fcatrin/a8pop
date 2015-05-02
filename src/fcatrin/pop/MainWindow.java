@@ -128,6 +128,11 @@ public class MainWindow {
 		if (e.keyCode == 's') level.moveSpike();
 		if (e.keyCode == 'g') level.openDoor();
 		
+		if (e.keyCode == '1') level.moveKidX(-1);
+		if (e.keyCode == '2') level.moveKidX(1);
+		if (e.keyCode == '3') level.moveKidY(-1);
+		if (e.keyCode == '4') level.moveKidY(1);
+		
 		
 		System.out.println(String.format("Screen Index %d", screenIndex));
 		changed = true;

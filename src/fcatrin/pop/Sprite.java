@@ -42,8 +42,8 @@ public class Sprite {
 	int frameIndex = 0;
 	int animationIndex = 0;
 	
-	int positionX = 0;
-	int positionY = 100;
+	public int x = 0;
+	public int y = 100;
 	
 	Frame animation[];
 	Frame currentFrame;
@@ -63,10 +63,10 @@ public class Sprite {
 	private void updateFrame() {
 		currentFrame = animation[frameIndex];
 		currentFrame.image = frameImages.get(currentFrame.frameIndex);
-		currentBounds.x1 = positionX;
-		currentBounds.x2 = positionX + currentFrame.image.width;
-		currentBounds.y1 = positionY - currentFrame.image.height;
-		currentBounds.y2 = positionY;
+		currentBounds.x1 = x;
+		currentBounds.x2 = x + currentFrame.image.width;
+		currentBounds.y1 = y - currentFrame.image.height;
+		currentBounds.y2 = y;
 	}
 
 	public Frame getFrame() {
@@ -88,7 +88,13 @@ public class Sprite {
 		return bounds;
 	}
 	
+	long lastFrameTime = 0;
+	
 	public void advanceFrame() {
+		long t = System.currentTimeMillis();
+		if ((t-lastFrameTime)<(1000/12)) return;
+		lastFrameTime = t;
+		
 		saveLastBounds();
 
 		frameIndex++;
