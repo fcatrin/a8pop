@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import fcatrin.pop.Image;
+import fcatrin.pop.Sprite;
+import fcatrin.pop.Sprite.Frame;
 import fcatrin.pop.compression.Huffman;
 import fcatrin.pop.compression.LZ;
 import fcatrin.pop.compression.LZ.LZData;
@@ -60,6 +62,8 @@ public class Level {
 	private final int trDirection[] = new int[MAX_TROBS];
 	private final int trObjid[] = new int[MAX_TROBS];
 	private int trobs = 0;
+	
+	public Sprite kid;
 	
 	
 	static Map<Integer, Image> tiles = new HashMap<Integer, Image>(); // TODO use an array when all tiles got created
@@ -361,6 +365,11 @@ public class Level {
 				drawTileBaseBottom(screenView, drawBlock.bottom, drawBlock.left, drawBlock.piece, drawBlock.mask, false, drawBlock.height);
 			}
 		}
+		
+		Frame kidFrame = kid.getFrame();
+		kidFrame.image.renderBottom(screenView, 120 + kidFrame.dy, 20 + kidFrame.dx, null, true, 0);
+		kid.advanceFrame();
+		
 		for(int i=0; drawF && i<drawBlocksF.length; i++) {
 			if (!dirtyBlocks[dirtyIndex[i]]) continue;
 			DrawBlock drawBlock = drawBlocksF[i];

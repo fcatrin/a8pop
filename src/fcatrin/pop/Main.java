@@ -39,6 +39,7 @@ public class Main {
 			System.out.println("Load " + String.format(format, i));
 			kid.addFrame(i, new File(kidDir, String.format(format, i)));
 		}
+		kid.init();
 		System.out.println("load sprite end");
 		
 		File baseDir = new File("images/dungeon");
@@ -104,6 +105,7 @@ public class Main {
 		
 		
 		Level level = Level.load(new File("levels/level1"));
+		level.kid = kid;
 		
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);
