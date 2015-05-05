@@ -802,8 +802,14 @@ public class Level {
 			writeTile(tileEntry.getKey(), tileEntry.getValue());
 		}
 	}
+	
+	public void dumpSprites() throws IOException {
+		for(Entry<Integer, Image> tileEntry : kid.frameImages.entrySet()) {
+			writeSprite("kid", tileEntry.getKey(), tileEntry.getValue());
+		}
+	}
 
-	private static void writeTile(Integer index, Image tile) throws IOException {
+	private static void writeTile(int index, Image tile) throws IOException {
 		String fileName = String.format("tile_%02x.pic", index);
 		int data[] = tile.getAtariData();
 		
@@ -811,6 +817,21 @@ public class Level {
 		FileOutputStream fos = new FileOutputStream(file);
 		fos.write((byte)((tile.width+3)/4));
 		fos.write((byte)tile.height);
+		for(int value : data) {
+			fos.write((byte)value);
+		}
+		fos.close();
+	}
+	
+	private static void writeSprite(String name, int index, Image image) throws IOException {
+		String fileName = String.format("sprite_%02x.pic", index);
+		
+		int data[] = image.getAtariData();
+		
+		File file = new File("asm/images/" + name + "/" + fileName);
+		FileOutputStream fos = new FileOutputStream(file);
+		fos.write((byte)((image.width+3)/4));
+		fos.write((byte)image.height);
 		for(int value : data) {
 			fos.write((byte)value);
 		}

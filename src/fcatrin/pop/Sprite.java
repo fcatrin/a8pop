@@ -22,7 +22,7 @@ public class Sprite {
 		}
 	}
 	
-	Map<Integer, Image> frameImages = new HashMap<Integer, Image>();
+	public Map<Integer, Image> frameImages = new HashMap<Integer, Image>();
 	
 	Frame animation_run_jump[] = {
 			new Frame(34, 0, 0),

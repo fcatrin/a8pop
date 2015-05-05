@@ -59,6 +59,8 @@ noDrawA
 		inx
 		cpx #levelTilesPerScreen
 		bne drawNextBlock
+		
+		jsr drawKid
 	
 		ldx #0
 		ldy #0	

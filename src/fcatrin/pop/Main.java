@@ -106,6 +106,7 @@ public class Main {
 		
 		Level level = Level.load(new File("levels/level1"));
 		level.kid = kid;
+		level.dumpSprites();
 		
 
 		AsyncTask.asyncProcessor = new AsyncProcessor(display);

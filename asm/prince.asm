@@ -7,9 +7,12 @@ COLOR0 = 708
 COLOR1 = 709
 COLOR2 = 710
 
-maskIndex = 208
-tileIndex = 210
-vramIndex = 212
+maskIndex   = 208
+tileIndex   = 210
+vramIndex   = 212
+spriteIndex = 214
+
+
 tileMask = $1F
 TILE_BLOCK = 20
 
@@ -98,7 +101,7 @@ waitvsync
 		lda #34
 		sta 559
 
-;halt	jmp halt		
+halt	jmp halt		
 		
 		lda 20
 		adc #90
@@ -127,9 +130,16 @@ haltx	jmp haltx
 		.include "level/prerender.asm"
 		.include "level/drawTile.asm"
 
+		.include "sprite.asm"
 		.include "mask.asm"
 		.include "utils.asm"
 		.include "level/bgdata.asm"
+
+heightLookup 
+		.rept 200
+		.word [*-heightLookup]/2*scanbytes
+		.endr
+
 
 .bank
 *		= $A000

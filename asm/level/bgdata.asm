@@ -172,11 +172,6 @@ preYPos					.byte 0
 tmpSaveX			.byte 0
 tmpSaveY			.byte 0
 
-heightLookup 
-		.rept 64
-		.word [*-heightLookup]/2*scanbytes
-		.endr
-
 tilesL  .byte       0, <tile01, <tile02, <tile03, <tile04, <tile05, <tile06, <tile07
 		.byte <tile08, <tile09, <tile0a, <tile0b, <tile0c,       0,       0,       0
 		.byte       0,       0,       0, <tile13,       0, <tile15,       0,       0
