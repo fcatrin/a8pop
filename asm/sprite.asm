@@ -22,6 +22,7 @@ drawKid
 		clc
 		lda heightLookup,x
 		adc #<vram
+		adc kidX			; TODO temporaty until we got pixel presicion
 		sta vramIndex
 		lda heightLookup+1,x
 		adc #>vram
@@ -66,8 +67,8 @@ noSpriteVramOverflow
 		bne spriteCopyScan		
 		rts
 
-kidX			.byte 0
-kidY			.byte 100
+kidX			.byte 11
+kidY			.byte 124
 kidFrameIndex 	.byte 0
 kidTop			.byte 0
 spriteWidth		.byte 0
