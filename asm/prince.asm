@@ -128,8 +128,8 @@ haltx	jmp haltx
 		.include "level/drawTile.asm"
 
 		.include "mask.asm"
-		.include "bgdata.asm"
 		.include "utils.asm"
+		.include "level/bgdata.asm"
 
 .bank
 *		= $A000
