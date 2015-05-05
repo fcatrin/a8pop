@@ -1,7 +1,18 @@
-drawAll		
+
+; draw all pre-rendered tiles (prerender.asm)
+; first draw all background tiles (C, B, A)
+; then draw all sprites
+; finally draw "front background" tiles (D, F)
+; skip drawing if render_dirty_blocks,x is not set
+
+
+drawBack	
 		ldx #0
 		ldy #0
 drawNextBlock
+		lda render_dirty_blocks,x
+		beq noDrawA
+		
 		stx renderBlockNumber
 		sty renderBlockOffset
 		lda render_piecef,x
@@ -43,8 +54,22 @@ noDrawB
 		jsr drawTile
 		ldy renderBlockOffset
 		ldx renderBlockNumber
-
 noDrawA
+		iny
+		inx
+		cpx #levelTilesPerScreen
+		bne drawNextBlock
+	
+		ldx #0
+		ldy #0	
+
+drawFront
+		stx renderBlockNumber
+		sty renderBlockOffset
+		
+		lda render_dirty_blocks,x
+		beq noDrawF
+		
 		lda render_pieced,x
 		beq noDrawD
 
@@ -70,13 +95,14 @@ noDrawD
 		jsr drawTile
 		ldy renderBlockOffset
 		ldx renderBlockNumber
-noDrawF		
+noDrawF
+		lda #0
+		sta render_dirty_blocks,x
 		iny
 		inx
 		cpx #levelTilesPerScreen
-		beq drawTop
-		jmp drawNextBlock
-drawTop	
+		bne drawFront
+
 		ldx #0
 renderNextTopTile		
 		stx renderBlockNumber

@@ -92,7 +92,7 @@ waitvsync
 
 		lda 20
 		sta frame1
-		jsr drawAll
+		jsr drawBack
 		lda 20
 		sta frame2
 		lda #34

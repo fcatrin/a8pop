@@ -43,6 +43,7 @@ changeLevel
 		jmp memcpy
 		
 changeScreen
+		jsr dirtySetAll
 		lda levelScreen
 		asl
 		tax
@@ -96,6 +97,23 @@ hasScreenTopRow
 		sta memcpyLen+1
 		jmp memcpy
 		
+dirtyClearAll
+		ldx #0
+		lda #0
+		beq dirtyLoop
+		
+dirtySetAll
+		ldx #0
+		lda #255
+				
+dirtyLoop		
+		sta render_dirty_blocks,x
+		inx
+		cpx #levelTilesPerScreen
+		bne dirtyLoop
+		rts
+
+
 
 ; origin struct
 ;	byte type[] = new byte[DESCRIPTORS];
