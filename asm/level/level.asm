@@ -1,21 +1,4 @@
-levelDataOffsets .word levelData0, levelData1
-		
-levelSize = 2304		
-levelData
-		.rept levelSize
-		.byte 0
-		.endr
-		
-levelData0 .incbin "../levels/LEVEL0"
-levelData1 .incbin "../levels/LEVEL1"
 
-levelScreenLookup
-		.rept levelScreens
-		.word levelData+([*-levelScreenLookup]/2*levelTilesPerScreen)
-		.endr
-
-levelScreen	.byte 0
-levelNumber	.byte 0
 
 
 changeLevel
@@ -43,8 +26,11 @@ changeLevel
 		jmp memcpy
 		
 changeScreen
-		jsr dirtySetAll
-		lda levelScreen
+		cmp #255
+		bne changeValidScreen
+		rts
+changeValidScreen
+		sta levelScreen
 		asl
 		tax
 		lda levelScreenLookup,x
@@ -60,13 +46,8 @@ levelScreenOffset
 		cpy #levelTilesPerScreen
 		bne levelScreenOffset
 		
-		lda levelScreen
-		asl
-		asl
-		tax
-		inx
-		inx                  ; TODO workaround assembler bug levelMap+2
-		lda levelMap,x
+		jsr getScreenUp
+		cmp #255
 		bne hasScreenTopRow
 		lda #TILE_BLOCK
 		ldx #levelTilesPerRow
@@ -74,10 +55,8 @@ setScreenTopBlock
 		sta screenDataTop,x
 		dex
 		bpl setScreenTopBlock
-		rts
+		jmp changeScreenEnd
 hasScreenTopRow
-		sec
-		sbc #1
 		asl
 		tax		
 		clc
@@ -95,7 +74,15 @@ hasScreenTopRow
 		sta memcpyLen
 		lda #0
 		sta memcpyLen+1
-		jmp memcpy
+		jsr memcpy
+changeScreenEnd	
+		lda #1
+		sta levelScreenChanged	
+		jsr dirtySetAll
+		jsr preRenderMap
+		jsr preRenderOffsets
+		rts
+		
 		
 dirtyClearAll
 		ldx #0
@@ -113,7 +100,69 @@ dirtyLoop
 		bne dirtyLoop
 		rts
 
+getScreenUp
+		lda levelScreen
+		asl
+		asl
+		tax
+		inx					; workaround for ATASM forward bug
+		inx
+		jmp getScreen
+		
+getScreenDown
+		lda levelScreen
+		asl
+		asl
+		tax
+		inx					; workaround for ATASM forward bug
+		inx
+		inx
+		jmp getScreen
+		
+getScreenLeft
+		lda levelScreen
+		asl
+		asl
+		tax
+		jmp getScreen
+		
+getScreenRight
+		lda levelScreen
+		asl
+		asl
+		tax
+		inx					; workaround for ATASM forward bug
+		
+getScreen		
+		lda levelMap,x
+		tax
+		dex
+		txa
+		rts
+		
+		
 
+
+levelDataOffsets .word levelData0, levelData1
+		
+levelSize = 2304		
+levelData
+		.rept levelSize
+		.byte 0
+		.endr
+		
+levelData0 .incbin "../levels/LEVEL0"
+levelData1 .incbin "../levels/LEVEL1"
+
+levelScreenLookup
+		.rept levelScreens
+		.word levelData+([*-levelScreenLookup]/2*levelTilesPerScreen)
+		.endr
+
+levelScreen	.byte 0
+levelNumber	.byte 0
+
+levelScreenChanged .byte 0
 
 ; origin struct
 ;	byte type[] = new byte[DESCRIPTORS];

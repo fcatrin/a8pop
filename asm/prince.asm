@@ -74,19 +74,19 @@ start
 		
 		
 		lda #0
-		sta levelScreen
-		
 		jsr changeScreen
-		jsr preRenderMap
-renderAgain
+
 		
-		lda 20
-		sta frame0
-		jsr preRenderOffsets
+
+nextFrame
+		jsr inputHandler
+		lda levelScreenChanged
+		beq nextFrame
 
 		lda #0
 		sta 559
-
+		sta levelScreenChanged
+		
 waitvsync
 		lda $D40B
 		cmp #130
@@ -101,29 +101,7 @@ waitvsync
 		lda #34
 		sta 559
 
-halt	jmp halt		
-		
-		lda 20
-		adc #90
-wait		
-		cmp 20
-		bne wait
-		
-		
-		ldx levelScreen
-		inx
-		cpx #levelScreens
-		bne renderNextScreen
-		ldx #0
-renderNextScreen		
-		stx levelScreen
-		jsr changeScreen
-		jsr preRenderMap
-		jmp renderAgain
-		
-		
-haltx	jmp haltx		
-	
+		jmp nextFrame	
 
 		.include "level/level.asm"		
 		.include "level/render.asm"
@@ -133,6 +111,7 @@ haltx	jmp haltx
 		.include "sprite.asm"
 		.include "mask.asm"
 		.include "utils.asm"
+		.include "input.asm"
 		.include "level/bgdata.asm"
 
 heightLookup 
