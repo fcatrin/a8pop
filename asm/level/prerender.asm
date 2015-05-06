@@ -212,12 +212,11 @@ getBlockVramOffset
 		lda (tileIndex),y		; get tile height
 		sec
 		sbc preYPos
-		asl
 		tax
 		sec
 		lda vramOffsetTemp
-		sbc heightLookup,x
+		sbc heightLookupL,x
 		tay
 		lda vramOffsetTemp+1
-		sbc heightLookup+1,x
+		sbc heightLookupH,x
 		rts

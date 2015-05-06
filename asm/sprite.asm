@@ -10,16 +10,21 @@ drawKid
 		sec
 		lda kidY
 		sbc spriteHeight
-		asl
 		tax
 		clc
-		lda heightLookup,x
+		lda heightLookupL,x
 		adc #<vram
-		adc kidXOffset
 		sta vramIndex
-		lda heightLookup+1,x
+		lda heightLookupH,x
 		adc #>vram
 		sta vramIndex+1
+		
+		clc
+		lda vramIndex
+		adc kidXOffset
+		sta vramIndex
+		bcc spriteCopyScan
+		inc vramIndex+1
 		
 spriteCopyScan		
 		ldy spriteWidth
@@ -109,9 +114,9 @@ kidSaveLastBounds
 kidUpdateDirtyBlocks
 		lda boundsKidPrev		; x1 = min(prevX1, currentX1)
 		cmp boundsKidCurrent
-		bpl kidUseX1			
+		bcs kidUseX1			
 		tax
-		bmi kidUsePrevX1
+		bcc kidUsePrevX1
 kidUseX1		
 		ldx boundsKidCurrent
 kidUsePrevX1		
@@ -119,9 +124,9 @@ kidUsePrevX1
 		
 		lda boundsKidPrev+1		; x2 = max(prevX2, currentX2)
 		cmp boundsKidCurrent+1
-		bmi kidUseX2
+		bcc kidUseX2
 		tax
-		bpl kidUsePrevX2
+		bcs kidUsePrevX2
 kidUseX2
 		ldx boundsKidCurrent+1
 kidUsePrevX2
@@ -129,9 +134,9 @@ kidUsePrevX2
 
 		lda boundsKidPrev+2		; y1 = min(prevY1, currentY1)
 		cmp boundsKidCurrent+2
-		bpl kidUseY1
+		bcs kidUseY1
 		tax
-		bmi kidUsePrevY1
+		bcc kidUsePrevY1
 kidUseY1		
 		ldx boundsKidCurrent+2
 kidUsePrevY1		
@@ -139,9 +144,9 @@ kidUsePrevY1
 		
 		lda boundsKidPrev+3		; y2 = max(prevY2, currentY2)
 		cmp boundsKidCurrent+3
-		bmi kidUseY2
+		bcc kidUseY2
 		tax
-		bpl kidUsePrevY2
+		bcs kidUsePrevY2
 kidUseY2
 		ldx boundsKidCurrent+3
 kidUsePrevY2
@@ -198,21 +203,21 @@ boundY1Found
 boundY2Found
 		inx
 		stx dirtyBlockY2
-		.byte 2
+		;.byte 2
 		
 dirtyBlockNextRow		
-		lda #0
+		lda #levelTilesPerRow*2
 		ldx #0
 		
 		cpx dirtyBlockY1
 		beq foundRowStart
-		clc
-		adc #levelTilesPerRow 
+		sec
+		sbc #levelTilesPerRow 
 		inx
 		cpx dirtyBlockY1
 		beq foundRowStart
-		clc
-		adc #levelTilesPerRow
+		sec
+		sbc #levelTilesPerRow
 		
 foundRowStart
 		;.byte 2
@@ -243,8 +248,8 @@ dirtyNextBlock
 		
 				
 
-kidX			.byte 0
-kidY			.byte 124
+kidX			.byte 15
+kidY			.byte 166
 kidXOffset		.byte 0
 kidFrameIndex 	.byte 0
 kidTop			.byte 0

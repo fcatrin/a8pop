@@ -136,9 +136,14 @@ waitvsync
 		.include "input.asm"
 		.include "level/bgdata.asm"
 
-heightLookup 
+heightLookupL 
 		.rept 200
-		.word [*-heightLookup]/2*scanbytes
+		.byte <([*-heightLookupL]*scanbytes)
+		.endr
+
+heightLookupH 
+		.rept 200
+		.byte >([*-heightLookupH]*scanbytes)
 		.endr
 
 
