@@ -75,17 +75,25 @@ start
 		
 		lda #0
 		jsr changeScreen
-
 		
+		jsr kidPreRender
 
 nextFrame
 		jsr inputHandler
 		lda levelScreenChanged
-		beq nextFrame
+		beq noScreenChanged
 
 		lda #0
 		sta 559
 		sta levelScreenChanged
+		jsr kidPreRender		; TODO evaluate to do only if needed
+		jmp waitvsync 
+		
+noScreenChanged
+		lda levelScreenDirty
+		beq nextFrame
+		lda #0
+		sta levelScreenDirty		
 		
 waitvsync
 		lda $D40B
@@ -98,6 +106,7 @@ waitvsync
 		jsr drawBack
 		lda 20
 		sta frame2
+		jsr dirtyClearAll
 		lda #34
 		sta 559
 

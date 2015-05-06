@@ -87,6 +87,7 @@ changeScreenEnd
 dirtyClearAll
 		ldx #0
 		lda #0
+		sta levelScreenDirty
 		beq dirtyLoop
 		
 dirtySetAll
@@ -162,7 +163,8 @@ levelScreenLookup
 levelScreen	.byte 0
 levelNumber	.byte 0
 
-levelScreenChanged .byte 0
+levelScreenChanged	.byte 0  ; redraw whole screen
+levelScreenDirty	.byte 0  ; redraw dirty blocks
 
 ; origin struct
 ;	byte type[] = new byte[DESCRIPTORS];

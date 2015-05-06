@@ -15,6 +15,8 @@ inputHandler
 		beq showScreenLeft
 		cmp #key_d
 		beq showScreenRight
+		cmp #key_j
+		beq moveSpriteLeft
 inputHandlerEnd		
 		rts
 		
@@ -38,10 +40,22 @@ showScreenRight
 		jsr changeScreen
 		jmp inputHandlerEnd
 
+moveSpriteLeft
+		ldx kidX
+		inx
+		cpx #160
+		bne moveSpriteLeftOk
+		ldx #0
+moveSpriteLeftOk		
+		stx kidX
+		jsr kidPreRender
+		jmp inputHandlerEnd
+
 key_input   = 764
 key_w		= 46
 key_s		= 62
 key_a		= 63
 key_d		= 58
+key_j		= 1
 
 key_last	.byte 0
