@@ -16,7 +16,13 @@ inputHandler
 		cmp #key_d
 		beq showScreenRight
 		cmp #key_j
+		beq moveSpriteRight
+		cmp #key_g
 		beq moveSpriteLeft
+		cmp #key_y
+		beq moveSpriteUp
+		cmp #key_h
+		beq moveSpriteDown
 inputHandlerEnd		
 		rts
 		
@@ -40,22 +46,56 @@ showScreenRight
 		jsr changeScreen
 		jmp inputHandlerEnd
 
-moveSpriteLeft
+moveSpriteRight
 		ldx kidX
 		inx
 		cpx #160
-		bne moveSpriteLeftOk
+		bne moveSpriteX
 		ldx #0
-moveSpriteLeftOk		
+		jmp moveSpriteX		
+		
+moveSpriteLeft
+		ldx kidX
+		dex
+		cpx #$FF
+		bne moveSpriteX
+		ldx #0
+moveSpriteX		
 		stx kidX
 		jsr kidPreRender
 		jmp inputHandlerEnd
+		
+
+moveSpriteDown
+		ldx kidY
+		inx
+		cpx #200
+		bne moveSpriteY
+		ldx #0
+		jmp moveSpriteY		
+		
+moveSpriteUp
+		ldx kidY
+		dex
+		cpx #$FF
+		bne moveSpriteY
+		ldx #0
+moveSpriteY		
+		stx kidY
+		jsr kidPreRender
+		jmp inputHandlerEnd
+
+
 
 key_input   = 764
 key_w		= 46
 key_s		= 62
 key_a		= 63
 key_d		= 58
+key_g		= 61
 key_j		= 1
+key_y		= 43
+key_h		= 57
+
 
 key_last	.byte 0
