@@ -47,6 +47,19 @@ levelMapTop = 2
 
 * = $600
 
+spriteWidth		.byte 0
+spriteHeight	.byte 0
+
+; x1, x2, y1, y2
+boundsKidCurrent	.byte 80, 80, 100, 100 ; safe defaults
+boundsKidPrev		.byte 80, 80, 100, 100 
+boundsKid			.byte 0, 0, 0, 0
+
+dirtyBlockX1	.byte 0
+dirtyBlockX2	.byte 0
+dirtyBlockY1	.byte 0
+dirtyBlockY2	.byte 0
+
 frame0 .byte 0
 frame1 .byte 0
 frame2 .byte 0

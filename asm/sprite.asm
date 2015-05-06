@@ -167,6 +167,7 @@ kidUsePrevY2
 		ror a
 		ror a
 		ror a
+		adc #1
 		sta dirtyBlockX2
 
 		; block y1 = (y1 - 3 - 1) / 63  (height=1 means y1==y2)
@@ -195,7 +196,9 @@ boundY1Found
 		bmi boundY2Found
 		inx
 boundY2Found
+		inx
 		stx dirtyBlockY2
+		.byte 2
 		
 dirtyBlockNextRow		
 		lda #0
@@ -224,12 +227,12 @@ dirtyNextBlock
 		iny
 		inx
 		cpx dirtyBlockX2
-		bmi dirtyNextBlock
+		bne dirtyNextBlock
 		
 		inc dirtyBlockY1
 		lda dirtyBlockY1
 		cmp dirtyBlockY2
-		bmi dirtyBlockNextRow
+		bne dirtyBlockNextRow
 		
 		lda #1
 		sta levelScreenDirty
@@ -245,18 +248,7 @@ kidY			.byte 124
 kidXOffset		.byte 0
 kidFrameIndex 	.byte 0
 kidTop			.byte 0
-spriteWidth		.byte 0
-spriteHeight	.byte 0
 
-; x1, x2, y1, y2
-boundsKidCurrent	.byte 80, 80, 100, 100 ; safe defaults
-boundsKidPrev		.byte 80, 80, 100, 100 
-boundsKid			.byte 0, 0, 0, 0
-
-dirtyBlockX1	.byte 0
-dirtyBlockX2	.byte 0
-dirtyBlockY1	.byte 0
-dirtyBlockY2	.byte 0
 
 kid_framesL		.byte <kid_22
 kid_framesH		.byte >kid_22
