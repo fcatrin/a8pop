@@ -15,18 +15,27 @@ public class BitStream {
 	public void append(int value, int nbits) {
 		String s = Utils.bits2string(value, nbits);
 		data.append(s);
-		System.out.println("append " + s);
 	}
 	
 	public void append(String sBits) {
 		data.append(sBits);
-		System.out.println("append " + sBits);
 	}
 
 	public void append(byte[] data) {
 		for(byte b : data) {
 			append(Utils.b2i(b), 8);
 		}
+	}
+	
+	public void appendHex(String s) {
+		for(int i=0; i<s.length(); i+=2) {
+			appendHexByte(s.substring(i));
+		}
+	}
+	
+	public void appendHexByte(String s) {
+		int value = Utils.hex2int(s.charAt(0)) * 16 + Utils.hex2int(s.charAt(1));
+		append(value, 8);
 	}
 
 	public String dump() {
@@ -38,6 +47,20 @@ public class BitStream {
 		byte result[] = new byte[(s.length()+7)/8];
 		for(int i=0; i<result.length; i++) {
 			result[i] = Utils.string2bits(s, 8);
+			if (s.length()>8) {
+				s = s.substring(8);
+			}
+		}
+		return result;
+	}
+	
+	public String asString() {
+		String s = dump();
+		String result = "";
+		int n = (s.length()+7)/8;
+		for(int i=0; i<n; i++) {
+			byte value = Utils.string2bits(s, 8);
+			result+= String.format("%02x", Utils.b2i(value));
 			if (s.length()>8) {
 				s = s.substring(8);
 			}
