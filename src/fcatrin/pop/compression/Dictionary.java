@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 
 import fcatrin.pop.utils.BitStream;
 import fcatrin.pop.utils.Utils;
@@ -17,15 +17,29 @@ import fcatrin.pop.utils.Utils;
 public class Dictionary {
 	Map<String, Word> words = new HashMap<String, Word>();
 	private ArrayList<Word> lstWords;
+	private Set<Byte> freeCodes = new HashSet<Byte>();
+	Map<String, Word> dictionary = new HashMap<String, Word>();
 	
 	class Word {
 		String text;
 		int times;
+		String code;
+	}
+	
+	public Dictionary() {
+		for(byte i=Byte.MIN_VALUE; i<Byte.MAX_VALUE; i++) {
+			System.out.println(i);
+			freeCodes.add(i);
+		}
 	}
 	
 	// slowest method
 	
 	public void init(byte data[]) {
+		for(int i=0; i<data.length; i++) {
+			freeCodes.remove(data[i]);
+		}
+		
 		for(int n=2; n<10; n++) {
 			for(int i=0; i<data.length-n; i++) {
 				String word = buildWord(data, i, n);
@@ -52,9 +66,9 @@ public class Dictionary {
 				int textCompare = (o1.text.length() == o2.text.length())?0:
 					(o1.text.length()<o2.text.length()?1:-1);
 				
-				return (o1.times == o2.times)? 
-					textCompare:
-					(o1.times < o2.times?1:-1);
+				int timesCompare = (o1.times == o2.times)?0:(o1.times < o2.times?1:-1); 
+				return textCompare==0?timesCompare:textCompare;
+				//return timesCompare == 0?textCompare:timesCompare;
 			}
 		});
 		for(Word word : lstWords) {
@@ -62,9 +76,9 @@ public class Dictionary {
 		}
 	}
 	
+	int symbols = 0;
 	private byte[] compress(byte data[]) {
 		int skip = 0;
-		int symbols = 0;
 		System.out.println("origin:" + data.length);
 		for(Word word : lstWords) {
 			if (skip>0) {
@@ -74,14 +88,35 @@ public class Dictionary {
 			if (word.times<=1) continue;
 			BitStream bs = new BitStream(data);
 			String oldStream = bs.asString();
-			String newStream = oldStream.replace(word.text, "FF");
-			if (!oldStream.equals(newStream)) symbols++;
+			String newStream = oldStream.replace(word.text, "..");
+			if (!oldStream.equals(newStream)) {
+				if (word.code==null) {
+					word.code = getNextFreeCode();
+					symbols++;
+				}
+				if (word.code!=null) {
+					dictionary.put(word.text, word);
+					newStream = newStream.replace("..", word.code);
+				} else {
+					System.out.println("No more free codes");
+					newStream = oldStream;
+				}
+				
+			}
 			bs = new BitStream();
 			bs.appendHex(newStream);
 			data = bs.asBytes();
 		}
 		System.out.println("target:" + data.length + ", symbols:" + symbols);
 		return data;
+	}
+	
+	private String getNextFreeCode() {
+		if (freeCodes.isEmpty()) return null;
+		
+		Byte code = freeCodes.iterator().next();
+		freeCodes.remove(code);
+		return String.format("%02x", code);
 	}
 	
 	private String buildWord(byte data[], int offset, int len) {
@@ -130,9 +165,20 @@ public class Dictionary {
 			data[i] = datal;
 		}
 		dict.buildDictionary();
-		BitStream bs = new BitStream();
-		bs.append(dict.compress(data[1]));
-		System.out.println(bs.asString());
+		
+		byte dataDictCompressed[][] = new byte[15][];
+		for(int i=0; i<15; i++) {
+			System.out.println("dict compress " + i);
+			dataDictCompressed[i] = dict.compress(data[i]);
+		}
+
+		byte dataDictCompressedAll[] = Utils.join(dataDictCompressed);
+		
+		Huffman h = new Huffman();
+		byte[] compressHuffman = h.compress(dataDictCompressedAll);
+		System.out.println("initial size:" + (720*15));
+		System.out.println("dict: " + dataDictCompressedAll.length);
+		System.out.println("huffman: " + compressHuffman.length);
 	}
 	
 }

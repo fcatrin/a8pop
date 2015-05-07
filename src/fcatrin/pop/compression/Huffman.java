@@ -85,7 +85,7 @@ public class Huffman {
 			nodes.put(node.id, node);
 		}
 		System.out.println("Huffman sorted");
-		System.out.println(q1);
+		//System.out.println(q1);
 		
 		while (true) {
 			int f1 = Integer.MAX_VALUE;
@@ -106,7 +106,7 @@ public class Huffman {
 			}
 			if (!hasPair) break;
 			
-			System.out.println(String.format("f1:%d, f2:%d, f3:%d  q1.size:%d, q2.size:%d", f1, f2, f3, q1.size(), q2.size()));
+			// System.out.println(String.format("f1:%d, f2:%d, f3:%d  q1.size:%d, q2.size:%d", f1, f2, f3, q1.size(), q2.size()));
 			
 			Node n1, n2;
 			if (f1 <= f2 && f1 <= f3) {
@@ -119,7 +119,7 @@ public class Huffman {
 				n1 = dequeue(q2);
 				n2 = dequeue(q2);
 			}
-			System.out.println(String.format("n1:%s, n2:%s", n1.toString(), n2.toString()));
+			// System.out.println(String.format("n1:%s, n2:%s", n1.toString(), n2.toString()));
 			// put leaf to the left
 			if (!n1.isLeaf()) {
 				Node tmp = n1;
@@ -133,10 +133,10 @@ public class Huffman {
 			intermediate.freq = n1.freq + n2.freq;
 			enqueue(q2, intermediate);
 			nodes.put(intermediate.id, intermediate);
-			System.out.println("q1 " + q1);
-			System.out.println("q2 " + q2);
+			// System.out.println("q1 " + q1);
+			// System.out.println("q2 " + q2);
 		}
-		System.out.println("Huffman Tree");
+		// System.out.println("Huffman Tree");
 		Node root = dequeue(q2);
 		dump(root);
 		
@@ -146,13 +146,13 @@ public class Huffman {
 			Node node = nodes.get(id++);
 			if (node == null) break;
 			if (node.isLeaf()) {
-				System.out.println(node + ", bits " + node.bits);
+				// System.out.println(node + ", bits " + node.bits);
 			}
 		} while (true);
 	}
 
 	private void dump(Node root) {
-		System.out.println(root);
+		// System.out.println(root);
 		if (root.left!=null) dump(root.left);
 		if (root.right!=null) dump(root.right);
 	}
