@@ -2,64 +2,103 @@
 ; A = tile number
 ; vramIndex = vram position of first scan
 
+; Time Zero  05 3F
+; Time Dirty 01 3A
+
+; Time without drawTile
+; Time Zero  02 29  (4E times)
+; Time Dirty 00 5B  (18 times)
+
 drawTile
 		cmp #0
 		bne validTile
 		rts
 validTile
-		
 		cpy #0
-		bne drawTileMasked		; use slower version with masking
+		beq noDrawTileMasked
+		jmp drawTileMasked		; use slower version with masking
+noDrawTileMasked
+
+		pha
+waitSync
+		lda vcount
+		bne waitSync
+		ldx timesTrackIndex
+		sta timesTrackBase,x
+		inc timesTrackIndex
+		pla
 
 		tax
 		lda tilesL,x
 		sta tileIndex
+		clc
+		adc #2
+		sta tileSrc0+1
+		sta tileSrc1+1
+		sta tileSrc2+1
+		sta tileSrc3+1
+		
 		lda tilesH,x
 		sta tileIndex+1
+		adc #0
+		sta tileSrc0+2
+		sta tileSrc1+2
+		sta tileSrc2+2
+		sta tileSrc3+2
 		
 		ldy #1
 		lda (tileIndex),y
-		tax
+		sta tileHeight
 		
-		clc
-		lda tileIndex
-		adc #2
-		sta tileIndex
-		bcc copyTileScan
-		inc tileIndex+1
-		
-copyTileScan		
+		ldx #0		
 		ldy #0
-		lda (tileIndex),y
+copyTileScan		
+tileSrc0		
+		lda $FFFF,x
 		sta (vramIndex),y
 		iny
-		lda (tileIndex),y
+		inx
+tileSrc1
+		lda $FFFF,x
 		sta (vramIndex),y
 		iny
-		lda (tileIndex),y
+		inx
+tileSrc2		
+		lda $FFFF,x
 		sta (vramIndex),y
 		iny
-		lda (tileIndex),y
+		inx
+tileSrc3		
+		lda $FFFF,x
 		sta (vramIndex),y
-		iny
+		inx
+
+		dec tileHeight
+		beq drawTileEnd
 		
+		tya
 		clc
-		lda tileIndex
-		adc #4
-		sta tileIndex
-		bcc incVRAMIndex
-		inc tileIndex+1
-		clc
-incVRAMIndex		
-		lda vramIndex
-		adc #40
-		sta vramIndex
-		bcc evalNextScan
+		adc #37
+		tay
+		bcc copyTileScan
 		inc vramIndex+1
-evalNextScan		
-		dex
-		bne copyTileScan
-drawTileEnd		
+		jmp copyTileScan
+
+drawTileEnd
+
+		ldx timesTrackIndex
+		sec
+		lda vcount
+		sta timesTrackBase,x
+		clc
+		adc timesTrackAcum
+		sta timesTrackAcum
+
+		bcc noOverflow
+		inc timesTrackAcum+1
+noOverflow		
+		inc timesTrackIndex
+		 	
 		rts
 
 

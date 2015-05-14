@@ -12,6 +12,8 @@ tileIndex   = 210
 vramIndex   = 212
 spriteIndex = 214
 
+vcount = $D40B
+
 
 tileMask = $1F
 TILE_BLOCK = 20
@@ -44,8 +46,12 @@ levelInfo    = levelData + 720 + 720 + 256 + 256 + 96
 
 levelMapTop = 2
 
+timesTrackIndex = $600
+timesTrackAcum  = $602
+timesTrackBase  = $606
 
-* = $600
+
+* = $700
 
 spriteWidth		.byte 0
 spriteHeight	.byte 0
@@ -148,6 +154,9 @@ heightLookupH
 
 
 .bank
+
+vramBack = $9000
+
 *		= $A000
 displayList
 		.byte 112, 112, 112, 
