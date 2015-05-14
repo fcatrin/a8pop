@@ -2,8 +2,8 @@
 ; A = tile number
 ; vramIndex = vram position of first scan
 
-; Time Zero  05 3F
-; Time Dirty 01 3A
+; Time Zero  08 1A
+; Time Dirty 02 12
 
 ; Time without drawTile
 ; Time Zero  02 29  (4E times)
@@ -15,18 +15,7 @@ drawTile
 		rts
 validTile
 		cpy #0
-		beq noDrawTileMasked
-		jmp drawTileMasked		; use slower version with masking
-noDrawTileMasked
-
-		pha
-waitSync
-		lda vcount
-		bne waitSync
-		ldx timesTrackIndex
-		sta timesTrackBase,x
-		inc timesTrackIndex
-		pla
+		bne drawTileMasked		; use slower version with masking
 
 		tax
 		lda tilesL,x
@@ -85,20 +74,6 @@ tileSrc3
 		jmp copyTileScan
 
 drawTileEnd
-
-		ldx timesTrackIndex
-		sec
-		lda vcount
-		sta timesTrackBase,x
-		clc
-		adc timesTrackAcum
-		sta timesTrackAcum
-
-		bcc noOverflow
-		inc timesTrackAcum+1
-noOverflow		
-		inc timesTrackIndex
-		 	
 		rts
 
 

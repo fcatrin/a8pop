@@ -6,15 +6,15 @@
 ; skip drawing if render_dirty_blocks,x is not set
 
 drawBack
+		lda vcount
+		bne drawBack
+		lda #0
+		sta 20
+		sta timesTrackIndex
+		sta timesTrackIndex+1
+		
 		ldx #0
 		ldy #0
-		sty timesTrackIndex
-		sty timesTrackAcum
-		sty timesTrackAcum+1
-		sty timesTrackAcum+2
-		
-
-		
 drawNextBlock
 		lda render_dirty_blocks,x
 		beq noDrawA
@@ -66,7 +66,7 @@ noDrawA
 		cpx #levelTilesPerScreen
 		bne drawNextBlock
 		
-		;jsr drawKid
+		jsr drawKid
 	
 		ldx #0
 		ldy #0	
@@ -126,7 +126,10 @@ renderNextTopTile
 		cpx #levelTilesPerRow
 		bne renderNextTopTile
 		
-		.byte 2
-		
+		sec
+		lda 20
+		sta timesTrackIndex
+		lda vcount
+		sta timesTrackIndex+1
 		rts
 			
