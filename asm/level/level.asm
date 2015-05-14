@@ -97,7 +97,7 @@ dirtySetAll
 dirtyLoop		
 		sta render_dirty_blocks,x
 		inx
-		cpx #levelTilesPerScreen
+		cpx #levelTilesPerScreen+levelTilesPerRow
 		bne dirtyLoop
 		rts
 

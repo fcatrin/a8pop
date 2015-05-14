@@ -155,7 +155,7 @@ render_pieced_top_offsetH
 		.byte 0
 		.endr
 render_dirty_blocks
-		.rept levelTilesPerScreen
+		.rept levelTilesPerScreen+levelTilesPerRow
 		.byte 0
 		.endr	
 

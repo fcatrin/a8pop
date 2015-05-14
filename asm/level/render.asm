@@ -120,7 +120,11 @@ noDrawF
 		bne drawFront
 
 		ldx #0
-renderNextTopTile		
+renderNextTopTile
+		lda render_dirty_blocks+levelTilesPerScreen,x
+		beq noRenderTopTile
+		lda #0
+		sta render_dirty_blocks+levelTilesPerScreen,x
 		stx renderBlockNumber
 		lda render_pieced_top_offsetL,x
 		sta vramIndex
@@ -130,6 +134,7 @@ renderNextTopTile
 		lda render_pieced_top,x
 		jsr drawTile
 		ldx renderBlockNumber
+noRenderTopTile		
 		inx
 		cpx #levelTilesPerRow
 		bne renderNextTopTile
