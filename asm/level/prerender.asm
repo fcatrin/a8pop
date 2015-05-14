@@ -63,6 +63,7 @@ preRenderNextLine
 		stx preRenderRow
 		bne preRenderNextRow
 		
+
 ; now go for the top row
 preNextTopTile
 		lda screenDataTop,x
@@ -72,7 +73,29 @@ preNextTopTile
 		sta render_pieced_top,x
 		inx
 		cpx #levelTilesPerRow
-		bne preNextTopTile		
+		bne preNextTopTile
+		
+; remove unused blocks
+		ldx #0
+removeUnusedNext		
+		lda render_piecef,x
+		cmp #$83
+		bne noRemoveBlock
+		lda #0
+		sta render_piecea,x
+		sta render_pieceb,x
+		sta render_piecec,x
+		jmp removeNext
+noRemoveBlock
+		lda render_piecea,x
+		beq removeNext
+		lda #0
+		sta render_piecec,x
+		;jmp removeNext
+removeNext
+		inx
+		cpx #levelTilesPerScreen
+		bne removeUnusedNext				
 		rts
 
 preRenderOffsets

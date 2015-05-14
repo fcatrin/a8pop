@@ -321,7 +321,7 @@ drawTileC
 		ldx #stdTileHeight
 		ldy #0
 clearOnlyNextScanC		
-		lda #255
+		lda #0
 		sta (vramIndex),y
 		iny
 		sta (vramIndex),y

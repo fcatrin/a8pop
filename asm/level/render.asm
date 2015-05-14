@@ -6,7 +6,7 @@
 ; skip drawing if render_dirty_blocks,x is not set
 
 drawBack
-		ldx #255
+		ldx #200
 		lda #0
 clearTimesTrackBase		
 		sta timesTrackBase,x
