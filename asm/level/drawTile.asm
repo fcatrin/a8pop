@@ -17,6 +17,10 @@ validTile
 		cpy #0
 		bne drawTileMasked		; use slower version with masking
 
+		ldx timesTrackIndex
+		sta timesTrackBase,x
+		inc timesTrackIndex
+		
 		tax
 		lda tilesL,x
 		sta tileIndex
@@ -85,6 +89,10 @@ drawTileMasked
 		bne drawTileRegularMask
 		jmp drawTileAutoMasked
 drawTileRegularMask		
+
+		ldx timesTrackIndex
+		sta timesTrackBase,x
+		inc timesTrackIndex
 	
 		tax
 		lda tilesL,x
@@ -205,6 +213,11 @@ drawTileMaskedEnd
 
 ; draw tile in A using automasking
 drawTileAutoMasked
+
+		ldx timesTrackIndex
+		sta timesTrackBase,x
+		inc timesTrackIndex
+
 		tax
 		lda tilesL,x
 		sta tileIndex
@@ -304,11 +317,11 @@ clearLastBlock
 drawTileC
 		cmp #0
 		bne clearAndDrawC
-		
+
 		ldx #stdTileHeight
-clearOnlyNextScanC		
 		ldy #0
-		lda #0
+clearOnlyNextScanC		
+		lda #255
 		sta (vramIndex),y
 		iny
 		sta (vramIndex),y
@@ -316,18 +329,23 @@ clearOnlyNextScanC
 		sta (vramIndex),y
 		iny
 		sta (vramIndex),y
-		sec
-		lda vramIndex
-		sbc #scanBytes
-		sta vramIndex
-		lda vramIndex+1
-		sbc #0
-		sta vramIndex+1
 		dex
-		bne clearOnlyNextScanC
+		beq clearOnlyEnd
+		tya
+		sec
+		sbc #scanBytes+3
+		tay
+		bcs clearOnlyNextScanC
+		dec vramIndex+1
+		jmp clearOnlyNextScanC
+clearOnlyEnd		
 		rts
 		
-clearAndDrawC		
+clearAndDrawC
+		ldx timesTrackIndex
+		sta timesTrackBase,x
+		inc timesTrackIndex
+	
 		tax
 		lda tilesL,x
 		sta tileIndex
