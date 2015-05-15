@@ -60,7 +60,6 @@ start
 		lda #dungeon_color2
 		sta COLOR2
 
-		.byte 2
 		jsr swapBuffers
 
 		lda #<displayList		; setup display list
@@ -106,7 +105,7 @@ waitvsync
 
 		lda 20
 		sta frame1
-		.byte 2
+		;.byte 2
 		jsr drawBack
 		lda 20
 		sta frame2
@@ -126,7 +125,7 @@ swapBuffers
 		lda #<vramBuffer1
 		sta vramBuffer
 		lda #>vramBuffer1
-		sta vramBuffer
+		sta vramBuffer+1
 		
 		lda #<vramBuffer2
 		sta vramPage1
@@ -138,14 +137,14 @@ swapBuffers
 		lda #>vramBufferBottom2
 		sta vramPage2+1
 		
-		lda #1
+		lda #0
 		sta vramActiveBuffer
 		rts
 vramActiveBufferSecond		
 		lda #<vramBuffer2
 		sta vramBuffer
 		lda #>vramBuffer2
-		sta vramBuffer
+		sta vramBuffer+1
 		
 		lda #<vramBuffer1
 		sta vramPage1
@@ -157,7 +156,7 @@ vramActiveBufferSecond
 		lda #>vramBufferBottom1
 		sta vramPage2+1
 		
-		lda #0
+		lda #1
 		sta vramActiveBuffer
 		rts	
 		
