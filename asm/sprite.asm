@@ -3,8 +3,8 @@ drawKid
 		lda kidX
 		and #$FC
 		clc
-		ror a
-		ror a
+		ror 
+		ror 
 		sta kidXOffset
 		
 		sec
@@ -156,10 +156,10 @@ kidUsePrevY2
 		lda boundsKid
 		and #$F0
 		clc
-		ror a
-		ror a
-		ror a
-		ror a
+		ror 
+		ror 
+		ror 
+		ror 
 		sta dirtyBlockX1
 		
 		; block x2 = (x2-1) / 16  (width=1 means x1==x2)
@@ -168,10 +168,10 @@ kidUsePrevY2
 		sbc #1
 		and #$F0
 		clc
-		ror a
-		ror a
-		ror a
-		ror a
+		ror 
+		ror 
+		ror 
+		ror 
 		adc #1
 		sta dirtyBlockX2
 
@@ -258,4 +258,4 @@ kidTop			.byte 0
 kid_framesL		.byte <kid_22
 kid_framesH		.byte >kid_22
 
-kid_22		.incbin "images/kid/sprite_22.pic"
+kid_22		ins "images/kid/sprite_22.pic"

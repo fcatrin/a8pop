@@ -152,8 +152,8 @@ levelData
 		.byte 0
 		.endr
 		
-levelData0 .incbin "../levels/LEVEL0"
-levelData1 .incbin "../levels/LEVEL1"
+levelData0 ins "../levels/LEVEL0"
+levelData1 ins "../levels/LEVEL1"
 
 levelScreenLookup
 		.rept levelScreens

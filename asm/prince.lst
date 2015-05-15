@@ -1,0 +1,5912 @@
+mads 1.9.9
+     1
+     2 					icl "utilsdef.asm"
+     1 = 00D6			memcpySrc = 214
+     2 = 00D8			memcpyDst = 216
+     3 = 00DA			memcpyLen = 218
+     3
+     4 = 0230			SDLSTL = 560
+     5 = 02C4			COLOR0 = 708
+     6 = 02C5			COLOR1 = 709
+     7 = 02C6			COLOR2 = 710
+     8
+     9 = 00D0			maskIndex   = 208
+    10 = 00D2			tileIndex   = 210
+    11 = 00D4			vramIndex   = 212
+    12 = 00D6			spriteIndex = 214
+    13
+    14 = D40B			vcount = $D40B
+    15
+    16
+    17 = 001F			tileMask = $1F
+    18 = 0014			TILE_BLOCK = 20
+    19
+    20 = 1E00			vramSize = 40*192
+    21
+    22 = 0094			dungeon_color0 = $94
+    23 = 008A			dungeon_color1 = $8A
+    24 = 000C			dungeon_color2 = $0C
+    25
+    26 = 0028			scanbytes = 40
+    27
+    28 = 0078			tileBaseOffset = 3*40
+    29 = 003F			stdTileHeight = 63
+    30 = 09D8			tileScanBytes = stdTileHeight*40
+    31
+    32 = 000A			levelTilesPerRow	= 10
+    33 = 001E			levelTilesPerScreen = 3*levelTilesPerRow
+    34 = 0018			levelScreens = 24
+    35 = 02D0			levelDescriptors = levelTilesPerScreen*levelScreens
+    36 = 0100			levelLinks = 256;
+    37
+    38 				; avoid asm overflow errors
+    39 = 0899			levelTypes   = levelData
+    40 = 0B69			levelSpecs   = levelData + 720
+    41 = 0E39			levelLinkMap = levelData + 720 + 720
+    42 = 0F39			levelLinkLoc = levelData + 720 + 720 + 256
+    43 = 1039			levelMap     = levelData + 720 + 720 + 256 + 256
+    44 = 1099			levelInfo    = levelData + 720 + 720 + 256 + 256 + 96
+    45
+    46 = 0002			levelMapTop = 2
+    47
+    48 = 0600			timesTrackIndex = $600
+    49 = 0602			timesTrackAcum  = $602
+    50 = 0606			timesTrackBase  = $606
+    51
+    52
+    53 						org $700
+    54
+    55 				start
+    56 FFFF> 0700-4C92> A9 94			lda #dungeon_color0		; setup colors
+    57 0702 8D C4 02				sta COLOR0
+    58 0705 A9 8A				lda #dungeon_color1
+    59 0707 8D C5 02				sta COLOR1
+    60 070A A9 0C				lda #dungeon_color2
+    61 070C 8D C6 02				sta COLOR2
+    62
+    63 070F 02					.byte 2
+    64 0710 20 73 07				jsr swapBuffers
+    65
+    66 0713 A9 00				lda #<displayList		; setup display list
+    67 0715 8D 30 02				sta SDLSTL
+    68 						
+    69 0718 A9 A0				lda #>displayList
+    70 071A 8D 31 02				sta SDLSTL+1
+    71 						
+    72 071D 20 C1 2B				jsr genAutoMaskTable
+    73 						
+    74 0720 A9 01				lda #1
+    75 0722 8D CA 23				sta levelNumber
+    76 0725 20 C0 07				jsr changeLevel
+    77 						
+    78 						
+    79 0728 A9 00				lda #0
+    80 072A 20 E7 07				jsr changeScreen
+    81 						
+    82 072D 20 D1 29				jsr kidPreRender
+    83
+    84 0730			nextFrame
+    85 0730 20 0E 2D				jsr inputHandler
+    86 0733 AD CB 23				lda levelScreenChanged
+    87 0736 F0 0E				beq noScreenChanged
+    88
+    89 0738 A9 00				lda #0
+    90 073A 8D 2F 02				sta 559
+    91 073D 8D CB 23				sta levelScreenChanged
+    92 0740 20 D1 29				jsr kidPreRender		; TODO evaluate to do only if needed
+    93 0743 4C 50 07				jmp waitvsync 
+    94 						
+    95 0746			noScreenChanged
+    96 0746 AD CC 23				lda levelScreenDirty
+    97 0749 F0 E5				beq nextFrame
+    98 074B A9 00				lda #0
+    99 074D 8D CC 23				sta levelScreenDirty		
+   100 						
+   101 0750			waitvsync
+   102 0750 AD 0B D4				lda $D40B
+   103 0753 C9 82				cmp #130
+   104 0755 D0 F9				bne waitvsync
+   105
+   106
+   107 0757 A5 14				lda 20
+   108 0759 8D 91 4C				sta frame1
+   109 075C 02					.byte 2
+   110 075D 20 CD 23				jsr drawBack
+   111 0760 A5 14				lda 20
+   112 0762 8D 92 4C				sta frame2
+   113 0765 20 51 08				jsr dirtyClearAll
+   114 						
+   115 0768 20 73 07				jsr swapBuffers
+   116 						
+   117 076B A9 22				lda #34
+   118 076D 8D 2F 02				sta 559
+   119
+   120 0770 4C 30 07				jmp nextFrame	
+   121 						
+   122 0773			swapBuffers
+   123 0773 AD 7D 4C				lda vramActiveBuffer
+   124 0776 F0 24				beq vramActiveBufferSecond
+   125 						
+   126 0778 A9 00				lda #<vramBuffer1
+   127 077A 8D 7E 4C				sta vramBuffer
+   128 077D A9 81				lda #>vramBuffer1
+   129 077F 8D 7E 4C				sta vramBuffer
+   130 						
+   131 0782 A9 00				lda #<vramBuffer2
+   132 0784 8D 04 A0				sta vramPage1
+   133 0787 A9 A1				lda #>vramBuffer2
+   134 0789 8D 05 A0				sta vramPage1+1
+   135 						
+   136 078C A9 00				lda #<vramBufferBottom2
+   137 078E 8D 66 A0				sta vramPage2
+   138 0791 A9 B0				lda #>vramBufferBottom2
+   139 0793 8D 67 A0				sta vramPage2+1
+   140 						
+   141 0796 A9 01				lda #1
+   142 0798 8D 7D 4C				sta vramActiveBuffer
+   143 079B 60					rts
+   144 079C			vramActiveBufferSecond		
+   145 079C A9 00				lda #<vramBuffer2
+   146 079E 8D 7E 4C				sta vramBuffer
+   147 07A1 A9 A1				lda #>vramBuffer2
+   148 07A3 8D 7E 4C				sta vramBuffer
+   149 						
+   150 07A6 A9 00				lda #<vramBuffer1
+   151 07A8 8D 04 A0				sta vramPage1
+   152 07AB A9 81				lda #>vramBuffer1
+   153 07AD 8D 05 A0				sta vramPage1+1
+   154 						
+   155 07B0 A9 00				lda #<vramBufferBottom1
+   156 07B2 8D 66 A0				sta vramPage2
+   157 07B5 A9 90				lda #>vramBufferBottom1
+   158 07B7 8D 67 A0				sta vramPage2+1
+   159 						
+   160 07BA A9 00				lda #0
+   161 07BC 8D 7D 4C				sta vramActiveBuffer
+   162 07BF 60					rts	
+   163 						
+   164
+   165 07C0					icl "level/level.asm"		
+     1
+     2
+     3
+     4 07C0			changeLevel
+     5 07C0 A9 99				lda #<levelData
+     6 07C2 85 D8				sta memcpyDst
+     7 07C4 A9 08				lda #>levelData
+     8 07C6 85 D9				sta memcpyDst+1
+     9 						
+    10 07C8 AD CA 23				lda levelNumber
+    11 07CB 0A					asl
+    12 07CC AA					tax
+    13 07CD BD 95 08				lda levelDataOffsets,x
+    14 07D0 85 D6				sta memcpySrc
+    15 07D2 BD 96 08				lda levelDataOffsets+1,x
+    16 07D5 85 D7				sta memcpySrc+1
+    17 						
+    18 07D7 A9 00				lda #<levelSize
+    19 07D9 85 DA				sta memcpyLen
+    20 07DB A9 09				lda #>levelSize
+    21 07DD 85 DB				sta memcpyLen+1
+    22 						
+    23 07DF A9 00				lda #0
+    24 07E1 8D C9 23				sta levelScreen
+    25 						
+    26 07E4 4C EA 2C				jmp memcpy
+    27 						
+    28 07E7			changeScreen
+    29 07E7 C9 FF				cmp #255
+    30 07E9 D0 01				bne changeValidScreen
+    31 07EB 60					rts
+    32 07EC			changeValidScreen
+    33 07EC 8D C9 23				sta levelScreen
+    34 07EF 0A					asl
+    35 07F0 AA					tax
+    36 07F1 BD 99 23				lda levelScreenLookup,x
+    37 07F4 8D 00 08				sta levelScreenOffset+1
+    38 07F7 BD 9A 23				lda levelScreenLookup+1,x
+    39 07FA 8D 01 08				sta levelScreenOffset+2
+    40 						
+    41 07FD A0 00				ldy #0
+    42 07FF			levelScreenOffset
+    43 07FF B9 FF FF				lda $FFFF,y
+    44 0802 99 FC 2E				sta screenData,y
+    45 0805 C8					iny
+    46 0806 C0 1E				cpy #levelTilesPerScreen
+    47 0808 D0 F5				bne levelScreenOffset
+    48 						
+    49 080A 20 67 08				jsr getScreenUp
+    50 080D C9 FF				cmp #255
+    51 080F D0 0D				bne hasScreenTopRow
+    52 0811 A9 14				lda #TILE_BLOCK
+    53 0813 A2 0A				ldx #levelTilesPerRow
+    54 0815			setScreenTopBlock		
+    55 0815 9D 1A 2F				sta screenDataTop,x
+    56 0818 CA					dex
+    57 0819 10 FA				bpl setScreenTopBlock
+    58 081B 4C 42 08				jmp changeScreenEnd
+    59 081E			hasScreenTopRow
+    60 081E 0A					asl
+    61 081F AA					tax		
+    62 0820 18					clc
+    63 0821 BD 99 23				lda levelScreenLookup,x
+    64 0824 69 14				adc #2*levelTilesPerRow		; last row
+    65 0826 85 D6				sta memcpySrc
+    66 0828 BD 9A 23				lda levelScreenLookup+1,x
+    67 082B 69 00				adc #0
+    68 082D 85 D7				sta memcpySrc+1
+    69 082F A9 1A				lda #<screenDataTop
+    70 0831 85 D8				sta memcpyDst
+    71 0833 A9 2F				lda #>screenDataTop
+    72 0835 85 D9				sta memcpyDst+1
+    73 0837 A9 0A				lda #levelTilesPerRow
+    74 0839 85 DA				sta memcpyLen
+    75 083B A9 00				lda #0
+    76 083D 85 DB				sta memcpyLen+1
+    77 083F 20 EA 2C				jsr memcpy
+    78 0842			changeScreenEnd	
+    79 0842 A9 01				lda #1
+    80 0844 8D CB 23				sta levelScreenChanged	
+    81 0847 20 5A 08				jsr dirtySetAll
+    82 084A 20 17 25				jsr preRenderMap
+    83 084D 20 CF 25				jsr preRenderOffsets
+    84 0850 60					rts
+    85 						
+    86 						
+    87 0851			dirtyClearAll
+    88 0851 A2 00				ldx #0
+    89 0853 A9 00				lda #0
+    90 0855 8D CC 23				sta levelScreenDirty
+    91 0858 F0 04				beq dirtyLoop
+    92 						
+    93 085A			dirtySetAll
+    94 085A A2 00				ldx #0
+    95 085C A9 FF				lda #255
+    96 								
+    97 085E			dirtyLoop		
+    98 085E 9D B8 31				sta render_dirty_blocks,x
+    99 0861 E8					inx
+   100 0862 E0 28				cpx #levelTilesPerScreen+levelTilesPerRow
+   101 0864 D0 F8				bne dirtyLoop
+   102 0866 60					rts
+   103
+   104 0867			getScreenUp
+   105 0867 AD C9 23				lda levelScreen
+   106 086A 0A					asl
+   107 086B 0A					asl
+   108 086C AA					tax
+   109 086D E8					inx					; workaround for ATASM forward bug
+   110 086E E8					inx
+   111 086F 4C 8E 08				jmp getScreen
+   112 						
+   113 0872			getScreenDown
+   114 0872 AD C9 23				lda levelScreen
+   115 0875 0A					asl
+   116 0876 0A					asl
+   117 0877 AA					tax
+   118 0878 E8					inx					; workaround for ATASM forward bug
+   119 0879 E8					inx
+   120 087A E8					inx
+   121 087B 4C 8E 08				jmp getScreen
+   122 						
+   123 087E			getScreenLeft
+   124 087E AD C9 23				lda levelScreen
+   125 0881 0A					asl
+   126 0882 0A					asl
+   127 0883 AA					tax
+   128 0884 4C 8E 08				jmp getScreen
+   129 						
+   130 0887			getScreenRight
+   131 0887 AD C9 23				lda levelScreen
+   132 088A 0A					asl
+   133 088B 0A					asl
+   134 088C AA					tax
+   135 088D E8					inx					; workaround for ATASM forward bug
+   136 						
+   137 088E			getScreen		
+   138 088E BD 39 10				lda levelMap,x
+   139 0891 AA					tax
+   140 0892 CA					dex
+   141 0893 8A					txa
+   142 0894 60					rts
+   143 						
+   144 						
+   145
+   146
+   147 0895 99 11 99 1A		levelDataOffsets .word levelData0, levelData1
+   148 						
+   149 = 0900			levelSize = 2304		
+   150 0899			levelData
+   151 						.rept levelSize
+   152 						.BYTE 0
+   153 						.ENDR
+   153 						.endr
+Source: REPT
+   152 0899 00					.BYTE 0
+   152 089A 00					.BYTE 0
+   152 089B 00					.BYTE 0
+   152 089C 00					.BYTE 0
+   152 089D 00					.BYTE 0
+   152 089E 00					.BYTE 0
+   152 089F 00					.BYTE 0
+   152 08A0 00					.BYTE 0
+   152 08A1 00					.BYTE 0
+   152 08A2 00					.BYTE 0
+   152 08A3 00					.BYTE 0
+   152 08A4 00					.BYTE 0
+   152 08A5 00					.BYTE 0
+   152 08A6 00					.BYTE 0
+   152 08A7 00					.BYTE 0
+   152 08A8 00					.BYTE 0
+   152 08A9 00					.BYTE 0
+   152 08AA 00					.BYTE 0
+   152 08AB 00					.BYTE 0
+   152 08AC 00					.BYTE 0
+   152 08AD 00					.BYTE 0
+   152 08AE 00					.BYTE 0
+   152 08AF 00					.BYTE 0
+   152 08B0 00					.BYTE 0
+   152 08B1 00					.BYTE 0
+   152 08B2 00					.BYTE 0
+   152 08B3 00					.BYTE 0
+   152 08B4 00					.BYTE 0
+   152 08B5 00					.BYTE 0
+   152 08B6 00					.BYTE 0
+   152 08B7 00					.BYTE 0
+   152 08B8 00					.BYTE 0
+   152 08B9 00					.BYTE 0
+   152 08BA 00					.BYTE 0
+   152 08BB 00					.BYTE 0
+   152 08BC 00					.BYTE 0
+   152 08BD 00					.BYTE 0
+   152 08BE 00					.BYTE 0
+   152 08BF 00					.BYTE 0
+   152 08C0 00					.BYTE 0
+   152 08C1 00					.BYTE 0
+   152 08C2 00					.BYTE 0
+   152 08C3 00					.BYTE 0
+   152 08C4 00					.BYTE 0
+   152 08C5 00					.BYTE 0
+   152 08C6 00					.BYTE 0
+   152 08C7 00					.BYTE 0
+   152 08C8 00					.BYTE 0
+   152 08C9 00					.BYTE 0
+   152 08CA 00					.BYTE 0
+   152 08CB 00					.BYTE 0
+   152 08CC 00					.BYTE 0
+   152 08CD 00					.BYTE 0
+   152 08CE 00					.BYTE 0
+   152 08CF 00					.BYTE 0
+   152 08D0 00					.BYTE 0
+   152 08D1 00					.BYTE 0
+   152 08D2 00					.BYTE 0
+   152 08D3 00					.BYTE 0
+   152 08D4 00					.BYTE 0
+   152 08D5 00					.BYTE 0
+   152 08D6 00					.BYTE 0
+   152 08D7 00					.BYTE 0
+   152 08D8 00					.BYTE 0
+   152 08D9 00					.BYTE 0
+   152 08DA 00					.BYTE 0
+   152 08DB 00					.BYTE 0
+   152 08DC 00					.BYTE 0
+   152 08DD 00					.BYTE 0
+   152 08DE 00					.BYTE 0
+   152 08DF 00					.BYTE 0
+   152 08E0 00					.BYTE 0
+   152 08E1 00					.BYTE 0
+   152 08E2 00					.BYTE 0
+   152 08E3 00					.BYTE 0
+   152 08E4 00					.BYTE 0
+   152 08E5 00					.BYTE 0
+   152 08E6 00					.BYTE 0
+   152 08E7 00					.BYTE 0
+   152 08E8 00					.BYTE 0
+   152 08E9 00					.BYTE 0
+   152 08EA 00					.BYTE 0
+   152 08EB 00					.BYTE 0
+   152 08EC 00					.BYTE 0
+   152 08ED 00					.BYTE 0
+   152 08EE 00					.BYTE 0
+   152 08EF 00					.BYTE 0
+   152 08F0 00					.BYTE 0
+   152 08F1 00					.BYTE 0
+   152 08F2 00					.BYTE 0
+   152 08F3 00					.BYTE 0
+   152 08F4 00					.BYTE 0
+   152 08F5 00					.BYTE 0
+   152 08F6 00					.BYTE 0
+   152 08F7 00					.BYTE 0
+   152 08F8 00					.BYTE 0
+   152 08F9 00					.BYTE 0
+   152 08FA 00					.BYTE 0
+   152 08FB 00					.BYTE 0
+   152 08FC 00					.BYTE 0
+   152 08FD 00					.BYTE 0
+   152 08FE 00					.BYTE 0
+   152 08FF 00					.BYTE 0
+   152 0900 00					.BYTE 0
+   152 0901 00					.BYTE 0
+   152 0902 00					.BYTE 0
+   152 0903 00					.BYTE 0
+   152 0904 00					.BYTE 0
+   152 0905 00					.BYTE 0
+   152 0906 00					.BYTE 0
+   152 0907 00					.BYTE 0
+   152 0908 00					.BYTE 0
+   152 0909 00					.BYTE 0
+   152 090A 00					.BYTE 0
+   152 090B 00					.BYTE 0
+   152 090C 00					.BYTE 0
+   152 090D 00					.BYTE 0
+   152 090E 00					.BYTE 0
+   152 090F 00					.BYTE 0
+   152 0910 00					.BYTE 0
+   152 0911 00					.BYTE 0
+   152 0912 00					.BYTE 0
+   152 0913 00					.BYTE 0
+   152 0914 00					.BYTE 0
+   152 0915 00					.BYTE 0
+   152 0916 00					.BYTE 0
+   152 0917 00					.BYTE 0
+   152 0918 00					.BYTE 0
+   152 0919 00					.BYTE 0
+   152 091A 00					.BYTE 0
+   152 091B 00					.BYTE 0
+   152 091C 00					.BYTE 0
+   152 091D 00					.BYTE 0
+   152 091E 00					.BYTE 0
+   152 091F 00					.BYTE 0
+   152 0920 00					.BYTE 0
+   152 0921 00					.BYTE 0
+   152 0922 00					.BYTE 0
+   152 0923 00					.BYTE 0
+   152 0924 00					.BYTE 0
+   152 0925 00					.BYTE 0
+   152 0926 00					.BYTE 0
+   152 0927 00					.BYTE 0
+   152 0928 00					.BYTE 0
+   152 0929 00					.BYTE 0
+   152 092A 00					.BYTE 0
+   152 092B 00					.BYTE 0
+   152 092C 00					.BYTE 0
+   152 092D 00					.BYTE 0
+   152 092E 00					.BYTE 0
+   152 092F 00					.BYTE 0
+   152 0930 00					.BYTE 0
+   152 0931 00					.BYTE 0
+   152 0932 00					.BYTE 0
+   152 0933 00					.BYTE 0
+   152 0934 00					.BYTE 0
+   152 0935 00					.BYTE 0
+   152 0936 00					.BYTE 0
+   152 0937 00					.BYTE 0
+   152 0938 00					.BYTE 0
+   152 0939 00					.BYTE 0
+   152 093A 00					.BYTE 0
+   152 093B 00					.BYTE 0
+   152 093C 00					.BYTE 0
+   152 093D 00					.BYTE 0
+   152 093E 00					.BYTE 0
+   152 093F 00					.BYTE 0
+   152 0940 00					.BYTE 0
+   152 0941 00					.BYTE 0
+   152 0942 00					.BYTE 0
+   152 0943 00					.BYTE 0
+   152 0944 00					.BYTE 0
+   152 0945 00					.BYTE 0
+   152 0946 00					.BYTE 0
+   152 0947 00					.BYTE 0
+   152 0948 00					.BYTE 0
+   152 0949 00					.BYTE 0
+   152 094A 00					.BYTE 0
+   152 094B 00					.BYTE 0
+   152 094C 00					.BYTE 0
+   152 094D 00					.BYTE 0
+   152 094E 00					.BYTE 0
+   152 094F 00					.BYTE 0
+   152 0950 00					.BYTE 0
+   152 0951 00					.BYTE 0
+   152 0952 00					.BYTE 0
+   152 0953 00					.BYTE 0
+   152 0954 00					.BYTE 0
+   152 0955 00					.BYTE 0
+   152 0956 00					.BYTE 0
+   152 0957 00					.BYTE 0
+   152 0958 00					.BYTE 0
+   152 0959 00					.BYTE 0
+   152 095A 00					.BYTE 0
+   152 095B 00					.BYTE 0
+   152 095C 00					.BYTE 0
+   152 095D 00					.BYTE 0
+   152 095E 00					.BYTE 0
+   152 095F 00					.BYTE 0
+   152 0960 00					.BYTE 0
+   152 0961 00					.BYTE 0
+   152 0962 00					.BYTE 0
+   152 0963 00					.BYTE 0
+   152 0964 00					.BYTE 0
+   152 0965 00					.BYTE 0
+   152 0966 00					.BYTE 0
+   152 0967 00					.BYTE 0
+   152 0968 00					.BYTE 0
+   152 0969 00					.BYTE 0
+   152 096A 00					.BYTE 0
+   152 096B 00					.BYTE 0
+   152 096C 00					.BYTE 0
+   152 096D 00					.BYTE 0
+   152 096E 00					.BYTE 0
+   152 096F 00					.BYTE 0
+   152 0970 00					.BYTE 0
+   152 0971 00					.BYTE 0
+   152 0972 00					.BYTE 0
+   152 0973 00					.BYTE 0
+   152 0974 00					.BYTE 0
+   152 0975 00					.BYTE 0
+   152 0976 00					.BYTE 0
+   152 0977 00					.BYTE 0
+   152 0978 00					.BYTE 0
+   152 0979 00					.BYTE 0
+   152 097A 00					.BYTE 0
+   152 097B 00					.BYTE 0
+   152 097C 00					.BYTE 0
+   152 097D 00					.BYTE 0
+   152 097E 00					.BYTE 0
+   152 097F 00					.BYTE 0
+   152 0980 00					.BYTE 0
+   152 0981 00					.BYTE 0
+   152 0982 00					.BYTE 0
+   152 0983 00					.BYTE 0
+   152 0984 00					.BYTE 0
+   152 0985 00					.BYTE 0
+   152 0986 00					.BYTE 0
+   152 0987 00					.BYTE 0
+   152 0988 00					.BYTE 0
+   152 0989 00					.BYTE 0
+   152 098A 00					.BYTE 0
+   152 098B 00					.BYTE 0
+   152 098C 00					.BYTE 0
+   152 098D 00					.BYTE 0
+   152 098E 00					.BYTE 0
+   152 098F 00					.BYTE 0
+   152 0990 00					.BYTE 0
+   152 0991 00					.BYTE 0
+   152 0992 00					.BYTE 0
+   152 0993 00					.BYTE 0
+   152 0994 00					.BYTE 0
+   152 0995 00					.BYTE 0
+   152 0996 00					.BYTE 0
+   152 0997 00					.BYTE 0
+   152 0998 00					.BYTE 0
+   152 0999 00					.BYTE 0
+   152 099A 00					.BYTE 0
+   152 099B 00					.BYTE 0
+   152 099C 00					.BYTE 0
+   152 099D 00					.BYTE 0
+   152 099E 00					.BYTE 0
+   152 099F 00					.BYTE 0
+   152 09A0 00					.BYTE 0
+   152 09A1 00					.BYTE 0
+   152 09A2 00					.BYTE 0
+   152 09A3 00					.BYTE 0
+   152 09A4 00					.BYTE 0
+   152 09A5 00					.BYTE 0
+   152 09A6 00					.BYTE 0
+   152 09A7 00					.BYTE 0
+   152 09A8 00					.BYTE 0
+   152 09A9 00					.BYTE 0
+   152 09AA 00					.BYTE 0
+   152 09AB 00					.BYTE 0
+   152 09AC 00					.BYTE 0
+   152 09AD 00					.BYTE 0
+   152 09AE 00					.BYTE 0
+   152 09AF 00					.BYTE 0
+   152 09B0 00					.BYTE 0
+   152 09B1 00					.BYTE 0
+   152 09B2 00					.BYTE 0
+   152 09B3 00					.BYTE 0
+   152 09B4 00					.BYTE 0
+   152 09B5 00					.BYTE 0
+   152 09B6 00					.BYTE 0
+   152 09B7 00					.BYTE 0
+   152 09B8 00					.BYTE 0
+   152 09B9 00					.BYTE 0
+   152 09BA 00					.BYTE 0
+   152 09BB 00					.BYTE 0
+   152 09BC 00					.BYTE 0
+   152 09BD 00					.BYTE 0
+   152 09BE 00					.BYTE 0
+   152 09BF 00					.BYTE 0
+   152 09C0 00					.BYTE 0
+   152 09C1 00					.BYTE 0
+   152 09C2 00					.BYTE 0
+   152 09C3 00					.BYTE 0
+   152 09C4 00					.BYTE 0
+   152 09C5 00					.BYTE 0
+   152 09C6 00					.BYTE 0
+   152 09C7 00					.BYTE 0
+   152 09C8 00					.BYTE 0
+   152 09C9 00					.BYTE 0
+   152 09CA 00					.BYTE 0
+   152 09CB 00					.BYTE 0
+   152 09CC 00					.BYTE 0
+   152 09CD 00					.BYTE 0
+   152 09CE 00					.BYTE 0
+   152 09CF 00					.BYTE 0
+   152 09D0 00					.BYTE 0
+   152 09D1 00					.BYTE 0
+   152 09D2 00					.BYTE 0
+   152 09D3 00					.BYTE 0
+   152 09D4 00					.BYTE 0
+   152 09D5 00					.BYTE 0
+   152 09D6 00					.BYTE 0
+   152 09D7 00					.BYTE 0
+   152 09D8 00					.BYTE 0
+   152 09D9 00					.BYTE 0
+   152 09DA 00					.BYTE 0
+   152 09DB 00					.BYTE 0
+   152 09DC 00					.BYTE 0
+   152 09DD 00					.BYTE 0
+   152 09DE 00					.BYTE 0
+   152 09DF 00					.BYTE 0
+   152 09E0 00					.BYTE 0
+   152 09E1 00					.BYTE 0
+   152 09E2 00					.BYTE 0
+   152 09E3 00					.BYTE 0
+   152 09E4 00					.BYTE 0
+   152 09E5 00					.BYTE 0
+   152 09E6 00					.BYTE 0
+   152 09E7 00					.BYTE 0
+   152 09E8 00					.BYTE 0
+   152 09E9 00					.BYTE 0
+   152 09EA 00					.BYTE 0
+   152 09EB 00					.BYTE 0
+   152 09EC 00					.BYTE 0
+   152 09ED 00					.BYTE 0
+   152 09EE 00					.BYTE 0
+   152 09EF 00					.BYTE 0
+   152 09F0 00					.BYTE 0
+   152 09F1 00					.BYTE 0
+   152 09F2 00					.BYTE 0
+   152 09F3 00					.BYTE 0
+   152 09F4 00					.BYTE 0
+   152 09F5 00					.BYTE 0
+   152 09F6 00					.BYTE 0
+   152 09F7 00					.BYTE 0
+   152 09F8 00					.BYTE 0
+   152 09F9 00					.BYTE 0
+   152 09FA 00					.BYTE 0
+   152 09FB 00					.BYTE 0
+   152 09FC 00					.BYTE 0
+   152 09FD 00					.BYTE 0
+   152 09FE 00					.BYTE 0
+   152 09FF 00					.BYTE 0
+   152 0A00 00					.BYTE 0
+   152 0A01 00					.BYTE 0
+   152 0A02 00					.BYTE 0
+   152 0A03 00					.BYTE 0
+   152 0A04 00					.BYTE 0
+   152 0A05 00					.BYTE 0
+   152 0A06 00					.BYTE 0
+   152 0A07 00					.BYTE 0
+   152 0A08 00					.BYTE 0
+   152 0A09 00					.BYTE 0
+   152 0A0A 00					.BYTE 0
+   152 0A0B 00					.BYTE 0
+   152 0A0C 00					.BYTE 0
+   152 0A0D 00					.BYTE 0
+   152 0A0E 00					.BYTE 0
+   152 0A0F 00					.BYTE 0
+   152 0A10 00					.BYTE 0
+   152 0A11 00					.BYTE 0
+   152 0A12 00					.BYTE 0
+   152 0A13 00					.BYTE 0
+   152 0A14 00					.BYTE 0
+   152 0A15 00					.BYTE 0
+   152 0A16 00					.BYTE 0
+   152 0A17 00					.BYTE 0
+   152 0A18 00					.BYTE 0
+   152 0A19 00					.BYTE 0
+   152 0A1A 00					.BYTE 0
+   152 0A1B 00					.BYTE 0
+   152 0A1C 00					.BYTE 0
+   152 0A1D 00					.BYTE 0
+   152 0A1E 00					.BYTE 0
+   152 0A1F 00					.BYTE 0
+   152 0A20 00					.BYTE 0
+   152 0A21 00					.BYTE 0
+   152 0A22 00					.BYTE 0
+   152 0A23 00					.BYTE 0
+   152 0A24 00					.BYTE 0
+   152 0A25 00					.BYTE 0
+   152 0A26 00					.BYTE 0
+   152 0A27 00					.BYTE 0
+   152 0A28 00					.BYTE 0
+   152 0A29 00					.BYTE 0
+   152 0A2A 00					.BYTE 0
+   152 0A2B 00					.BYTE 0
+   152 0A2C 00					.BYTE 0
+   152 0A2D 00					.BYTE 0
+   152 0A2E 00					.BYTE 0
+   152 0A2F 00					.BYTE 0
+   152 0A30 00					.BYTE 0
+   152 0A31 00					.BYTE 0
+   152 0A32 00					.BYTE 0
+   152 0A33 00					.BYTE 0
+   152 0A34 00					.BYTE 0
+   152 0A35 00					.BYTE 0
+   152 0A36 00					.BYTE 0
+   152 0A37 00					.BYTE 0
+   152 0A38 00					.BYTE 0
+   152 0A39 00					.BYTE 0
+   152 0A3A 00					.BYTE 0
+   152 0A3B 00					.BYTE 0
+   152 0A3C 00					.BYTE 0
+   152 0A3D 00					.BYTE 0
+   152 0A3E 00					.BYTE 0
+   152 0A3F 00					.BYTE 0
+   152 0A40 00					.BYTE 0
+   152 0A41 00					.BYTE 0
+   152 0A42 00					.BYTE 0
+   152 0A43 00					.BYTE 0
+   152 0A44 00					.BYTE 0
+   152 0A45 00					.BYTE 0
+   152 0A46 00					.BYTE 0
+   152 0A47 00					.BYTE 0
+   152 0A48 00					.BYTE 0
+   152 0A49 00					.BYTE 0
+   152 0A4A 00					.BYTE 0
+   152 0A4B 00					.BYTE 0
+   152 0A4C 00					.BYTE 0
+   152 0A4D 00					.BYTE 0
+   152 0A4E 00					.BYTE 0
+   152 0A4F 00					.BYTE 0
+   152 0A50 00					.BYTE 0
+   152 0A51 00					.BYTE 0
+   152 0A52 00					.BYTE 0
+   152 0A53 00					.BYTE 0
+   152 0A54 00					.BYTE 0
+   152 0A55 00					.BYTE 0
+   152 0A56 00					.BYTE 0
+   152 0A57 00					.BYTE 0
+   152 0A58 00					.BYTE 0
+   152 0A59 00					.BYTE 0
+   152 0A5A 00					.BYTE 0
+   152 0A5B 00					.BYTE 0
+   152 0A5C 00					.BYTE 0
+   152 0A5D 00					.BYTE 0
+   152 0A5E 00					.BYTE 0
+   152 0A5F 00					.BYTE 0
+   152 0A60 00					.BYTE 0
+   152 0A61 00					.BYTE 0
+   152 0A62 00					.BYTE 0
+   152 0A63 00					.BYTE 0
+   152 0A64 00					.BYTE 0
+   152 0A65 00					.BYTE 0
+   152 0A66 00					.BYTE 0
+   152 0A67 00					.BYTE 0
+   152 0A68 00					.BYTE 0
+   152 0A69 00					.BYTE 0
+   152 0A6A 00					.BYTE 0
+   152 0A6B 00					.BYTE 0
+   152 0A6C 00					.BYTE 0
+   152 0A6D 00					.BYTE 0
+   152 0A6E 00					.BYTE 0
+   152 0A6F 00					.BYTE 0
+   152 0A70 00					.BYTE 0
+   152 0A71 00					.BYTE 0
+   152 0A72 00					.BYTE 0
+   152 0A73 00					.BYTE 0
+   152 0A74 00					.BYTE 0
+   152 0A75 00					.BYTE 0
+   152 0A76 00					.BYTE 0
+   152 0A77 00					.BYTE 0
+   152 0A78 00					.BYTE 0
+   152 0A79 00					.BYTE 0
+   152 0A7A 00					.BYTE 0
+   152 0A7B 00					.BYTE 0
+   152 0A7C 00					.BYTE 0
+   152 0A7D 00					.BYTE 0
+   152 0A7E 00					.BYTE 0
+   152 0A7F 00					.BYTE 0
+   152 0A80 00					.BYTE 0
+   152 0A81 00					.BYTE 0
+   152 0A82 00					.BYTE 0
+   152 0A83 00					.BYTE 0
+   152 0A84 00					.BYTE 0
+   152 0A85 00					.BYTE 0
+   152 0A86 00					.BYTE 0
+   152 0A87 00					.BYTE 0
+   152 0A88 00					.BYTE 0
+   152 0A89 00					.BYTE 0
+   152 0A8A 00					.BYTE 0
+   152 0A8B 00					.BYTE 0
+   152 0A8C 00					.BYTE 0
+   152 0A8D 00					.BYTE 0
+   152 0A8E 00					.BYTE 0
+   152 0A8F 00					.BYTE 0
+   152 0A90 00					.BYTE 0
+   152 0A91 00					.BYTE 0
+   152 0A92 00					.BYTE 0
+   152 0A93 00					.BYTE 0
+   152 0A94 00					.BYTE 0
+   152 0A95 00					.BYTE 0
+   152 0A96 00					.BYTE 0
+   152 0A97 00					.BYTE 0
+   152 0A98 00					.BYTE 0
+   152 0A99 00					.BYTE 0
+   152 0A9A 00					.BYTE 0
+   152 0A9B 00					.BYTE 0
+   152 0A9C 00					.BYTE 0
+   152 0A9D 00					.BYTE 0
+   152 0A9E 00					.BYTE 0
+   152 0A9F 00					.BYTE 0
+   152 0AA0 00					.BYTE 0
+   152 0AA1 00					.BYTE 0
+   152 0AA2 00					.BYTE 0
+   152 0AA3 00					.BYTE 0
+   152 0AA4 00					.BYTE 0
+   152 0AA5 00					.BYTE 0
+   152 0AA6 00					.BYTE 0
+   152 0AA7 00					.BYTE 0
+   152 0AA8 00					.BYTE 0
+   152 0AA9 00					.BYTE 0
+   152 0AAA 00					.BYTE 0
+   152 0AAB 00					.BYTE 0
+   152 0AAC 00					.BYTE 0
+   152 0AAD 00					.BYTE 0
+   152 0AAE 00					.BYTE 0
+   152 0AAF 00					.BYTE 0
+   152 0AB0 00					.BYTE 0
+   152 0AB1 00					.BYTE 0
+   152 0AB2 00					.BYTE 0
+   152 0AB3 00					.BYTE 0
+   152 0AB4 00					.BYTE 0
+   152 0AB5 00					.BYTE 0
+   152 0AB6 00					.BYTE 0
+   152 0AB7 00					.BYTE 0
+   152 0AB8 00					.BYTE 0
+   152 0AB9 00					.BYTE 0
+   152 0ABA 00					.BYTE 0
+   152 0ABB 00					.BYTE 0
+   152 0ABC 00					.BYTE 0
+   152 0ABD 00					.BYTE 0
+   152 0ABE 00					.BYTE 0
+   152 0ABF 00					.BYTE 0
+   152 0AC0 00					.BYTE 0
+   152 0AC1 00					.BYTE 0
+   152 0AC2 00					.BYTE 0
+   152 0AC3 00					.BYTE 0
+   152 0AC4 00					.BYTE 0
+   152 0AC5 00					.BYTE 0
+   152 0AC6 00					.BYTE 0
+   152 0AC7 00					.BYTE 0
+   152 0AC8 00					.BYTE 0
+   152 0AC9 00					.BYTE 0
+   152 0ACA 00					.BYTE 0
+   152 0ACB 00					.BYTE 0
+   152 0ACC 00					.BYTE 0
+   152 0ACD 00					.BYTE 0
+   152 0ACE 00					.BYTE 0
+   152 0ACF 00					.BYTE 0
+   152 0AD0 00					.BYTE 0
+   152 0AD1 00					.BYTE 0
+   152 0AD2 00					.BYTE 0
+   152 0AD3 00					.BYTE 0
+   152 0AD4 00					.BYTE 0
+   152 0AD5 00					.BYTE 0
+   152 0AD6 00					.BYTE 0
+   152 0AD7 00					.BYTE 0
+   152 0AD8 00					.BYTE 0
+   152 0AD9 00					.BYTE 0
+   152 0ADA 00					.BYTE 0
+   152 0ADB 00					.BYTE 0
+   152 0ADC 00					.BYTE 0
+   152 0ADD 00					.BYTE 0
+   152 0ADE 00					.BYTE 0
+   152 0ADF 00					.BYTE 0
+   152 0AE0 00					.BYTE 0
+   152 0AE1 00					.BYTE 0
+   152 0AE2 00					.BYTE 0
+   152 0AE3 00					.BYTE 0
+   152 0AE4 00					.BYTE 0
+   152 0AE5 00					.BYTE 0
+   152 0AE6 00					.BYTE 0
+   152 0AE7 00					.BYTE 0
+   152 0AE8 00					.BYTE 0
+   152 0AE9 00					.BYTE 0
+   152 0AEA 00					.BYTE 0
+   152 0AEB 00					.BYTE 0
+   152 0AEC 00					.BYTE 0
+   152 0AED 00					.BYTE 0
+   152 0AEE 00					.BYTE 0
+   152 0AEF 00					.BYTE 0
+   152 0AF0 00					.BYTE 0
+   152 0AF1 00					.BYTE 0
+   152 0AF2 00					.BYTE 0
+   152 0AF3 00					.BYTE 0
+   152 0AF4 00					.BYTE 0
+   152 0AF5 00					.BYTE 0
+   152 0AF6 00					.BYTE 0
+   152 0AF7 00					.BYTE 0
+   152 0AF8 00					.BYTE 0
+   152 0AF9 00					.BYTE 0
+   152 0AFA 00					.BYTE 0
+   152 0AFB 00					.BYTE 0
+   152 0AFC 00					.BYTE 0
+   152 0AFD 00					.BYTE 0
+   152 0AFE 00					.BYTE 0
+   152 0AFF 00					.BYTE 0
+   152 0B00 00					.BYTE 0
+   152 0B01 00					.BYTE 0
+   152 0B02 00					.BYTE 0
+   152 0B03 00					.BYTE 0
+   152 0B04 00					.BYTE 0
+   152 0B05 00					.BYTE 0
+   152 0B06 00					.BYTE 0
+   152 0B07 00					.BYTE 0
+   152 0B08 00					.BYTE 0
+   152 0B09 00					.BYTE 0
+   152 0B0A 00					.BYTE 0
+   152 0B0B 00					.BYTE 0
+   152 0B0C 00					.BYTE 0
+   152 0B0D 00					.BYTE 0
+   152 0B0E 00					.BYTE 0
+   152 0B0F 00					.BYTE 0
+   152 0B10 00					.BYTE 0
+   152 0B11 00					.BYTE 0
+   152 0B12 00					.BYTE 0
+   152 0B13 00					.BYTE 0
+   152 0B14 00					.BYTE 0
+   152 0B15 00					.BYTE 0
+   152 0B16 00					.BYTE 0
+   152 0B17 00					.BYTE 0
+   152 0B18 00					.BYTE 0
+   152 0B19 00					.BYTE 0
+   152 0B1A 00					.BYTE 0
+   152 0B1B 00					.BYTE 0
+   152 0B1C 00					.BYTE 0
+   152 0B1D 00					.BYTE 0
+   152 0B1E 00					.BYTE 0
+   152 0B1F 00					.BYTE 0
+   152 0B20 00					.BYTE 0
+   152 0B21 00					.BYTE 0
+   152 0B22 00					.BYTE 0
+   152 0B23 00					.BYTE 0
+   152 0B24 00					.BYTE 0
+   152 0B25 00					.BYTE 0
+   152 0B26 00					.BYTE 0
+   152 0B27 00					.BYTE 0
+   152 0B28 00					.BYTE 0
+   152 0B29 00					.BYTE 0
+   152 0B2A 00					.BYTE 0
+   152 0B2B 00					.BYTE 0
+   152 0B2C 00					.BYTE 0
+   152 0B2D 00					.BYTE 0
+   152 0B2E 00					.BYTE 0
+   152 0B2F 00					.BYTE 0
+   152 0B30 00					.BYTE 0
+   152 0B31 00					.BYTE 0
+   152 0B32 00					.BYTE 0
+   152 0B33 00					.BYTE 0
+   152 0B34 00					.BYTE 0
+   152 0B35 00					.BYTE 0
+   152 0B36 00					.BYTE 0
+   152 0B37 00					.BYTE 0
+   152 0B38 00					.BYTE 0
+   152 0B39 00					.BYTE 0
+   152 0B3A 00					.BYTE 0
+   152 0B3B 00					.BYTE 0
+   152 0B3C 00					.BYTE 0
+   152 0B3D 00					.BYTE 0
+   152 0B3E 00					.BYTE 0
+   152 0B3F 00					.BYTE 0
+   152 0B40 00					.BYTE 0
+   152 0B41 00					.BYTE 0
+   152 0B42 00					.BYTE 0
+   152 0B43 00					.BYTE 0
+   152 0B44 00					.BYTE 0
+   152 0B45 00					.BYTE 0
+   152 0B46 00					.BYTE 0
+   152 0B47 00					.BYTE 0
+   152 0B48 00					.BYTE 0
+   152 0B49 00					.BYTE 0
+   152 0B4A 00					.BYTE 0
+   152 0B4B 00					.BYTE 0
+   152 0B4C 00					.BYTE 0
+   152 0B4D 00					.BYTE 0
+   152 0B4E 00					.BYTE 0
+   152 0B4F 00					.BYTE 0
+   152 0B50 00					.BYTE 0
+   152 0B51 00					.BYTE 0
+   152 0B52 00					.BYTE 0
+   152 0B53 00					.BYTE 0
+   152 0B54 00					.BYTE 0
+   152 0B55 00					.BYTE 0
+   152 0B56 00					.BYTE 0
+   152 0B57 00					.BYTE 0
+   152 0B58 00					.BYTE 0
+   152 0B59 00					.BYTE 0
+   152 0B5A 00					.BYTE 0
+   152 0B5B 00					.BYTE 0
+   152 0B5C 00					.BYTE 0
+   152 0B5D 00					.BYTE 0
+   152 0B5E 00					.BYTE 0
+   152 0B5F 00					.BYTE 0
+   152 0B60 00					.BYTE 0
+   152 0B61 00					.BYTE 0
+   152 0B62 00					.BYTE 0
+   152 0B63 00					.BYTE 0
+   152 0B64 00					.BYTE 0
+   152 0B65 00					.BYTE 0
+   152 0B66 00					.BYTE 0
+   152 0B67 00					.BYTE 0
+   152 0B68 00					.BYTE 0
+   152 0B69 00					.BYTE 0
+   152 0B6A 00					.BYTE 0
+   152 0B6B 00					.BYTE 0
+   152 0B6C 00					.BYTE 0
+   152 0B6D 00					.BYTE 0
+   152 0B6E 00					.BYTE 0
+   152 0B6F 00					.BYTE 0
+   152 0B70 00					.BYTE 0
+   152 0B71 00					.BYTE 0
+   152 0B72 00					.BYTE 0
+   152 0B73 00					.BYTE 0
+   152 0B74 00					.BYTE 0
+   152 0B75 00					.BYTE 0
+   152 0B76 00					.BYTE 0
+   152 0B77 00					.BYTE 0
+   152 0B78 00					.BYTE 0
+   152 0B79 00					.BYTE 0
+   152 0B7A 00					.BYTE 0
+   152 0B7B 00					.BYTE 0
+   152 0B7C 00					.BYTE 0
+   152 0B7D 00					.BYTE 0
+   152 0B7E 00					.BYTE 0
+   152 0B7F 00					.BYTE 0
+   152 0B80 00					.BYTE 0
+   152 0B81 00					.BYTE 0
+   152 0B82 00					.BYTE 0
+   152 0B83 00					.BYTE 0
+   152 0B84 00					.BYTE 0
+   152 0B85 00					.BYTE 0
+   152 0B86 00					.BYTE 0
+   152 0B87 00					.BYTE 0
+   152 0B88 00					.BYTE 0
+   152 0B89 00					.BYTE 0
+   152 0B8A 00					.BYTE 0
+   152 0B8B 00					.BYTE 0
+   152 0B8C 00					.BYTE 0
+   152 0B8D 00					.BYTE 0
+   152 0B8E 00					.BYTE 0
+   152 0B8F 00					.BYTE 0
+   152 0B90 00					.BYTE 0
+   152 0B91 00					.BYTE 0
+   152 0B92 00					.BYTE 0
+   152 0B93 00					.BYTE 0
+   152 0B94 00					.BYTE 0
+   152 0B95 00					.BYTE 0
+   152 0B96 00					.BYTE 0
+   152 0B97 00					.BYTE 0
+   152 0B98 00					.BYTE 0
+   152 0B99 00					.BYTE 0
+   152 0B9A 00					.BYTE 0
+   152 0B9B 00					.BYTE 0
+   152 0B9C 00					.BYTE 0
+   152 0B9D 00					.BYTE 0
+   152 0B9E 00					.BYTE 0
+   152 0B9F 00					.BYTE 0
+   152 0BA0 00					.BYTE 0
+   152 0BA1 00					.BYTE 0
+   152 0BA2 00					.BYTE 0
+   152 0BA3 00					.BYTE 0
+   152 0BA4 00					.BYTE 0
+   152 0BA5 00					.BYTE 0
+   152 0BA6 00					.BYTE 0
+   152 0BA7 00					.BYTE 0
+   152 0BA8 00					.BYTE 0
+   152 0BA9 00					.BYTE 0
+   152 0BAA 00					.BYTE 0
+   152 0BAB 00					.BYTE 0
+   152 0BAC 00					.BYTE 0
+   152 0BAD 00					.BYTE 0
+   152 0BAE 00					.BYTE 0
+   152 0BAF 00					.BYTE 0
+   152 0BB0 00					.BYTE 0
+   152 0BB1 00					.BYTE 0
+   152 0BB2 00					.BYTE 0
+   152 0BB3 00					.BYTE 0
+   152 0BB4 00					.BYTE 0
+   152 0BB5 00					.BYTE 0
+   152 0BB6 00					.BYTE 0
+   152 0BB7 00					.BYTE 0
+   152 0BB8 00					.BYTE 0
+   152 0BB9 00					.BYTE 0
+   152 0BBA 00					.BYTE 0
+   152 0BBB 00					.BYTE 0
+   152 0BBC 00					.BYTE 0
+   152 0BBD 00					.BYTE 0
+   152 0BBE 00					.BYTE 0
+   152 0BBF 00					.BYTE 0
+   152 0BC0 00					.BYTE 0
+   152 0BC1 00					.BYTE 0
+   152 0BC2 00					.BYTE 0
+   152 0BC3 00					.BYTE 0
+   152 0BC4 00					.BYTE 0
+   152 0BC5 00					.BYTE 0
+   152 0BC6 00					.BYTE 0
+   152 0BC7 00					.BYTE 0
+   152 0BC8 00					.BYTE 0
+   152 0BC9 00					.BYTE 0
+   152 0BCA 00					.BYTE 0
+   152 0BCB 00					.BYTE 0
+   152 0BCC 00					.BYTE 0
+   152 0BCD 00					.BYTE 0
+   152 0BCE 00					.BYTE 0
+   152 0BCF 00					.BYTE 0
+   152 0BD0 00					.BYTE 0
+   152 0BD1 00					.BYTE 0
+   152 0BD2 00					.BYTE 0
+   152 0BD3 00					.BYTE 0
+   152 0BD4 00					.BYTE 0
+   152 0BD5 00					.BYTE 0
+   152 0BD6 00					.BYTE 0
+   152 0BD7 00					.BYTE 0
+   152 0BD8 00					.BYTE 0
+   152 0BD9 00					.BYTE 0
+   152 0BDA 00					.BYTE 0
+   152 0BDB 00					.BYTE 0
+   152 0BDC 00					.BYTE 0
+   152 0BDD 00					.BYTE 0
+   152 0BDE 00					.BYTE 0
+   152 0BDF 00					.BYTE 0
+   152 0BE0 00					.BYTE 0
+   152 0BE1 00					.BYTE 0
+   152 0BE2 00					.BYTE 0
+   152 0BE3 00					.BYTE 0
+   152 0BE4 00					.BYTE 0
+   152 0BE5 00					.BYTE 0
+   152 0BE6 00					.BYTE 0
+   152 0BE7 00					.BYTE 0
+   152 0BE8 00					.BYTE 0
+   152 0BE9 00					.BYTE 0
+   152 0BEA 00					.BYTE 0
+   152 0BEB 00					.BYTE 0
+   152 0BEC 00					.BYTE 0
+   152 0BED 00					.BYTE 0
+   152 0BEE 00					.BYTE 0
+   152 0BEF 00					.BYTE 0
+   152 0BF0 00					.BYTE 0
+   152 0BF1 00					.BYTE 0
+   152 0BF2 00					.BYTE 0
+   152 0BF3 00					.BYTE 0
+   152 0BF4 00					.BYTE 0
+   152 0BF5 00					.BYTE 0
+   152 0BF6 00					.BYTE 0
+   152 0BF7 00					.BYTE 0
+   152 0BF8 00					.BYTE 0
+   152 0BF9 00					.BYTE 0
+   152 0BFA 00					.BYTE 0
+   152 0BFB 00					.BYTE 0
+   152 0BFC 00					.BYTE 0
+   152 0BFD 00					.BYTE 0
+   152 0BFE 00					.BYTE 0
+   152 0BFF 00					.BYTE 0
+   152 0C00 00					.BYTE 0
+   152 0C01 00					.BYTE 0
+   152 0C02 00					.BYTE 0
+   152 0C03 00					.BYTE 0
+   152 0C04 00					.BYTE 0
+   152 0C05 00					.BYTE 0
+   152 0C06 00					.BYTE 0
+   152 0C07 00					.BYTE 0
+   152 0C08 00					.BYTE 0
+   152 0C09 00					.BYTE 0
+   152 0C0A 00					.BYTE 0
+   152 0C0B 00					.BYTE 0
+   152 0C0C 00					.BYTE 0
+   152 0C0D 00					.BYTE 0
+   152 0C0E 00					.BYTE 0
+   152 0C0F 00					.BYTE 0
+   152 0C10 00					.BYTE 0
+   152 0C11 00					.BYTE 0
+   152 0C12 00					.BYTE 0
+   152 0C13 00					.BYTE 0
+   152 0C14 00					.BYTE 0
+   152 0C15 00					.BYTE 0
+   152 0C16 00					.BYTE 0
+   152 0C17 00					.BYTE 0
+   152 0C18 00					.BYTE 0
+   152 0C19 00					.BYTE 0
+   152 0C1A 00					.BYTE 0
+   152 0C1B 00					.BYTE 0
+   152 0C1C 00					.BYTE 0
+   152 0C1D 00					.BYTE 0
+   152 0C1E 00					.BYTE 0
+   152 0C1F 00					.BYTE 0
+   152 0C20 00					.BYTE 0
+   152 0C21 00					.BYTE 0
+   152 0C22 00					.BYTE 0
+   152 0C23 00					.BYTE 0
+   152 0C24 00					.BYTE 0
+   152 0C25 00					.BYTE 0
+   152 0C26 00					.BYTE 0
+   152 0C27 00					.BYTE 0
+   152 0C28 00					.BYTE 0
+   152 0C29 00					.BYTE 0
+   152 0C2A 00					.BYTE 0
+   152 0C2B 00					.BYTE 0
+   152 0C2C 00					.BYTE 0
+   152 0C2D 00					.BYTE 0
+   152 0C2E 00					.BYTE 0
+   152 0C2F 00					.BYTE 0
+   152 0C30 00					.BYTE 0
+   152 0C31 00					.BYTE 0
+   152 0C32 00					.BYTE 0
+   152 0C33 00					.BYTE 0
+   152 0C34 00					.BYTE 0
+   152 0C35 00					.BYTE 0
+   152 0C36 00					.BYTE 0
+   152 0C37 00					.BYTE 0
+   152 0C38 00					.BYTE 0
+   152 0C39 00					.BYTE 0
+   152 0C3A 00					.BYTE 0
+   152 0C3B 00					.BYTE 0
+   152 0C3C 00					.BYTE 0
+   152 0C3D 00					.BYTE 0
+   152 0C3E 00					.BYTE 0
+   152 0C3F 00					.BYTE 0
+   152 0C40 00					.BYTE 0
+   152 0C41 00					.BYTE 0
+   152 0C42 00					.BYTE 0
+   152 0C43 00					.BYTE 0
+   152 0C44 00					.BYTE 0
+   152 0C45 00					.BYTE 0
+   152 0C46 00					.BYTE 0
+   152 0C47 00					.BYTE 0
+   152 0C48 00					.BYTE 0
+   152 0C49 00					.BYTE 0
+   152 0C4A 00					.BYTE 0
+   152 0C4B 00					.BYTE 0
+   152 0C4C 00					.BYTE 0
+   152 0C4D 00					.BYTE 0
+   152 0C4E 00					.BYTE 0
+   152 0C4F 00					.BYTE 0
+   152 0C50 00					.BYTE 0
+   152 0C51 00					.BYTE 0
+   152 0C52 00					.BYTE 0
+   152 0C53 00					.BYTE 0
+   152 0C54 00					.BYTE 0
+   152 0C55 00					.BYTE 0
+   152 0C56 00					.BYTE 0
+   152 0C57 00					.BYTE 0
+   152 0C58 00					.BYTE 0
+   152 0C59 00					.BYTE 0
+   152 0C5A 00					.BYTE 0
+   152 0C5B 00					.BYTE 0
+   152 0C5C 00					.BYTE 0
+   152 0C5D 00					.BYTE 0
+   152 0C5E 00					.BYTE 0
+   152 0C5F 00					.BYTE 0
+   152 0C60 00					.BYTE 0
+   152 0C61 00					.BYTE 0
+   152 0C62 00					.BYTE 0
+   152 0C63 00					.BYTE 0
+   152 0C64 00					.BYTE 0
+   152 0C65 00					.BYTE 0
+   152 0C66 00					.BYTE 0
+   152 0C67 00					.BYTE 0
+   152 0C68 00					.BYTE 0
+   152 0C69 00					.BYTE 0
+   152 0C6A 00					.BYTE 0
+   152 0C6B 00					.BYTE 0
+   152 0C6C 00					.BYTE 0
+   152 0C6D 00					.BYTE 0
+   152 0C6E 00					.BYTE 0
+   152 0C6F 00					.BYTE 0
+   152 0C70 00					.BYTE 0
+   152 0C71 00					.BYTE 0
+   152 0C72 00					.BYTE 0
+   152 0C73 00					.BYTE 0
+   152 0C74 00					.BYTE 0
+   152 0C75 00					.BYTE 0
+   152 0C76 00					.BYTE 0
+   152 0C77 00					.BYTE 0
+   152 0C78 00					.BYTE 0
+   152 0C79 00					.BYTE 0
+   152 0C7A 00					.BYTE 0
+   152 0C7B 00					.BYTE 0
+   152 0C7C 00					.BYTE 0
+   152 0C7D 00					.BYTE 0
+   152 0C7E 00					.BYTE 0
+   152 0C7F 00					.BYTE 0
+   152 0C80 00					.BYTE 0
+   152 0C81 00					.BYTE 0
+   152 0C82 00					.BYTE 0
+   152 0C83 00					.BYTE 0
+   152 0C84 00					.BYTE 0
+   152 0C85 00					.BYTE 0
+   152 0C86 00					.BYTE 0
+   152 0C87 00					.BYTE 0
+   152 0C88 00					.BYTE 0
+   152 0C89 00					.BYTE 0
+   152 0C8A 00					.BYTE 0
+   152 0C8B 00					.BYTE 0
+   152 0C8C 00					.BYTE 0
+   152 0C8D 00					.BYTE 0
+   152 0C8E 00					.BYTE 0
+   152 0C8F 00					.BYTE 0
+   152 0C90 00					.BYTE 0
+   152 0C91 00					.BYTE 0
+   152 0C92 00					.BYTE 0
+   152 0C93 00					.BYTE 0
+   152 0C94 00					.BYTE 0
+   152 0C95 00					.BYTE 0
+   152 0C96 00					.BYTE 0
+   152 0C97 00					.BYTE 0
+   152 0C98 00					.BYTE 0
+   152 0C99 00					.BYTE 0
+   152 0C9A 00					.BYTE 0
+   152 0C9B 00					.BYTE 0
+   152 0C9C 00					.BYTE 0
+   152 0C9D 00					.BYTE 0
+   152 0C9E 00					.BYTE 0
+   152 0C9F 00					.BYTE 0
+   152 0CA0 00					.BYTE 0
+   152 0CA1 00					.BYTE 0
+   152 0CA2 00					.BYTE 0
+   152 0CA3 00					.BYTE 0
+   152 0CA4 00					.BYTE 0
+   152 0CA5 00					.BYTE 0
+   152 0CA6 00					.BYTE 0
+   152 0CA7 00					.BYTE 0
+   152 0CA8 00					.BYTE 0
+   152 0CA9 00					.BYTE 0
+   152 0CAA 00					.BYTE 0
+   152 0CAB 00					.BYTE 0
+   152 0CAC 00					.BYTE 0
+   152 0CAD 00					.BYTE 0
+   152 0CAE 00					.BYTE 0
+   152 0CAF 00					.BYTE 0
+   152 0CB0 00					.BYTE 0
+   152 0CB1 00					.BYTE 0
+   152 0CB2 00					.BYTE 0
+   152 0CB3 00					.BYTE 0
+   152 0CB4 00					.BYTE 0
+   152 0CB5 00					.BYTE 0
+   152 0CB6 00					.BYTE 0
+   152 0CB7 00					.BYTE 0
+   152 0CB8 00					.BYTE 0
+   152 0CB9 00					.BYTE 0
+   152 0CBA 00					.BYTE 0
+   152 0CBB 00					.BYTE 0
+   152 0CBC 00					.BYTE 0
+   152 0CBD 00					.BYTE 0
+   152 0CBE 00					.BYTE 0
+   152 0CBF 00					.BYTE 0
+   152 0CC0 00					.BYTE 0
+   152 0CC1 00					.BYTE 0
+   152 0CC2 00					.BYTE 0
+   152 0CC3 00					.BYTE 0
+   152 0CC4 00					.BYTE 0
+   152 0CC5 00					.BYTE 0
+   152 0CC6 00					.BYTE 0
+   152 0CC7 00					.BYTE 0
+   152 0CC8 00					.BYTE 0
+   152 0CC9 00					.BYTE 0
+   152 0CCA 00					.BYTE 0
+   152 0CCB 00					.BYTE 0
+   152 0CCC 00					.BYTE 0
+   152 0CCD 00					.BYTE 0
+   152 0CCE 00					.BYTE 0
+   152 0CCF 00					.BYTE 0
+   152 0CD0 00					.BYTE 0
+   152 0CD1 00					.BYTE 0
+   152 0CD2 00					.BYTE 0
+   152 0CD3 00					.BYTE 0
+   152 0CD4 00					.BYTE 0
+   152 0CD5 00					.BYTE 0
+   152 0CD6 00					.BYTE 0
+   152 0CD7 00					.BYTE 0
+   152 0CD8 00					.BYTE 0
+   152 0CD9 00					.BYTE 0
+   152 0CDA 00					.BYTE 0
+   152 0CDB 00					.BYTE 0
+   152 0CDC 00					.BYTE 0
+   152 0CDD 00					.BYTE 0
+   152 0CDE 00					.BYTE 0
+   152 0CDF 00					.BYTE 0
+   152 0CE0 00					.BYTE 0
+   152 0CE1 00					.BYTE 0
+   152 0CE2 00					.BYTE 0
+   152 0CE3 00					.BYTE 0
+   152 0CE4 00					.BYTE 0
+   152 0CE5 00					.BYTE 0
+   152 0CE6 00					.BYTE 0
+   152 0CE7 00					.BYTE 0
+   152 0CE8 00					.BYTE 0
+   152 0CE9 00					.BYTE 0
+   152 0CEA 00					.BYTE 0
+   152 0CEB 00					.BYTE 0
+   152 0CEC 00					.BYTE 0
+   152 0CED 00					.BYTE 0
+   152 0CEE 00					.BYTE 0
+   152 0CEF 00					.BYTE 0
+   152 0CF0 00					.BYTE 0
+   152 0CF1 00					.BYTE 0
+   152 0CF2 00					.BYTE 0
+   152 0CF3 00					.BYTE 0
+   152 0CF4 00					.BYTE 0
+   152 0CF5 00					.BYTE 0
+   152 0CF6 00					.BYTE 0
+   152 0CF7 00					.BYTE 0
+   152 0CF8 00					.BYTE 0
+   152 0CF9 00					.BYTE 0
+   152 0CFA 00					.BYTE 0
+   152 0CFB 00					.BYTE 0
+   152 0CFC 00					.BYTE 0
+   152 0CFD 00					.BYTE 0
+   152 0CFE 00					.BYTE 0
+   152 0CFF 00					.BYTE 0
+   152 0D00 00					.BYTE 0
+   152 0D01 00					.BYTE 0
+   152 0D02 00					.BYTE 0
+   152 0D03 00					.BYTE 0
+   152 0D04 00					.BYTE 0
+   152 0D05 00					.BYTE 0
+   152 0D06 00					.BYTE 0
+   152 0D07 00					.BYTE 0
+   152 0D08 00					.BYTE 0
+   152 0D09 00					.BYTE 0
+   152 0D0A 00					.BYTE 0
+   152 0D0B 00					.BYTE 0
+   152 0D0C 00					.BYTE 0
+   152 0D0D 00					.BYTE 0
+   152 0D0E 00					.BYTE 0
+   152 0D0F 00					.BYTE 0
+   152 0D10 00					.BYTE 0
+   152 0D11 00					.BYTE 0
+   152 0D12 00					.BYTE 0
+   152 0D13 00					.BYTE 0
+   152 0D14 00					.BYTE 0
+   152 0D15 00					.BYTE 0
+   152 0D16 00					.BYTE 0
+   152 0D17 00					.BYTE 0
+   152 0D18 00					.BYTE 0
+   152 0D19 00					.BYTE 0
+   152 0D1A 00					.BYTE 0
+   152 0D1B 00					.BYTE 0
+   152 0D1C 00					.BYTE 0
+   152 0D1D 00					.BYTE 0
+   152 0D1E 00					.BYTE 0
+   152 0D1F 00					.BYTE 0
+   152 0D20 00					.BYTE 0
+   152 0D21 00					.BYTE 0
+   152 0D22 00					.BYTE 0
+   152 0D23 00					.BYTE 0
+   152 0D24 00					.BYTE 0
+   152 0D25 00					.BYTE 0
+   152 0D26 00					.BYTE 0
+   152 0D27 00					.BYTE 0
+   152 0D28 00					.BYTE 0
+   152 0D29 00					.BYTE 0
+   152 0D2A 00					.BYTE 0
+   152 0D2B 00					.BYTE 0
+   152 0D2C 00					.BYTE 0
+   152 0D2D 00					.BYTE 0
+   152 0D2E 00					.BYTE 0
+   152 0D2F 00					.BYTE 0
+   152 0D30 00					.BYTE 0
+   152 0D31 00					.BYTE 0
+   152 0D32 00					.BYTE 0
+   152 0D33 00					.BYTE 0
+   152 0D34 00					.BYTE 0
+   152 0D35 00					.BYTE 0
+   152 0D36 00					.BYTE 0
+   152 0D37 00					.BYTE 0
+   152 0D38 00					.BYTE 0
+   152 0D39 00					.BYTE 0
+   152 0D3A 00					.BYTE 0
+   152 0D3B 00					.BYTE 0
+   152 0D3C 00					.BYTE 0
+   152 0D3D 00					.BYTE 0
+   152 0D3E 00					.BYTE 0
+   152 0D3F 00					.BYTE 0
+   152 0D40 00					.BYTE 0
+   152 0D41 00					.BYTE 0
+   152 0D42 00					.BYTE 0
+   152 0D43 00					.BYTE 0
+   152 0D44 00					.BYTE 0
+   152 0D45 00					.BYTE 0
+   152 0D46 00					.BYTE 0
+   152 0D47 00					.BYTE 0
+   152 0D48 00					.BYTE 0
+   152 0D49 00					.BYTE 0
+   152 0D4A 00					.BYTE 0
+   152 0D4B 00					.BYTE 0
+   152 0D4C 00					.BYTE 0
+   152 0D4D 00					.BYTE 0
+   152 0D4E 00					.BYTE 0
+   152 0D4F 00					.BYTE 0
+   152 0D50 00					.BYTE 0
+   152 0D51 00					.BYTE 0
+   152 0D52 00					.BYTE 0
+   152 0D53 00					.BYTE 0
+   152 0D54 00					.BYTE 0
+   152 0D55 00					.BYTE 0
+   152 0D56 00					.BYTE 0
+   152 0D57 00					.BYTE 0
+   152 0D58 00					.BYTE 0
+   152 0D59 00					.BYTE 0
+   152 0D5A 00					.BYTE 0
+   152 0D5B 00					.BYTE 0
+   152 0D5C 00					.BYTE 0
+   152 0D5D 00					.BYTE 0
+   152 0D5E 00					.BYTE 0
+   152 0D5F 00					.BYTE 0
+   152 0D60 00					.BYTE 0
+   152 0D61 00					.BYTE 0
+   152 0D62 00					.BYTE 0
+   152 0D63 00					.BYTE 0
+   152 0D64 00					.BYTE 0
+   152 0D65 00					.BYTE 0
+   152 0D66 00					.BYTE 0
+   152 0D67 00					.BYTE 0
+   152 0D68 00					.BYTE 0
+   152 0D69 00					.BYTE 0
+   152 0D6A 00					.BYTE 0
+   152 0D6B 00					.BYTE 0
+   152 0D6C 00					.BYTE 0
+   152 0D6D 00					.BYTE 0
+   152 0D6E 00					.BYTE 0
+   152 0D6F 00					.BYTE 0
+   152 0D70 00					.BYTE 0
+   152 0D71 00					.BYTE 0
+   152 0D72 00					.BYTE 0
+   152 0D73 00					.BYTE 0
+   152 0D74 00					.BYTE 0
+   152 0D75 00					.BYTE 0
+   152 0D76 00					.BYTE 0
+   152 0D77 00					.BYTE 0
+   152 0D78 00					.BYTE 0
+   152 0D79 00					.BYTE 0
+   152 0D7A 00					.BYTE 0
+   152 0D7B 00					.BYTE 0
+   152 0D7C 00					.BYTE 0
+   152 0D7D 00					.BYTE 0
+   152 0D7E 00					.BYTE 0
+   152 0D7F 00					.BYTE 0
+   152 0D80 00					.BYTE 0
+   152 0D81 00					.BYTE 0
+   152 0D82 00					.BYTE 0
+   152 0D83 00					.BYTE 0
+   152 0D84 00					.BYTE 0
+   152 0D85 00					.BYTE 0
+   152 0D86 00					.BYTE 0
+   152 0D87 00					.BYTE 0
+   152 0D88 00					.BYTE 0
+   152 0D89 00					.BYTE 0
+   152 0D8A 00					.BYTE 0
+   152 0D8B 00					.BYTE 0
+   152 0D8C 00					.BYTE 0
+   152 0D8D 00					.BYTE 0
+   152 0D8E 00					.BYTE 0
+   152 0D8F 00					.BYTE 0
+   152 0D90 00					.BYTE 0
+   152 0D91 00					.BYTE 0
+   152 0D92 00					.BYTE 0
+   152 0D93 00					.BYTE 0
+   152 0D94 00					.BYTE 0
+   152 0D95 00					.BYTE 0
+   152 0D96 00					.BYTE 0
+   152 0D97 00					.BYTE 0
+   152 0D98 00					.BYTE 0
+   152 0D99 00					.BYTE 0
+   152 0D9A 00					.BYTE 0
+   152 0D9B 00					.BYTE 0
+   152 0D9C 00					.BYTE 0
+   152 0D9D 00					.BYTE 0
+   152 0D9E 00					.BYTE 0
+   152 0D9F 00					.BYTE 0
+   152 0DA0 00					.BYTE 0
+   152 0DA1 00					.BYTE 0
+   152 0DA2 00					.BYTE 0
+   152 0DA3 00					.BYTE 0
+   152 0DA4 00					.BYTE 0
+   152 0DA5 00					.BYTE 0
+   152 0DA6 00					.BYTE 0
+   152 0DA7 00					.BYTE 0
+   152 0DA8 00					.BYTE 0
+   152 0DA9 00					.BYTE 0
+   152 0DAA 00					.BYTE 0
+   152 0DAB 00					.BYTE 0
+   152 0DAC 00					.BYTE 0
+   152 0DAD 00					.BYTE 0
+   152 0DAE 00					.BYTE 0
+   152 0DAF 00					.BYTE 0
+   152 0DB0 00					.BYTE 0
+   152 0DB1 00					.BYTE 0
+   152 0DB2 00					.BYTE 0
+   152 0DB3 00					.BYTE 0
+   152 0DB4 00					.BYTE 0
+   152 0DB5 00					.BYTE 0
+   152 0DB6 00					.BYTE 0
+   152 0DB7 00					.BYTE 0
+   152 0DB8 00					.BYTE 0
+   152 0DB9 00					.BYTE 0
+   152 0DBA 00					.BYTE 0
+   152 0DBB 00					.BYTE 0
+   152 0DBC 00					.BYTE 0
+   152 0DBD 00					.BYTE 0
+   152 0DBE 00					.BYTE 0
+   152 0DBF 00					.BYTE 0
+   152 0DC0 00					.BYTE 0
+   152 0DC1 00					.BYTE 0
+   152 0DC2 00					.BYTE 0
+   152 0DC3 00					.BYTE 0
+   152 0DC4 00					.BYTE 0
+   152 0DC5 00					.BYTE 0
+   152 0DC6 00					.BYTE 0
+   152 0DC7 00					.BYTE 0
+   152 0DC8 00					.BYTE 0
+   152 0DC9 00					.BYTE 0
+   152 0DCA 00					.BYTE 0
+   152 0DCB 00					.BYTE 0
+   152 0DCC 00					.BYTE 0
+   152 0DCD 00					.BYTE 0
+   152 0DCE 00					.BYTE 0
+   152 0DCF 00					.BYTE 0
+   152 0DD0 00					.BYTE 0
+   152 0DD1 00					.BYTE 0
+   152 0DD2 00					.BYTE 0
+   152 0DD3 00					.BYTE 0
+   152 0DD4 00					.BYTE 0
+   152 0DD5 00					.BYTE 0
+   152 0DD6 00					.BYTE 0
+   152 0DD7 00					.BYTE 0
+   152 0DD8 00					.BYTE 0
+   152 0DD9 00					.BYTE 0
+   152 0DDA 00					.BYTE 0
+   152 0DDB 00					.BYTE 0
+   152 0DDC 00					.BYTE 0
+   152 0DDD 00					.BYTE 0
+   152 0DDE 00					.BYTE 0
+   152 0DDF 00					.BYTE 0
+   152 0DE0 00					.BYTE 0
+   152 0DE1 00					.BYTE 0
+   152 0DE2 00					.BYTE 0
+   152 0DE3 00					.BYTE 0
+   152 0DE4 00					.BYTE 0
+   152 0DE5 00					.BYTE 0
+   152 0DE6 00					.BYTE 0
+   152 0DE7 00					.BYTE 0
+   152 0DE8 00					.BYTE 0
+   152 0DE9 00					.BYTE 0
+   152 0DEA 00					.BYTE 0
+   152 0DEB 00					.BYTE 0
+   152 0DEC 00					.BYTE 0
+   152 0DED 00					.BYTE 0
+   152 0DEE 00					.BYTE 0
+   152 0DEF 00					.BYTE 0
+   152 0DF0 00					.BYTE 0
+   152 0DF1 00					.BYTE 0
+   152 0DF2 00					.BYTE 0
+   152 0DF3 00					.BYTE 0
+   152 0DF4 00					.BYTE 0
+   152 0DF5 00					.BYTE 0
+   152 0DF6 00					.BYTE 0
+   152 0DF7 00					.BYTE 0
+   152 0DF8 00					.BYTE 0
+   152 0DF9 00					.BYTE 0
+   152 0DFA 00					.BYTE 0
+   152 0DFB 00					.BYTE 0
+   152 0DFC 00					.BYTE 0
+   152 0DFD 00					.BYTE 0
+   152 0DFE 00					.BYTE 0
+   152 0DFF 00					.BYTE 0
+   152 0E00 00					.BYTE 0
+   152 0E01 00					.BYTE 0
+   152 0E02 00					.BYTE 0
+   152 0E03 00					.BYTE 0
+   152 0E04 00					.BYTE 0
+   152 0E05 00					.BYTE 0
+   152 0E06 00					.BYTE 0
+   152 0E07 00					.BYTE 0
+   152 0E08 00					.BYTE 0
+   152 0E09 00					.BYTE 0
+   152 0E0A 00					.BYTE 0
+   152 0E0B 00					.BYTE 0
+   152 0E0C 00					.BYTE 0
+   152 0E0D 00					.BYTE 0
+   152 0E0E 00					.BYTE 0
+   152 0E0F 00					.BYTE 0
+   152 0E10 00					.BYTE 0
+   152 0E11 00					.BYTE 0
+   152 0E12 00					.BYTE 0
+   152 0E13 00					.BYTE 0
+   152 0E14 00					.BYTE 0
+   152 0E15 00					.BYTE 0
+   152 0E16 00					.BYTE 0
+   152 0E17 00					.BYTE 0
+   152 0E18 00					.BYTE 0
+   152 0E19 00					.BYTE 0
+   152 0E1A 00					.BYTE 0
+   152 0E1B 00					.BYTE 0
+   152 0E1C 00					.BYTE 0
+   152 0E1D 00					.BYTE 0
+   152 0E1E 00					.BYTE 0
+   152 0E1F 00					.BYTE 0
+   152 0E20 00					.BYTE 0
+   152 0E21 00					.BYTE 0
+   152 0E22 00					.BYTE 0
+   152 0E23 00					.BYTE 0
+   152 0E24 00					.BYTE 0
+   152 0E25 00					.BYTE 0
+   152 0E26 00					.BYTE 0
+   152 0E27 00					.BYTE 0
+   152 0E28 00					.BYTE 0
+   152 0E29 00					.BYTE 0
+   152 0E2A 00					.BYTE 0
+   152 0E2B 00					.BYTE 0
+   152 0E2C 00					.BYTE 0
+   152 0E2D 00					.BYTE 0
+   152 0E2E 00					.BYTE 0
+   152 0E2F 00					.BYTE 0
+   152 0E30 00					.BYTE 0
+   152 0E31 00					.BYTE 0
+   152 0E32 00					.BYTE 0
+   152 0E33 00					.BYTE 0
+   152 0E34 00					.BYTE 0
+   152 0E35 00					.BYTE 0
+   152 0E36 00					.BYTE 0
+   152 0E37 00					.BYTE 0
+   152 0E38 00					.BYTE 0
+   152 0E39 00					.BYTE 0
+   152 0E3A 00					.BYTE 0
+   152 0E3B 00					.BYTE 0
+   152 0E3C 00					.BYTE 0
+   152 0E3D 00					.BYTE 0
+   152 0E3E 00					.BYTE 0
+   152 0E3F 00					.BYTE 0
+   152 0E40 00					.BYTE 0
+   152 0E41 00					.BYTE 0
+   152 0E42 00					.BYTE 0
+   152 0E43 00					.BYTE 0
+   152 0E44 00					.BYTE 0
+   152 0E45 00					.BYTE 0
+   152 0E46 00					.BYTE 0
+   152 0E47 00					.BYTE 0
+   152 0E48 00					.BYTE 0
+   152 0E49 00					.BYTE 0
+   152 0E4A 00					.BYTE 0
+   152 0E4B 00					.BYTE 0
+   152 0E4C 00					.BYTE 0
+   152 0E4D 00					.BYTE 0
+   152 0E4E 00					.BYTE 0
+   152 0E4F 00					.BYTE 0
+   152 0E50 00					.BYTE 0
+   152 0E51 00					.BYTE 0
+   152 0E52 00					.BYTE 0
+   152 0E53 00					.BYTE 0
+   152 0E54 00					.BYTE 0
+   152 0E55 00					.BYTE 0
+   152 0E56 00					.BYTE 0
+   152 0E57 00					.BYTE 0
+   152 0E58 00					.BYTE 0
+   152 0E59 00					.BYTE 0
+   152 0E5A 00					.BYTE 0
+   152 0E5B 00					.BYTE 0
+   152 0E5C 00					.BYTE 0
+   152 0E5D 00					.BYTE 0
+   152 0E5E 00					.BYTE 0
+   152 0E5F 00					.BYTE 0
+   152 0E60 00					.BYTE 0
+   152 0E61 00					.BYTE 0
+   152 0E62 00					.BYTE 0
+   152 0E63 00					.BYTE 0
+   152 0E64 00					.BYTE 0
+   152 0E65 00					.BYTE 0
+   152 0E66 00					.BYTE 0
+   152 0E67 00					.BYTE 0
+   152 0E68 00					.BYTE 0
+   152 0E69 00					.BYTE 0
+   152 0E6A 00					.BYTE 0
+   152 0E6B 00					.BYTE 0
+   152 0E6C 00					.BYTE 0
+   152 0E6D 00					.BYTE 0
+   152 0E6E 00					.BYTE 0
+   152 0E6F 00					.BYTE 0
+   152 0E70 00					.BYTE 0
+   152 0E71 00					.BYTE 0
+   152 0E72 00					.BYTE 0
+   152 0E73 00					.BYTE 0
+   152 0E74 00					.BYTE 0
+   152 0E75 00					.BYTE 0
+   152 0E76 00					.BYTE 0
+   152 0E77 00					.BYTE 0
+   152 0E78 00					.BYTE 0
+   152 0E79 00					.BYTE 0
+   152 0E7A 00					.BYTE 0
+   152 0E7B 00					.BYTE 0
+   152 0E7C 00					.BYTE 0
+   152 0E7D 00					.BYTE 0
+   152 0E7E 00					.BYTE 0
+   152 0E7F 00					.BYTE 0
+   152 0E80 00					.BYTE 0
+   152 0E81 00					.BYTE 0
+   152 0E82 00					.BYTE 0
+   152 0E83 00					.BYTE 0
+   152 0E84 00					.BYTE 0
+   152 0E85 00					.BYTE 0
+   152 0E86 00					.BYTE 0
+   152 0E87 00					.BYTE 0
+   152 0E88 00					.BYTE 0
+   152 0E89 00					.BYTE 0
+   152 0E8A 00					.BYTE 0
+   152 0E8B 00					.BYTE 0
+   152 0E8C 00					.BYTE 0
+   152 0E8D 00					.BYTE 0
+   152 0E8E 00					.BYTE 0
+   152 0E8F 00					.BYTE 0
+   152 0E90 00					.BYTE 0
+   152 0E91 00					.BYTE 0
+   152 0E92 00					.BYTE 0
+   152 0E93 00					.BYTE 0
+   152 0E94 00					.BYTE 0
+   152 0E95 00					.BYTE 0
+   152 0E96 00					.BYTE 0
+   152 0E97 00					.BYTE 0
+   152 0E98 00					.BYTE 0
+   152 0E99 00					.BYTE 0
+   152 0E9A 00					.BYTE 0
+   152 0E9B 00					.BYTE 0
+   152 0E9C 00					.BYTE 0
+   152 0E9D 00					.BYTE 0
+   152 0E9E 00					.BYTE 0
+   152 0E9F 00					.BYTE 0
+   152 0EA0 00					.BYTE 0
+   152 0EA1 00					.BYTE 0
+   152 0EA2 00					.BYTE 0
+   152 0EA3 00					.BYTE 0
+   152 0EA4 00					.BYTE 0
+   152 0EA5 00					.BYTE 0
+   152 0EA6 00					.BYTE 0
+   152 0EA7 00					.BYTE 0
+   152 0EA8 00					.BYTE 0
+   152 0EA9 00					.BYTE 0
+   152 0EAA 00					.BYTE 0
+   152 0EAB 00					.BYTE 0
+   152 0EAC 00					.BYTE 0
+   152 0EAD 00					.BYTE 0
+   152 0EAE 00					.BYTE 0
+   152 0EAF 00					.BYTE 0
+   152 0EB0 00					.BYTE 0
+   152 0EB1 00					.BYTE 0
+   152 0EB2 00					.BYTE 0
+   152 0EB3 00					.BYTE 0
+   152 0EB4 00					.BYTE 0
+   152 0EB5 00					.BYTE 0
+   152 0EB6 00					.BYTE 0
+   152 0EB7 00					.BYTE 0
+   152 0EB8 00					.BYTE 0
+   152 0EB9 00					.BYTE 0
+   152 0EBA 00					.BYTE 0
+   152 0EBB 00					.BYTE 0
+   152 0EBC 00					.BYTE 0
+   152 0EBD 00					.BYTE 0
+   152 0EBE 00					.BYTE 0
+   152 0EBF 00					.BYTE 0
+   152 0EC0 00					.BYTE 0
+   152 0EC1 00					.BYTE 0
+   152 0EC2 00					.BYTE 0
+   152 0EC3 00					.BYTE 0
+   152 0EC4 00					.BYTE 0
+   152 0EC5 00					.BYTE 0
+   152 0EC6 00					.BYTE 0
+   152 0EC7 00					.BYTE 0
+   152 0EC8 00					.BYTE 0
+   152 0EC9 00					.BYTE 0
+   152 0ECA 00					.BYTE 0
+   152 0ECB 00					.BYTE 0
+   152 0ECC 00					.BYTE 0
+   152 0ECD 00					.BYTE 0
+   152 0ECE 00					.BYTE 0
+   152 0ECF 00					.BYTE 0
+   152 0ED0 00					.BYTE 0
+   152 0ED1 00					.BYTE 0
+   152 0ED2 00					.BYTE 0
+   152 0ED3 00					.BYTE 0
+   152 0ED4 00					.BYTE 0
+   152 0ED5 00					.BYTE 0
+   152 0ED6 00					.BYTE 0
+   152 0ED7 00					.BYTE 0
+   152 0ED8 00					.BYTE 0
+   152 0ED9 00					.BYTE 0
+   152 0EDA 00					.BYTE 0
+   152 0EDB 00					.BYTE 0
+   152 0EDC 00					.BYTE 0
+   152 0EDD 00					.BYTE 0
+   152 0EDE 00					.BYTE 0
+   152 0EDF 00					.BYTE 0
+   152 0EE0 00					.BYTE 0
+   152 0EE1 00					.BYTE 0
+   152 0EE2 00					.BYTE 0
+   152 0EE3 00					.BYTE 0
+   152 0EE4 00					.BYTE 0
+   152 0EE5 00					.BYTE 0
+   152 0EE6 00					.BYTE 0
+   152 0EE7 00					.BYTE 0
+   152 0EE8 00					.BYTE 0
+   152 0EE9 00					.BYTE 0
+   152 0EEA 00					.BYTE 0
+   152 0EEB 00					.BYTE 0
+   152 0EEC 00					.BYTE 0
+   152 0EED 00					.BYTE 0
+   152 0EEE 00					.BYTE 0
+   152 0EEF 00					.BYTE 0
+   152 0EF0 00					.BYTE 0
+   152 0EF1 00					.BYTE 0
+   152 0EF2 00					.BYTE 0
+   152 0EF3 00					.BYTE 0
+   152 0EF4 00					.BYTE 0
+   152 0EF5 00					.BYTE 0
+   152 0EF6 00					.BYTE 0
+   152 0EF7 00					.BYTE 0
+   152 0EF8 00					.BYTE 0
+   152 0EF9 00					.BYTE 0
+   152 0EFA 00					.BYTE 0
+   152 0EFB 00					.BYTE 0
+   152 0EFC 00					.BYTE 0
+   152 0EFD 00					.BYTE 0
+   152 0EFE 00					.BYTE 0
+   152 0EFF 00					.BYTE 0
+   152 0F00 00					.BYTE 0
+   152 0F01 00					.BYTE 0
+   152 0F02 00					.BYTE 0
+   152 0F03 00					.BYTE 0
+   152 0F04 00					.BYTE 0
+   152 0F05 00					.BYTE 0
+   152 0F06 00					.BYTE 0
+   152 0F07 00					.BYTE 0
+   152 0F08 00					.BYTE 0
+   152 0F09 00					.BYTE 0
+   152 0F0A 00					.BYTE 0
+   152 0F0B 00					.BYTE 0
+   152 0F0C 00					.BYTE 0
+   152 0F0D 00					.BYTE 0
+   152 0F0E 00					.BYTE 0
+   152 0F0F 00					.BYTE 0
+   152 0F10 00					.BYTE 0
+   152 0F11 00					.BYTE 0
+   152 0F12 00					.BYTE 0
+   152 0F13 00					.BYTE 0
+   152 0F14 00					.BYTE 0
+   152 0F15 00					.BYTE 0
+   152 0F16 00					.BYTE 0
+   152 0F17 00					.BYTE 0
+   152 0F18 00					.BYTE 0
+   152 0F19 00					.BYTE 0
+   152 0F1A 00					.BYTE 0
+   152 0F1B 00					.BYTE 0
+   152 0F1C 00					.BYTE 0
+   152 0F1D 00					.BYTE 0
+   152 0F1E 00					.BYTE 0
+   152 0F1F 00					.BYTE 0
+   152 0F20 00					.BYTE 0
+   152 0F21 00					.BYTE 0
+   152 0F22 00					.BYTE 0
+   152 0F23 00					.BYTE 0
+   152 0F24 00					.BYTE 0
+   152 0F25 00					.BYTE 0
+   152 0F26 00					.BYTE 0
+   152 0F27 00					.BYTE 0
+   152 0F28 00					.BYTE 0
+   152 0F29 00					.BYTE 0
+   152 0F2A 00					.BYTE 0
+   152 0F2B 00					.BYTE 0
+   152 0F2C 00					.BYTE 0
+   152 0F2D 00					.BYTE 0
+   152 0F2E 00					.BYTE 0
+   152 0F2F 00					.BYTE 0
+   152 0F30 00					.BYTE 0
+   152 0F31 00					.BYTE 0
+   152 0F32 00					.BYTE 0
+   152 0F33 00					.BYTE 0
+   152 0F34 00					.BYTE 0
+   152 0F35 00					.BYTE 0
+   152 0F36 00					.BYTE 0
+   152 0F37 00					.BYTE 0
+   152 0F38 00					.BYTE 0
+   152 0F39 00					.BYTE 0
+   152 0F3A 00					.BYTE 0
+   152 0F3B 00					.BYTE 0
+   152 0F3C 00					.BYTE 0
+   152 0F3D 00					.BYTE 0
+   152 0F3E 00					.BYTE 0
+   152 0F3F 00					.BYTE 0
+   152 0F40 00					.BYTE 0
+   152 0F41 00					.BYTE 0
+   152 0F42 00					.BYTE 0
+   152 0F43 00					.BYTE 0
+   152 0F44 00					.BYTE 0
+   152 0F45 00					.BYTE 0
+   152 0F46 00					.BYTE 0
+   152 0F47 00					.BYTE 0
+   152 0F48 00					.BYTE 0
+   152 0F49 00					.BYTE 0
+   152 0F4A 00					.BYTE 0
+   152 0F4B 00					.BYTE 0
+   152 0F4C 00					.BYTE 0
+   152 0F4D 00					.BYTE 0
+   152 0F4E 00					.BYTE 0
+   152 0F4F 00					.BYTE 0
+   152 0F50 00					.BYTE 0
+   152 0F51 00					.BYTE 0
+   152 0F52 00					.BYTE 0
+   152 0F53 00					.BYTE 0
+   152 0F54 00					.BYTE 0
+   152 0F55 00					.BYTE 0
+   152 0F56 00					.BYTE 0
+   152 0F57 00					.BYTE 0
+   152 0F58 00					.BYTE 0
+   152 0F59 00					.BYTE 0
+   152 0F5A 00					.BYTE 0
+   152 0F5B 00					.BYTE 0
+   152 0F5C 00					.BYTE 0
+   152 0F5D 00					.BYTE 0
+   152 0F5E 00					.BYTE 0
+   152 0F5F 00					.BYTE 0
+   152 0F60 00					.BYTE 0
+   152 0F61 00					.BYTE 0
+   152 0F62 00					.BYTE 0
+   152 0F63 00					.BYTE 0
+   152 0F64 00					.BYTE 0
+   152 0F65 00					.BYTE 0
+   152 0F66 00					.BYTE 0
+   152 0F67 00					.BYTE 0
+   152 0F68 00					.BYTE 0
+   152 0F69 00					.BYTE 0
+   152 0F6A 00					.BYTE 0
+   152 0F6B 00					.BYTE 0
+   152 0F6C 00					.BYTE 0
+   152 0F6D 00					.BYTE 0
+   152 0F6E 00					.BYTE 0
+   152 0F6F 00					.BYTE 0
+   152 0F70 00					.BYTE 0
+   152 0F71 00					.BYTE 0
+   152 0F72 00					.BYTE 0
+   152 0F73 00					.BYTE 0
+   152 0F74 00					.BYTE 0
+   152 0F75 00					.BYTE 0
+   152 0F76 00					.BYTE 0
+   152 0F77 00					.BYTE 0
+   152 0F78 00					.BYTE 0
+   152 0F79 00					.BYTE 0
+   152 0F7A 00					.BYTE 0
+   152 0F7B 00					.BYTE 0
+   152 0F7C 00					.BYTE 0
+   152 0F7D 00					.BYTE 0
+   152 0F7E 00					.BYTE 0
+   152 0F7F 00					.BYTE 0
+   152 0F80 00					.BYTE 0
+   152 0F81 00					.BYTE 0
+   152 0F82 00					.BYTE 0
+   152 0F83 00					.BYTE 0
+   152 0F84 00					.BYTE 0
+   152 0F85 00					.BYTE 0
+   152 0F86 00					.BYTE 0
+   152 0F87 00					.BYTE 0
+   152 0F88 00					.BYTE 0
+   152 0F89 00					.BYTE 0
+   152 0F8A 00					.BYTE 0
+   152 0F8B 00					.BYTE 0
+   152 0F8C 00					.BYTE 0
+   152 0F8D 00					.BYTE 0
+   152 0F8E 00					.BYTE 0
+   152 0F8F 00					.BYTE 0
+   152 0F90 00					.BYTE 0
+   152 0F91 00					.BYTE 0
+   152 0F92 00					.BYTE 0
+   152 0F93 00					.BYTE 0
+   152 0F94 00					.BYTE 0
+   152 0F95 00					.BYTE 0
+   152 0F96 00					.BYTE 0
+   152 0F97 00					.BYTE 0
+   152 0F98 00					.BYTE 0
+   152 0F99 00					.BYTE 0
+   152 0F9A 00					.BYTE 0
+   152 0F9B 00					.BYTE 0
+   152 0F9C 00					.BYTE 0
+   152 0F9D 00					.BYTE 0
+   152 0F9E 00					.BYTE 0
+   152 0F9F 00					.BYTE 0
+   152 0FA0 00					.BYTE 0
+   152 0FA1 00					.BYTE 0
+   152 0FA2 00					.BYTE 0
+   152 0FA3 00					.BYTE 0
+   152 0FA4 00					.BYTE 0
+   152 0FA5 00					.BYTE 0
+   152 0FA6 00					.BYTE 0
+   152 0FA7 00					.BYTE 0
+   152 0FA8 00					.BYTE 0
+   152 0FA9 00					.BYTE 0
+   152 0FAA 00					.BYTE 0
+   152 0FAB 00					.BYTE 0
+   152 0FAC 00					.BYTE 0
+   152 0FAD 00					.BYTE 0
+   152 0FAE 00					.BYTE 0
+   152 0FAF 00					.BYTE 0
+   152 0FB0 00					.BYTE 0
+   152 0FB1 00					.BYTE 0
+   152 0FB2 00					.BYTE 0
+   152 0FB3 00					.BYTE 0
+   152 0FB4 00					.BYTE 0
+   152 0FB5 00					.BYTE 0
+   152 0FB6 00					.BYTE 0
+   152 0FB7 00					.BYTE 0
+   152 0FB8 00					.BYTE 0
+   152 0FB9 00					.BYTE 0
+   152 0FBA 00					.BYTE 0
+   152 0FBB 00					.BYTE 0
+   152 0FBC 00					.BYTE 0
+   152 0FBD 00					.BYTE 0
+   152 0FBE 00					.BYTE 0
+   152 0FBF 00					.BYTE 0
+   152 0FC0 00					.BYTE 0
+   152 0FC1 00					.BYTE 0
+   152 0FC2 00					.BYTE 0
+   152 0FC3 00					.BYTE 0
+   152 0FC4 00					.BYTE 0
+   152 0FC5 00					.BYTE 0
+   152 0FC6 00					.BYTE 0
+   152 0FC7 00					.BYTE 0
+   152 0FC8 00					.BYTE 0
+   152 0FC9 00					.BYTE 0
+   152 0FCA 00					.BYTE 0
+   152 0FCB 00					.BYTE 0
+   152 0FCC 00					.BYTE 0
+   152 0FCD 00					.BYTE 0
+   152 0FCE 00					.BYTE 0
+   152 0FCF 00					.BYTE 0
+   152 0FD0 00					.BYTE 0
+   152 0FD1 00					.BYTE 0
+   152 0FD2 00					.BYTE 0
+   152 0FD3 00					.BYTE 0
+   152 0FD4 00					.BYTE 0
+   152 0FD5 00					.BYTE 0
+   152 0FD6 00					.BYTE 0
+   152 0FD7 00					.BYTE 0
+   152 0FD8 00					.BYTE 0
+   152 0FD9 00					.BYTE 0
+   152 0FDA 00					.BYTE 0
+   152 0FDB 00					.BYTE 0
+   152 0FDC 00					.BYTE 0
+   152 0FDD 00					.BYTE 0
+   152 0FDE 00					.BYTE 0
+   152 0FDF 00					.BYTE 0
+   152 0FE0 00					.BYTE 0
+   152 0FE1 00					.BYTE 0
+   152 0FE2 00					.BYTE 0
+   152 0FE3 00					.BYTE 0
+   152 0FE4 00					.BYTE 0
+   152 0FE5 00					.BYTE 0
+   152 0FE6 00					.BYTE 0
+   152 0FE7 00					.BYTE 0
+   152 0FE8 00					.BYTE 0
+   152 0FE9 00					.BYTE 0
+   152 0FEA 00					.BYTE 0
+   152 0FEB 00					.BYTE 0
+   152 0FEC 00					.BYTE 0
+   152 0FED 00					.BYTE 0
+   152 0FEE 00					.BYTE 0
+   152 0FEF 00					.BYTE 0
+   152 0FF0 00					.BYTE 0
+   152 0FF1 00					.BYTE 0
+   152 0FF2 00					.BYTE 0
+   152 0FF3 00					.BYTE 0
+   152 0FF4 00					.BYTE 0
+   152 0FF5 00					.BYTE 0
+   152 0FF6 00					.BYTE 0
+   152 0FF7 00					.BYTE 0
+   152 0FF8 00					.BYTE 0
+   152 0FF9 00					.BYTE 0
+   152 0FFA 00					.BYTE 0
+   152 0FFB 00					.BYTE 0
+   152 0FFC 00					.BYTE 0
+   152 0FFD 00					.BYTE 0
+   152 0FFE 00					.BYTE 0
+   152 0FFF 00					.BYTE 0
+   152 1000 00					.BYTE 0
+   152 1001 00					.BYTE 0
+   152 1002 00					.BYTE 0
+   152 1003 00					.BYTE 0
+   152 1004 00					.BYTE 0
+   152 1005 00					.BYTE 0
+   152 1006 00					.BYTE 0
+   152 1007 00					.BYTE 0
+   152 1008 00					.BYTE 0
+   152 1009 00					.BYTE 0
+   152 100A 00					.BYTE 0
+   152 100B 00					.BYTE 0
+   152 100C 00					.BYTE 0
+   152 100D 00					.BYTE 0
+   152 100E 00					.BYTE 0
+   152 100F 00					.BYTE 0
+   152 1010 00					.BYTE 0
+   152 1011 00					.BYTE 0
+   152 1012 00					.BYTE 0
+   152 1013 00					.BYTE 0
+   152 1014 00					.BYTE 0
+   152 1015 00					.BYTE 0
+   152 1016 00					.BYTE 0
+   152 1017 00					.BYTE 0
+   152 1018 00					.BYTE 0
+   152 1019 00					.BYTE 0
+   152 101A 00					.BYTE 0
+   152 101B 00					.BYTE 0
+   152 101C 00					.BYTE 0
+   152 101D 00					.BYTE 0
+   152 101E 00					.BYTE 0
+   152 101F 00					.BYTE 0
+   152 1020 00					.BYTE 0
+   152 1021 00					.BYTE 0
+   152 1022 00					.BYTE 0
+   152 1023 00					.BYTE 0
+   152 1024 00					.BYTE 0
+   152 1025 00					.BYTE 0
+   152 1026 00					.BYTE 0
+   152 1027 00					.BYTE 0
+   152 1028 00					.BYTE 0
+   152 1029 00					.BYTE 0
+   152 102A 00					.BYTE 0
+   152 102B 00					.BYTE 0
+   152 102C 00					.BYTE 0
+   152 102D 00					.BYTE 0
+   152 102E 00					.BYTE 0
+   152 102F 00					.BYTE 0
+   152 1030 00					.BYTE 0
+   152 1031 00					.BYTE 0
+   152 1032 00					.BYTE 0
+   152 1033 00					.BYTE 0
+   152 1034 00					.BYTE 0
+   152 1035 00					.BYTE 0
+   152 1036 00					.BYTE 0
+   152 1037 00					.BYTE 0
+   152 1038 00					.BYTE 0
+   152 1039 00					.BYTE 0
+   152 103A 00					.BYTE 0
+   152 103B 00					.BYTE 0
+   152 103C 00					.BYTE 0
+   152 103D 00					.BYTE 0
+   152 103E 00					.BYTE 0
+   152 103F 00					.BYTE 0
+   152 1040 00					.BYTE 0
+   152 1041 00					.BYTE 0
+   152 1042 00					.BYTE 0
+   152 1043 00					.BYTE 0
+   152 1044 00					.BYTE 0
+   152 1045 00					.BYTE 0
+   152 1046 00					.BYTE 0
+   152 1047 00					.BYTE 0
+   152 1048 00					.BYTE 0
+   152 1049 00					.BYTE 0
+   152 104A 00					.BYTE 0
+   152 104B 00					.BYTE 0
+   152 104C 00					.BYTE 0
+   152 104D 00					.BYTE 0
+   152 104E 00					.BYTE 0
+   152 104F 00					.BYTE 0
+   152 1050 00					.BYTE 0
+   152 1051 00					.BYTE 0
+   152 1052 00					.BYTE 0
+   152 1053 00					.BYTE 0
+   152 1054 00					.BYTE 0
+   152 1055 00					.BYTE 0
+   152 1056 00					.BYTE 0
+   152 1057 00					.BYTE 0
+   152 1058 00					.BYTE 0
+   152 1059 00					.BYTE 0
+   152 105A 00					.BYTE 0
+   152 105B 00					.BYTE 0
+   152 105C 00					.BYTE 0
+   152 105D 00					.BYTE 0
+   152 105E 00					.BYTE 0
+   152 105F 00					.BYTE 0
+   152 1060 00					.BYTE 0
+   152 1061 00					.BYTE 0
+   152 1062 00					.BYTE 0
+   152 1063 00					.BYTE 0
+   152 1064 00					.BYTE 0
+   152 1065 00					.BYTE 0
+   152 1066 00					.BYTE 0
+   152 1067 00					.BYTE 0
+   152 1068 00					.BYTE 0
+   152 1069 00					.BYTE 0
+   152 106A 00					.BYTE 0
+   152 106B 00					.BYTE 0
+   152 106C 00					.BYTE 0
+   152 106D 00					.BYTE 0
+   152 106E 00					.BYTE 0
+   152 106F 00					.BYTE 0
+   152 1070 00					.BYTE 0
+   152 1071 00					.BYTE 0
+   152 1072 00					.BYTE 0
+   152 1073 00					.BYTE 0
+   152 1074 00					.BYTE 0
+   152 1075 00					.BYTE 0
+   152 1076 00					.BYTE 0
+   152 1077 00					.BYTE 0
+   152 1078 00					.BYTE 0
+   152 1079 00					.BYTE 0
+   152 107A 00					.BYTE 0
+   152 107B 00					.BYTE 0
+   152 107C 00					.BYTE 0
+   152 107D 00					.BYTE 0
+   152 107E 00					.BYTE 0
+   152 107F 00					.BYTE 0
+   152 1080 00					.BYTE 0
+   152 1081 00					.BYTE 0
+   152 1082 00					.BYTE 0
+   152 1083 00					.BYTE 0
+   152 1084 00					.BYTE 0
+   152 1085 00					.BYTE 0
+   152 1086 00					.BYTE 0
+   152 1087 00					.BYTE 0
+   152 1088 00					.BYTE 0
+   152 1089 00					.BYTE 0
+   152 108A 00					.BYTE 0
+   152 108B 00					.BYTE 0
+   152 108C 00					.BYTE 0
+   152 108D 00					.BYTE 0
+   152 108E 00					.BYTE 0
+   152 108F 00					.BYTE 0
+   152 1090 00					.BYTE 0
+   152 1091 00					.BYTE 0
+   152 1092 00					.BYTE 0
+   152 1093 00					.BYTE 0
+   152 1094 00					.BYTE 0
+   152 1095 00					.BYTE 0
+   152 1096 00					.BYTE 0
+   152 1097 00					.BYTE 0
+   152 1098 00					.BYTE 0
+   152 1099 00					.BYTE 0
+   152 109A 00					.BYTE 0
+   152 109B 00					.BYTE 0
+   152 109C 00					.BYTE 0
+   152 109D 00					.BYTE 0
+   152 109E 00					.BYTE 0
+   152 109F 00					.BYTE 0
+   152 10A0 00					.BYTE 0
+   152 10A1 00					.BYTE 0
+   152 10A2 00					.BYTE 0
+   152 10A3 00					.BYTE 0
+   152 10A4 00					.BYTE 0
+   152 10A5 00					.BYTE 0
+   152 10A6 00					.BYTE 0
+   152 10A7 00					.BYTE 0
+   152 10A8 00					.BYTE 0
+   152 10A9 00					.BYTE 0
+   152 10AA 00					.BYTE 0
+   152 10AB 00					.BYTE 0
+   152 10AC 00					.BYTE 0
+   152 10AD 00					.BYTE 0
+   152 10AE 00					.BYTE 0
+   152 10AF 00					.BYTE 0
+   152 10B0 00					.BYTE 0
+   152 10B1 00					.BYTE 0
+   152 10B2 00					.BYTE 0
+   152 10B3 00					.BYTE 0
+   152 10B4 00					.BYTE 0
+   152 10B5 00					.BYTE 0
+   152 10B6 00					.BYTE 0
+   152 10B7 00					.BYTE 0
+   152 10B8 00					.BYTE 0
+   152 10B9 00					.BYTE 0
+   152 10BA 00					.BYTE 0
+   152 10BB 00					.BYTE 0
+   152 10BC 00					.BYTE 0
+   152 10BD 00					.BYTE 0
+   152 10BE 00					.BYTE 0
+   152 10BF 00					.BYTE 0
+   152 10C0 00					.BYTE 0
+   152 10C1 00					.BYTE 0
+   152 10C2 00					.BYTE 0
+   152 10C3 00					.BYTE 0
+   152 10C4 00					.BYTE 0
+   152 10C5 00					.BYTE 0
+   152 10C6 00					.BYTE 0
+   152 10C7 00					.BYTE 0
+   152 10C8 00					.BYTE 0
+   152 10C9 00					.BYTE 0
+   152 10CA 00					.BYTE 0
+   152 10CB 00					.BYTE 0
+   152 10CC 00					.BYTE 0
+   152 10CD 00					.BYTE 0
+   152 10CE 00					.BYTE 0
+   152 10CF 00					.BYTE 0
+   152 10D0 00					.BYTE 0
+   152 10D1 00					.BYTE 0
+   152 10D2 00					.BYTE 0
+   152 10D3 00					.BYTE 0
+   152 10D4 00					.BYTE 0
+   152 10D5 00					.BYTE 0
+   152 10D6 00					.BYTE 0
+   152 10D7 00					.BYTE 0
+   152 10D8 00					.BYTE 0
+   152 10D9 00					.BYTE 0
+   152 10DA 00					.BYTE 0
+   152 10DB 00					.BYTE 0
+   152 10DC 00					.BYTE 0
+   152 10DD 00					.BYTE 0
+   152 10DE 00					.BYTE 0
+   152 10DF 00					.BYTE 0
+   152 10E0 00					.BYTE 0
+   152 10E1 00					.BYTE 0
+   152 10E2 00					.BYTE 0
+   152 10E3 00					.BYTE 0
+   152 10E4 00					.BYTE 0
+   152 10E5 00					.BYTE 0
+   152 10E6 00					.BYTE 0
+   152 10E7 00					.BYTE 0
+   152 10E8 00					.BYTE 0
+   152 10E9 00					.BYTE 0
+   152 10EA 00					.BYTE 0
+   152 10EB 00					.BYTE 0
+   152 10EC 00					.BYTE 0
+   152 10ED 00					.BYTE 0
+   152 10EE 00					.BYTE 0
+   152 10EF 00					.BYTE 0
+   152 10F0 00					.BYTE 0
+   152 10F1 00					.BYTE 0
+   152 10F2 00					.BYTE 0
+   152 10F3 00					.BYTE 0
+   152 10F4 00					.BYTE 0
+   152 10F5 00					.BYTE 0
+   152 10F6 00					.BYTE 0
+   152 10F7 00					.BYTE 0
+   152 10F8 00					.BYTE 0
+   152 10F9 00					.BYTE 0
+   152 10FA 00					.BYTE 0
+   152 10FB 00					.BYTE 0
+   152 10FC 00					.BYTE 0
+   152 10FD 00					.BYTE 0
+   152 10FE 00					.BYTE 0
+   152 10FF 00					.BYTE 0
+   152 1100 00					.BYTE 0
+   152 1101 00					.BYTE 0
+   152 1102 00					.BYTE 0
+   152 1103 00					.BYTE 0
+   152 1104 00					.BYTE 0
+   152 1105 00					.BYTE 0
+   152 1106 00					.BYTE 0
+   152 1107 00					.BYTE 0
+   152 1108 00					.BYTE 0
+   152 1109 00					.BYTE 0
+   152 110A 00					.BYTE 0
+   152 110B 00					.BYTE 0
+   152 110C 00					.BYTE 0
+   152 110D 00					.BYTE 0
+   152 110E 00					.BYTE 0
+   152 110F 00					.BYTE 0
+   152 1110 00					.BYTE 0
+   152 1111 00					.BYTE 0
+   152 1112 00					.BYTE 0
+   152 1113 00					.BYTE 0
+   152 1114 00					.BYTE 0
+   152 1115 00					.BYTE 0
+   152 1116 00					.BYTE 0
+   152 1117 00					.BYTE 0
+   152 1118 00					.BYTE 0
+   152 1119 00					.BYTE 0
+   152 111A 00					.BYTE 0
+   152 111B 00					.BYTE 0
+   152 111C 00					.BYTE 0
+   152 111D 00					.BYTE 0
+   152 111E 00					.BYTE 0
+   152 111F 00					.BYTE 0
+   152 1120 00					.BYTE 0
+   152 1121 00					.BYTE 0
+   152 1122 00					.BYTE 0
+   152 1123 00					.BYTE 0
+   152 1124 00					.BYTE 0
+   152 1125 00					.BYTE 0
+   152 1126 00					.BYTE 0
+   152 1127 00					.BYTE 0
+   152 1128 00					.BYTE 0
+   152 1129 00					.BYTE 0
+   152 112A 00					.BYTE 0
+   152 112B 00					.BYTE 0
+   152 112C 00					.BYTE 0
+   152 112D 00					.BYTE 0
+   152 112E 00					.BYTE 0
+   152 112F 00					.BYTE 0
+   152 1130 00					.BYTE 0
+   152 1131 00					.BYTE 0
+   152 1132 00					.BYTE 0
+   152 1133 00					.BYTE 0
+   152 1134 00					.BYTE 0
+   152 1135 00					.BYTE 0
+   152 1136 00					.BYTE 0
+   152 1137 00					.BYTE 0
+   152 1138 00					.BYTE 0
+   152 1139 00					.BYTE 0
+   152 113A 00					.BYTE 0
+   152 113B 00					.BYTE 0
+   152 113C 00					.BYTE 0
+   152 113D 00					.BYTE 0
+   152 113E 00					.BYTE 0
+   152 113F 00					.BYTE 0
+   152 1140 00					.BYTE 0
+   152 1141 00					.BYTE 0
+   152 1142 00					.BYTE 0
+   152 1143 00					.BYTE 0
+   152 1144 00					.BYTE 0
+   152 1145 00					.BYTE 0
+   152 1146 00					.BYTE 0
+   152 1147 00					.BYTE 0
+   152 1148 00					.BYTE 0
+   152 1149 00					.BYTE 0
+   152 114A 00					.BYTE 0
+   152 114B 00					.BYTE 0
+   152 114C 00					.BYTE 0
+   152 114D 00					.BYTE 0
+   152 114E 00					.BYTE 0
+   152 114F 00					.BYTE 0
+   152 1150 00					.BYTE 0
+   152 1151 00					.BYTE 0
+   152 1152 00					.BYTE 0
+   152 1153 00					.BYTE 0
+   152 1154 00					.BYTE 0
+   152 1155 00					.BYTE 0
+   152 1156 00					.BYTE 0
+   152 1157 00					.BYTE 0
+   152 1158 00					.BYTE 0
+   152 1159 00					.BYTE 0
+   152 115A 00					.BYTE 0
+   152 115B 00					.BYTE 0
+   152 115C 00					.BYTE 0
+   152 115D 00					.BYTE 0
+   152 115E 00					.BYTE 0
+   152 115F 00					.BYTE 0
+   152 1160 00					.BYTE 0
+   152 1161 00					.BYTE 0
+   152 1162 00					.BYTE 0
+   152 1163 00					.BYTE 0
+   152 1164 00					.BYTE 0
+   152 1165 00					.BYTE 0
+   152 1166 00					.BYTE 0
+   152 1167 00					.BYTE 0
+   152 1168 00					.BYTE 0
+   152 1169 00					.BYTE 0
+   152 116A 00					.BYTE 0
+   152 116B 00					.BYTE 0
+   152 116C 00					.BYTE 0
+   152 116D 00					.BYTE 0
+   152 116E 00					.BYTE 0
+   152 116F 00					.BYTE 0
+   152 1170 00					.BYTE 0
+   152 1171 00					.BYTE 0
+   152 1172 00					.BYTE 0
+   152 1173 00					.BYTE 0
+   152 1174 00					.BYTE 0
+   152 1175 00					.BYTE 0
+   152 1176 00					.BYTE 0
+   152 1177 00					.BYTE 0
+   152 1178 00					.BYTE 0
+   152 1179 00					.BYTE 0
+   152 117A 00					.BYTE 0
+   152 117B 00					.BYTE 0
+   152 117C 00					.BYTE 0
+   152 117D 00					.BYTE 0
+   152 117E 00					.BYTE 0
+   152 117F 00					.BYTE 0
+   152 1180 00					.BYTE 0
+   152 1181 00					.BYTE 0
+   152 1182 00					.BYTE 0
+   152 1183 00					.BYTE 0
+   152 1184 00					.BYTE 0
+   152 1185 00					.BYTE 0
+   152 1186 00					.BYTE 0
+   152 1187 00					.BYTE 0
+   152 1188 00					.BYTE 0
+   152 1189 00					.BYTE 0
+   152 118A 00					.BYTE 0
+   152 118B 00					.BYTE 0
+   152 118C 00					.BYTE 0
+   152 118D 00					.BYTE 0
+   152 118E 00					.BYTE 0
+   152 118F 00					.BYTE 0
+   152 1190 00					.BYTE 0
+   152 1191 00					.BYTE 0
+   152 1192 00					.BYTE 0
+   152 1193 00					.BYTE 0
+   152 1194 00					.BYTE 0
+   152 1195 00					.BYTE 0
+   152 1196 00					.BYTE 0
+   152 1197 00					.BYTE 0
+   152 1198 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/level.asm
+   154 						
+   155 1199 33 21 00 00 21 21 + levelData0 ins "../levels/LEVEL0"
+   156 1A99 00 00 00 21 01 21 + levelData1 ins "../levels/LEVEL1"
+   157
+   158 2399			levelScreenLookup
+   159 						.rept levelScreens
+   160 						.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   161 						.ENDR
+   161 						.endr
+Source: REPT
+   160 2399 99 08				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 239B B7 08				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 239D D5 08				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 239F F3 08				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23A1 11 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23A3 2F 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23A5 4D 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23A7 6B 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23A9 89 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23AB A7 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23AD C5 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23AF E3 09				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23B1 01 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23B3 1F 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23B5 3D 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23B7 5B 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23B9 79 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23BB 97 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23BD B5 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23BF D3 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23C1 F1 0A				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23C3 0F 0B				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23C5 2D 0B				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+   160 23C7 4B 0B				.WORD LEVELDATA+([*-LEVELSCREENLOOKUP]/2*LEVELTILESPERSCREEN)
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/level.asm
+   162
+   163 23C9 00			levelScreen	.byte 0
+   164 23CA 00			levelNumber	.byte 0
+   165
+   166 23CB 00			levelScreenChanged	.byte 0  ; redraw whole screen
+   167 23CC 00			levelScreenDirty	.byte 0  ; redraw dirty blocks
+   168
+   169 				; origin struct
+   170 				;	byte type[] = new byte[DESCRIPTORS];
+   171 				;	byte spec[] = new byte[DESCRIPTORS];
+   172 				;	byte linkMap[] = new byte[MAX_LINK];
+   173 				;	byte linkLoc[] = new byte[MAX_LINK];
+   174 				;	byte map[] = new byte[SCREENS*4];
+   175 				;	byte info[] = new byte[256];		
+   166 23CD					icl "level/render.asm"
+     1
+     2 				; draw all pre-rendered tiles (prerender.asm)
+     3 				; first draw all background tiles (C, B, A)
+     4 				; then draw all sprites
+     5 				; finally draw "front background" tiles (D, F)
+     6 				; skip drawing if render_dirty_blocks,x is not set
+     7
+     8 23CD			drawBack
+     9 23CD A2 C8				ldx #200
+    10 23CF A9 00				lda #0
+    11 23D1			clearTimesTrackBase		
+    12 23D1 9D 06 06				sta timesTrackBase,x
+    13 23D4 CA					dex
+    14 23D5 D0 FA				bne clearTimesTrackBase
+    15 23D7			waitVsync1	
+    16 23D7 AD 0B D4				lda vcount
+    17 23DA D0 FB				bne waitVsync1
+    18 23DC A9 00				lda #0
+    19 23DE 85 14				sta 20
+    20 23E0 8D 00 06				sta timesTrackIndex
+    21 23E3 8D 02 06				sta timesTrackAcum
+    22 23E6 8D 03 06				sta timesTrackAcum+1
+    23 						
+    24 23E9 A2 00				ldx #0
+    25 23EB A0 00				ldy #0
+    26 23ED			drawNextBlock
+    27 23ED BD B8 31				lda render_dirty_blocks,x
+    28 23F0 F0 79				beq noDrawA
+    29 						
+    30 23F2 8E E0 31				stx renderBlockNumber
+    31 23F5 8C E1 31				sty renderBlockOffset
+    32 23F8 BD 22 31				lda render_piecef,x
+    33 23FB C9 83				cmp #$83
+    34 23FD D0 03				bne noShortCut
+    35 23FF 4C 46 24				jmp noDrawB
+    36 2402			noShortCut
+    37 2402 18					clc
+    38 2403 B9 8C 30				lda render_piecec_offsetL,y
+    39 2406 6D 7E 4C				adc vramBuffer
+    40 2409 85 D4				sta vramIndex
+    41 240B B9 AA 30				lda render_piecec_offsetH,y
+    42 240E 6D 7F 4C				adc vramBuffer+1
+    43 2411 85 D5				sta vramIndex+1
+    44 2413 A0 00				ldy #0
+    45 2415 BD 6E 30				lda render_piecec,x
+    46 2418 20 BF 28				jsr drawTileC
+    47 241B AC E1 31				ldy renderBlockOffset
+    48 241E AE E0 31				ldx renderBlockNumber
+    49 2421			noDrawC
+    50 2421 BD D8 2F				lda render_pieceb,x
+    51 2424 F0 20				beq noDrawB
+    52 2426 18					clc
+    53 2427 B9 32 30				lda render_pieceb_offsetL,y
+    54 242A 6D 7E 4C				adc vramBuffer
+    55 242D 85 D4				sta vramIndex
+    56 242F B9 50 30				lda render_pieceb_offsetH,y
+    57 2432 6D 7F 4C				adc vramBuffer+1
+    58 2435 85 D5				sta vramIndex+1
+    59 2437 BC 14 30				ldy render_maskb,x
+    60 243A BD D8 2F				lda render_pieceb,x
+    61 243D 20 E8 26				jsr drawTile
+    62 2440 AC E1 31				ldy renderBlockOffset
+    63 2443 AE E0 31				ldx renderBlockNumber
+    64
+    65 2446			noDrawB
+    66 2446 BD 42 2F				lda render_piecea,x
+    67 2449 F0 20				beq noDrawA
+    68 244B 18					clc
+    69 244C B9 7E 2F				lda render_piecea_offsetL,y
+    70 244F 6D 7E 4C				adc vramBuffer
+    71 2452 85 D4				sta vramIndex
+    72 2454 B9 9C 2F				lda render_piecea_offsetH,y
+    73 2457 6D 7F 4C				adc vramBuffer+1
+    74 245A 85 D5				sta vramIndex+1
+    75 245C BC 60 2F				ldy render_maska,x
+    76 245F BD 42 2F				lda render_piecea,x
+    77 2462 20 E8 26				jsr drawTile
+    78 2465 AC E1 31				ldy renderBlockOffset
+    79 2468 AE E0 31				ldx renderBlockNumber
+    80 246B			noDrawA
+    81 246B C8					iny
+    82 246C E8					inx
+    83 246D E0 1E				cpx #levelTilesPerScreen
+    84 246F F0 03				beq drawBackEnd
+    85 2471 4C ED 23				jmp drawNextBlock
+    86 						
+    87 2474			drawBackEnd		
+    88 2474 20 71 29				jsr drawKid
+    89 					
+    90 2477 A2 00				ldx #0
+    91 2479 A0 00				ldy #0	
+    92
+    93 247B			drawFront
+    94 247B 8E E0 31				stx renderBlockNumber
+    95 247E 8C E1 31				sty renderBlockOffset
+    96 						
+    97 2481 BD B8 31				lda render_dirty_blocks,x
+    98 2484 F0 49				beq noDrawF
+    99 						
+   100 2486 BD C8 30				lda render_pieced,x
+   101 2489 F0 1F				beq noDrawD
+   102
+   103 248B 18					clc
+   104 248C B9 E6 30				lda render_pieced_offsetL,y
+   105 248F 6D 7E 4C				adc vramBuffer
+   106 2492 85 D4				sta vramIndex
+   107 2494 B9 04 31				lda render_pieced_offsetH,y
+   108 2497 6D 7F 4C				adc vramBuffer+1
+   109 249A 85 D5				sta vramIndex+1
+   110 249C A0 00				ldy #0
+   111 249E BD C8 30				lda render_pieced,x
+   112 24A1 20 E8 26				jsr drawTile
+   113 24A4 AC E1 31				ldy renderBlockOffset
+   114 24A7 AE E0 31				ldx renderBlockNumber
+   115 						
+   116 24AA			noDrawD		
+   117 24AA BD 22 31				lda render_piecef,x
+   118 24AD F0 20				beq noDrawF
+   119 24AF 18					clc
+   120 24B0 B9 5E 31				lda render_piecef_offsetL,y
+   121 24B3 6D 7E 4C				adc vramBuffer
+   122 24B6 85 D4				sta vramIndex
+   123 24B8 B9 7C 31				lda render_piecef_offsetH,y
+   124 24BB 6D 7F 4C				adc vramBuffer+1
+   125 24BE 85 D5				sta vramIndex+1
+   126 24C0 BC 40 31				ldy render_maskf,x
+   127 24C3 BD 22 31				lda render_piecef,x
+   128 24C6 20 E8 26				jsr drawTile
+   129 24C9 AC E1 31				ldy renderBlockOffset
+   130 24CC AE E0 31				ldx renderBlockNumber
+   131 24CF			noDrawF
+   132 24CF A9 00				lda #0
+   133 24D1 9D B8 31				sta render_dirty_blocks,x
+   134 24D4 C8					iny
+   135 24D5 E8					inx
+   136 24D6 E0 1E				cpx #levelTilesPerScreen
+   137 24D8 D0 A1				bne drawFront
+   138
+   139 24DA A2 00				ldx #0
+   140 24DC			renderNextTopTile
+   141 24DC BD D6 31				lda render_dirty_blocks+levelTilesPerScreen,x
+   142 24DF F0 24				beq noRenderTopTile
+   143 24E1 A9 00				lda #0
+   144 24E3 9D D6 31				sta render_dirty_blocks+levelTilesPerScreen,x
+   145 24E6 8E E0 31				stx renderBlockNumber
+   146 24E9 18					clc
+   147 24EA BD A4 31				lda render_pieced_top_offsetL,x
+   148 24ED 6D 7E 4C				adc vramBuffer
+   149 24F0 85 D4				sta vramIndex
+   150 24F2 BD AE 31				lda render_pieced_top_offsetH,x
+   151 24F5 6D 7F 4C				adc vramBuffer+1
+   152 24F8 85 D5				sta vramIndex+1
+   153 24FA A0 00				ldy #0
+   154 24FC BD 9A 31				lda render_pieced_top,x
+   155 24FF 20 E8 26				jsr drawTile
+   156 2502 AE E0 31				ldx renderBlockNumber
+   157 2505			noRenderTopTile		
+   158 2505 E8					inx
+   159 2506 E0 0A				cpx #levelTilesPerRow
+   160 2508 D0 D2				bne renderNextTopTile
+   161 						
+   162 250A 38					sec
+   163 250B A5 14				lda 20
+   164 250D 8D 02 06				sta timesTrackAcum
+   165 2510 AD 0B D4				lda vcount
+   166 2513 8D 03 06				sta timesTrackAcum+1
+   167 2516 60					rts
+   168 							
+   167 2517					icl "level/prerender.asm"
+     1
+     2 				; Pre Render Map
+     3 				; Create lookup tables for each tile pieces with screen offset
+     4
+     5 2517			preRenderMap
+     6 2517 A9 00				lda #0
+     7 2519 8D E2 31				sta preRenderBlockDst
+     8
+     9 251C A2 06				ldx #6					; start in third row
+    10 251E 8E E4 31				stx preRenderRow
+    11
+    12 2521			preRenderNextRow		
+    13 2521 BD B4 2D				lda blockOffset,x
+    14 2524 8D E3 31				sta preRenderBlockSrc
+    15
+    16 2527 A9 0A				lda #10
+    17 2529 8D E5 31				sta preRenderCols
+    18
+    19 252C			preRenderNextBlock
+    20 252C AE E3 31				ldx preRenderBlockSrc		; load block number from map
+    21 252F BD FC 2E				lda screenData,x
+    22 2532 29 1F				and #tileMask
+    23 2534 A8					tay
+    24 2535 AE E2 31				ldx preRenderBlockDst		; y = block id, x = tile position
+    25 2538 B9 BC 2D				lda piecea,y				; write piecea, maska for this block
+    26 253B 9D 42 2F				sta render_piecea,x
+    27 253E B9 FC 2D				lda pieceay,y
+    28 2541 9D BA 2F				sta render_pieceay,x
+    29 2544 B9 3C 2E				lda maska,y
+    30 2547 9D 60 2F				sta render_maska,x
+    31 254A B9 9C 2E				lda pieced,y
+    32 254D 9D C8 30				sta render_pieced,x
+    33 2550 B9 BC 2E				lda piecef,y
+    34 2553 9D 22 31				sta render_piecef,x
+    35 2556 B9 DC 2E				lda maskf,y
+    36 2559 9D 40 31				sta render_maskf,x
+    37 						
+    38 255C AD E5 31				lda preRenderCols			; last column dont need pieceb and piecec (all pieces to the left)
+    39 255F C9 01				cmp #1
+    40 2561 F0 1F				beq skipPieceLeft
+    41 						
+    42 2563 B9 DC 2D				lda pieceb,y				; write pieceb, maskb for this block
+    43 2566 9D D9 2F				sta render_pieceb+1,x
+    44 2569 B9 5C 2E				lda maskb,y
+    45 256C 9D 15 30				sta render_maskb+1,x
+    46 256F B9 1C 2E				lda pieceby,y
+    47 2572 9D F7 2F				sta render_pieceby+1,x
+    48 						
+    49 2575 AD E2 31				lda preRenderBlockDst	    ; write piecec for this block only in rows 2 & 3
+    50 2578 C9 14				cmp #20
+    51 257A 10 06				bpl skipPieceLeft
+    52 257C B9 7C 2E				lda piecec,y
+    53 257F 9D 79 30				sta render_piecec+11,x
+    54 2582			skipPieceLeft		
+    55 2582 EE E3 31				inc preRenderBlockSrc
+    56 2585 EE E2 31				inc preRenderBlockDst
+    57 2588 CE E5 31				dec preRenderCols
+    58 258B D0 9F				bne preRenderNextBlock
+    59 258D			preRenderNextLine		
+    60 258D AE E4 31				ldx preRenderRow
+    61 2590 CA					dex
+    62 2591 CA					dex
+    63 2592 8E E4 31				stx preRenderRow
+    64 2595 D0 8A				bne preRenderNextRow
+    65 						
+    66
+    67 				; now go for the top row
+    68 2597			preNextTopTile
+    69 2597 BD 1A 2F				lda screenDataTop,x
+    70 259A 29 1F				and #$1F
+    71 259C A8					tay
+    72 259D B9 9C 2E				lda pieced,y
+    73 25A0 9D 9A 31				sta render_pieced_top,x
+    74 25A3 E8					inx
+    75 25A4 E0 0A				cpx #levelTilesPerRow
+    76 25A6 D0 EF				bne preNextTopTile
+    77 						
+    78 				; remove unused blocks
+    79 25A8 A2 00				ldx #0
+    80 25AA			removeUnusedNext		
+    81 25AA BD 22 31				lda render_piecef,x
+    82 25AD C9 83				cmp #$83
+    83 25AF D0 0E				bne noRemoveBlock
+    84 25B1 A9 00				lda #0
+    85 25B3 9D 42 2F				sta render_piecea,x
+    86 25B6 9D D8 2F				sta render_pieceb,x
+    87 25B9 9D 6E 30				sta render_piecec,x
+    88 25BC 4C C9 25				jmp removeNext
+    89 25BF			noRemoveBlock
+    90 25BF BD 42 2F				lda render_piecea,x
+    91 25C2 F0 05				beq removeNext
+    92 25C4 A9 00				lda #0
+    93 25C6 9D 6E 30				sta render_piecec,x
+    94 						;jmp removeNext
+    95 25C9			removeNext
+    96 25C9 E8					inx
+    97 25CA E0 1E				cpx #levelTilesPerScreen
+    98 25CC D0 DC				bne removeUnusedNext				
+    99 25CE 60					rts
+   100
+   101 25CF			preRenderOffsets
+   102 25CF A9 00				lda #0
+   103 25D1 8D E6 31				sta preRenderOffsetBlock
+   104 25D4 8D E2 31				sta preRenderBlockDst
+   105 						
+   106 25D7 A2 06				ldx #6					; start in third row
+   107 						
+   108 25D9			preRenderOffsetRow		
+   109 25D9 8E E4 31				stx preRenderRow
+   110 25DC A9 0A				lda #10
+   111 25DE 8D E5 31				sta preRenderCols
+   112
+   113 25E1 18					clc						; set vramOffset for row on x
+   114 25E2 BD A8 2D				lda vramOffsets,x
+   115 25E5 8D B0 2D				sta vramOffset
+   116 25E8 BD A9 2D				lda vramOffsets+1,x
+   117 25EB 8D B1 2D				sta vramOffset+1
+   118
+   119 25EE			preRenderOffsetNextCol
+   120 25EE AD B0 2D				lda vramOffset
+   121 25F1 8D B2 2D				sta vramOffsetTemp
+   122 25F4 AD B1 2D				lda vramOffset+1
+   123 25F7 8D B3 2D				sta vramOffsetTemp+1
+   124
+   125 25FA AE E2 31				ldx preRenderBlockDst
+   126 25FD BD C8 30				lda render_pieced,x
+   127 2600 A0 00				ldy #0
+   128 2602 20 C2 26				jsr getBlockVramOffset
+   129 2605 AE E6 31				ldx preRenderOffsetBlock
+   130 2608 9D 04 31				sta render_pieced_offsetH,x
+   131 260B 98					tya
+   132 260C 9D E6 30				sta render_pieced_offsetL,x
+   133 						
+   134 260F AE E2 31				ldx preRenderBlockDst
+   135 2612 BD D8 2F				lda render_pieceb,x
+   136 2615 BC F6 2F				ldy render_pieceby,x
+   137 2618 20 C2 26				jsr getBlockVramOffset
+   138 261B AE E6 31				ldx preRenderOffsetBlock
+   139 261E 9D 50 30				sta render_pieceb_offsetH,x
+   140 2621 98					tya
+   141 2622 9D 32 30				sta render_pieceb_offsetL,x
+   142 						
+   143 2625 AE E2 31				ldx preRenderBlockDst
+   144 2628 BD 6E 30				lda render_piecec,x
+   145 262B A0 00				ldy #0
+   146 262D 20 C2 26				jsr getBlockVramOffset
+   147 2630 AE E6 31				ldx preRenderOffsetBlock
+   148 2633 9D AA 30				sta render_piecec_offsetH,x
+   149 2636 98					tya
+   150 2637 9D 8C 30				sta render_piecec_offsetL,x
+   151 						
+   152 263A 38					sec								; offsetF = offsetA = offset - 3 scanlines
+   153 263B AD B0 2D				lda vramOffset
+   154 263E E9 78				sbc #3*scanbytes
+   155 2640 8D B2 2D				sta vramOffsetTemp
+   156 2643 AD B1 2D				lda vramOffset+1
+   157 2646 E9 00				sbc #0
+   158 2648 8D B3 2D				sta vramOffsetTemp+1
+   159
+   160 264B AE E2 31				ldx preRenderBlockDst
+   161 264E BD 42 2F				lda render_piecea,x
+   162 2651 BC BA 2F				ldy render_pieceay,x
+   163 2654 20 C2 26				jsr getBlockVramOffset
+   164 2657 AE E6 31				ldx preRenderOffsetBlock
+   165 265A 9D 9C 2F				sta render_piecea_offsetH,x
+   166 265D 98					tya
+   167 265E 9D 7E 2F				sta render_piecea_offsetL,x
+   168 2661 AE E2 31				ldx preRenderBlockDst
+   169 2664 BD 22 31				lda render_piecef,x
+   170 2667 A0 00				ldy #0
+   171 2669 20 C2 26				jsr getBlockVramOffset
+   172 266C AE E6 31				ldx preRenderOffsetBlock
+   173 266F 9D 7C 31				sta render_piecef_offsetH,x
+   174 2672 98					tya
+   175 2673 9D 5E 31				sta render_piecef_offsetL,x
+   176
+   177 2676 18					clc								; offsetB = offset + 4 bytes (next tile col)
+   178 2677 AD B0 2D				lda vramOffset					; offsetC = offsetB (for now)
+   179 267A 69 04				adc #4
+   180 267C 8D B0 2D				sta vramOffset
+   181 267F 90 03				bcc vramOffsetNoOverflow
+   182 2681 EE B1 2D				inc vramOffset+1
+   183 2684			vramOffsetNoOverflow		
+   184 						
+   185 2684 EE E2 31				inc preRenderBlockDst
+   186 2687 EE E6 31				inc preRenderOffsetBlock
+   187 						
+   188 268A CE E5 31				dec preRenderCols
+   189 268D F0 03				beq preRenderOffsetNextRow
+   190 268F 4C EE 25				jmp preRenderOffsetNextCol
+   191 2692			preRenderOffsetNextRow		
+   192 2692 AE E4 31				ldx preRenderRow
+   193 2695 CA					dex
+   194 2696 CA					dex
+   195 2697 F0 03				beq preRenderOffsetEnd
+   196 2699 4C D9 25				jmp preRenderOffsetRow
+   197 269C			preRenderOffsetEnd
+   198
+   199 				; calc offsets for first row.  Constant for now
+   200 269C 18					clc						; set vramOffset for row on x
+   201 269D 8D B0 2D				sta vramOffset
+   202 26A0 8D B1 2D				sta vramOffset+1
+   203 26A3 A2 00				ldx #0
+   204 26A5			nextTopOffset
+   205 26A5 AD B1 2D				lda vramOffset+1		
+   206 26A8 9D AE 31				sta render_pieced_top_offsetH,x
+   207 26AB AD B0 2D				lda vramOffset
+   208 26AE 9D A4 31				sta render_pieced_top_offsetL,x
+   209 26B1 18					clc
+   210 26B2 69 04				adc #4
+   211 26B4 8D B0 2D				sta vramOffset
+   212 26B7 90 03				bcc noOverflowTop
+   213 26B9 EE B1 2D				inc vramOffset+1
+   214 26BC			noOverflowTop
+   215 26BC E8					inx
+   216 26BD E0 0A				cpx #levelTilesPerRow
+   217 26BF D0 E4				bne nextTopOffset
+   218 26C1 60					rts
+   219
+   220 				; return first position in screen for tile in A
+   221 				; tileOffset Y = LSB, A = MSB
+   222 26C2			getBlockVramOffset
+   223 26C2 AA					tax
+   224 26C3 8C E7 31				sty preYPos
+   225 26C6 BD EA 31				lda tilesL,x
+   226 26C9 85 D2				sta tileIndex
+   227 26CB BD 9A 32				lda tilesH,x
+   228 26CE 85 D3				sta tileIndex+1
+   229 						
+   230 26D0 A0 01				ldy #1
+   231 26D2 B1 D2				lda (tileIndex),y		; get tile height
+   232 26D4 38					sec
+   233 26D5 ED E7 31				sbc preYPos
+   234 26D8 AA					tax
+   235 26D9 38					sec
+   236 26DA AD B2 2D				lda vramOffsetTemp
+   237 26DD FD EB 4A				sbc heightLookupL,x
+   238 26E0 A8					tay
+   239 26E1 AD B3 2D				lda vramOffsetTemp+1
+   240 26E4 FD B3 4B				sbc heightLookupH,x
+   241 26E7 60					rts
+   168 26E8					icl "level/drawTile.asm"
+     1 				; draw a tile on screen (STA method)
+     2 				; A = tile number
+     3 				; vramIndex = vram position of first scan
+     4
+     5 				; Time Zero  08 1A
+     6 				; Time Dirty 02 12
+     7
+     8 				; Time without drawTile
+     9 				; Time Zero  02 29  (4E times)
+    10 				; Time Dirty 00 5B  (18 times)
+    11
+    12 26E8			drawTile
+    13 26E8 C9 00				cmp #0
+    14 26EA D0 01				bne validTile
+    15 26EC 60					rts
+    16 26ED			validTile
+    17 26ED C0 00				cpy #0
+    18 26EF D0 69				bne drawTileMasked		; use slower version with masking
+    19
+    20 26F1 AE 00 06				ldx timesTrackIndex
+    21 26F4 9D 06 06				sta timesTrackBase,x
+    22 26F7 EE 00 06				inc timesTrackIndex
+    23 						
+    24 26FA AA					tax
+    25 26FB BD EA 31				lda tilesL,x
+    26 26FE 85 D2				sta tileIndex
+    27 2700 18					clc
+    28 2701 69 02				adc #2
+    29 2703 8D 2E 27				sta tileSrc0+1
+    30 2706 8D 35 27				sta tileSrc1+1
+    31 2709 8D 3C 27				sta tileSrc2+1
+    32 270C 8D 43 27				sta tileSrc3+1
+    33 						
+    34 270F BD 9A 32				lda tilesH,x
+    35 2712 85 D3				sta tileIndex+1
+    36 2714 69 00				adc #0
+    37 2716 8D 2F 27				sta tileSrc0+2
+    38 2719 8D 36 27				sta tileSrc1+2
+    39 271C 8D 3D 27				sta tileSrc2+2
+    40 271F 8D 44 27				sta tileSrc3+2
+    41 						
+    42 2722 A0 01				ldy #1
+    43 2724 B1 D2				lda (tileIndex),y
+    44 2726 8D A5 2D				sta tileHeight
+    45 						
+    46 2729 A2 00				ldx #0		
+    47 272B A0 00				ldy #0
+    48 272D			copyTileScan		
+    49 272D			tileSrc0		
+    50 272D BD FF FF				lda $FFFF,x
+    51 2730 91 D4				sta (vramIndex),y
+    52 2732 C8					iny
+    53 2733 E8					inx
+    54 2734			tileSrc1
+    55 2734 BD FF FF				lda $FFFF,x
+    56 2737 91 D4				sta (vramIndex),y
+    57 2739 C8					iny
+    58 273A E8					inx
+    59 273B			tileSrc2		
+    60 273B BD FF FF				lda $FFFF,x
+    61 273E 91 D4				sta (vramIndex),y
+    62 2740 C8					iny
+    63 2741 E8					inx
+    64 2742			tileSrc3		
+    65 2742 BD FF FF				lda $FFFF,x
+    66 2745 91 D4				sta (vramIndex),y
+    67 2747 E8					inx
+    68
+    69 2748 CE A5 2D				dec tileHeight
+    70 274B F0 0C				beq drawTileEnd
+    71 						
+    72 274D 98					tya
+    73 274E 18					clc
+    74 274F 69 25				adc #37
+    75 2751 A8					tay
+    76 2752 90 D9				bcc copyTileScan
+    77 2754 E6 D5				inc vramIndex+1
+    78 2756 4C 2D 27				jmp copyTileScan
+    79
+    80 2759			drawTileEnd
+    81 2759 60					rts
+    82
+    83
+    84 				; draw tile using mask
+    85 				; A = tile
+    86 				; Y = mask		
+    87 275A			drawTileMasked
+    88 275A C0 FF				cpy #255
+    89 275C D0 03				bne drawTileRegularMask
+    90 275E 4C 26 28				jmp drawTileAutoMasked
+    91 2761			drawTileRegularMask		
+    92
+    93 2761 AE 00 06				ldx timesTrackIndex
+    94 2764 9D 06 06				sta timesTrackBase,x
+    95 2767 EE 00 06				inc timesTrackIndex
+    96 					
+    97 276A AA					tax
+    98 276B BD EA 31				lda tilesL,x
+    99 276E 85 D2				sta tileIndex
+   100 2770 BD 9A 32				lda tilesH,x
+   101 2773 85 D3				sta tileIndex+1
+   102 						
+   103 2775 B9 EA 31				lda tilesL,y
+   104 2778 85 D0				sta maskIndex
+   105 277A B9 9A 32				lda tilesH,y
+   106 277D 85 D1				sta maskIndex+1
+   107 						
+   108 277F A0 01				ldy #1
+   109 2781 B1 D2				lda (tileIndex),y
+   110 2783 8D A5 2D				sta tileHeight
+   111 						
+   112 2786 A0 01				ldy #1
+   113 2788 B1 D0				lda (maskIndex), y
+   114 278A 38					sec
+   115 278B ED A5 2D				sbc tileHeight
+   116 278E 8D A6 2D				sta tileMaskDiff		; tileMaskDiff = tileHeight - maskHeight
+   117 2791 30 0B				bmi tileMaskShorter
+   118 2793 0A					asl						; maskIndex += tileMaskDiff*4
+   119 2794 0A					asl
+   120 2795 18					clc
+   121 2796 65 D0				adc maskIndex
+   122 2798 85 D0				sta maskIndex
+   123 279A 90 02				bcc tileMaskShorter
+   124 279C E6 D1				inc maskIndex+1
+   125 279E			tileMaskShorter		
+   126 279E 18					clc
+   127 279F A5 D2				lda tileIndex
+   128 27A1 69 02				adc #2
+   129 27A3 85 D2				sta tileIndex
+   130 27A5 90 03				bcc incMaskIndex
+   131 27A7 E6 D3				inc tileIndex+1
+   132 27A9 18					clc
+   133 27AA			incMaskIndex		
+   134 27AA A5 D0				lda maskIndex
+   135 27AC 69 02				adc #2
+   136 27AE 85 D0				sta maskIndex
+   137 27B0 90 02				bcc beginCopy
+   138 27B2 E6 D1				inc maskIndex+1
+   139
+   140 27B4			beginCopy		
+   141 27B4 AE A5 2D				ldx tileHeight
+   142 						
+   143 27B7			copyTileMaskedScan		
+   144 27B7 A0 00				ldy #0
+   145 27B9 AD A6 2D				lda tileMaskDiff
+   146 27BC 10 16				bpl copyWithMask
+   147 27BE B1 D2				lda (tileIndex),y
+   148 27C0 91 D4				sta (vramIndex),y
+   149 27C2 C8					iny
+   150 27C3 B1 D2				lda (tileIndex),y
+   151 27C5 91 D4				sta (vramIndex),y
+   152 27C7 C8					iny
+   153 27C8 B1 D2				lda (tileIndex),y
+   154 27CA 91 D4				sta (vramIndex),y
+   155 27CC C8					iny
+   156 27CD B1 D2				lda (tileIndex),y
+   157 27CF 91 D4				sta (vramIndex),y
+   158 27D1 4C F7 27				jmp copyNextScanMask
+   159 27D4			copyWithMask
+   160 27D4 B1 D4				lda (vramIndex),y
+   161 27D6 31 D0				and (maskIndex),y
+   162 27D8 11 D2				ora (tileIndex),y
+   163 27DA 91 D4				sta (vramIndex),y
+   164 27DC C8					iny
+   165 27DD B1 D4				lda (vramIndex),y
+   166 27DF 31 D0				and (maskIndex),y
+   167 27E1 11 D2				ora (tileIndex),y
+   168 27E3 91 D4				sta (vramIndex),y
+   169 27E5 C8					iny
+   170 27E6 B1 D4				lda (vramIndex),y
+   171 27E8 31 D0				and (maskIndex),y
+   172 27EA 11 D2				ora (tileIndex),y
+   173 27EC 91 D4				sta (vramIndex),y
+   174 27EE C8					iny
+   175 27EF B1 D4				lda (vramIndex),y
+   176 27F1 31 D0				and (maskIndex),y
+   177 27F3 11 D2				ora (tileIndex),y
+   178 27F5 91 D4				sta (vramIndex),y
+   179 27F7			copyNextScanMask
+   180 27F7 18					clc
+   181 27F8 A5 D2				lda tileIndex
+   182 27FA 69 04				adc #4
+   183 27FC 85 D2				sta tileIndex
+   184 27FE 90 02				bcc checkTileMaskDiff
+   185 2800 E6 D3				inc tileIndex+1
+   186 						
+   187 2802			checkTileMaskDiff		
+   188 2802 AD A6 2D				lda tileMaskDiff
+   189 2805 C9 00				cmp #0
+   190 2807 30 0B				bmi skipMaskScanline
+   191 						
+   192 2809 18					clc
+   193 280A A5 D0				lda maskIndex
+   194 280C 69 04				adc #4
+   195 280E 85 D0				sta maskIndex
+   196 2810 90 02				bcc skipMaskScanLine
+   197 2812 E6 D1				inc maskIndex+1
+   198
+   199 2814			skipMaskScanline
+   200 2814 EE A6 2D				inc tileMaskDiff
+   201 						
+   202 2817 18					clc
+   203 2818 A5 D4				lda vramIndex
+   204 281A 69 28				adc #40
+   205 281C 85 D4				sta vramIndex
+   206 281E 90 02				bcc prepareNextMaskedScan
+   207 2820 E6 D5				inc vramIndex+1
+   208 2822			prepareNextMaskedScan		
+   209 2822 CA					dex
+   210 2823 D0 92				bne copyTileMaskedScan
+   211 2825			drawTileMaskedEnd		
+   212 2825 60					rts
+   213
+   214 				; draw tile in A using automasking
+   215 2826			drawTileAutoMasked
+   216
+   217 2826 AE 00 06				ldx timesTrackIndex
+   218 2829 9D 06 06				sta timesTrackBase,x
+   219 282C EE 00 06				inc timesTrackIndex
+   220
+   221 282F AA					tax
+   222 2830 BD EA 31				lda tilesL,x
+   223 2833 85 D2				sta tileIndex
+   224 2835 BD 9A 32				lda tilesH,x
+   225 2838 85 D3				sta tileIndex+1
+   226 						
+   227 283A A0 01				ldy #1
+   228 283C B1 D2				lda (tileIndex),y
+   229 283E 8D A5 2D				sta tileHeight
+   230 						
+   231 2841 18					clc
+   232 2842 A5 D2				lda tileIndex
+   233 2844 69 02				adc #2
+   234 2846 85 D2				sta tileIndex
+   235 2848 90 02				bcc copyTileAutoMaskedScan
+   236 284A E6 D3				inc tileIndex+1
+   237 					
+   238 284C			copyTileAutoMaskedScan		
+   239 284C A0 00				ldy #0
+   240 284E B1 D2				lda (tileIndex),y
+   241 2850 AA					tax
+   242 2851 B1 D4				lda (vramIndex),y
+   243 2853 3D EA 2B				and autoMaskTable,x
+   244 2856 11 D2				ora (tileIndex),y
+   245 2858 91 D4				sta (vramIndex),y
+   246 285A C8					iny
+   247
+   248 285B B1 D2				lda (tileIndex),y
+   249 285D AA					tax
+   250 285E B1 D4				lda (vramIndex),y
+   251 2860 3D EA 2B				and autoMaskTable,x
+   252 2863 11 D2				ora (tileIndex),y
+   253 2865 91 D4				sta (vramIndex),y
+   254 2867 C8					iny
+   255
+   256 2868 B1 D2				lda (tileIndex),y
+   257 286A AA					tax
+   258 286B B1 D4				lda (vramIndex),y
+   259 286D 3D EA 2B				and autoMaskTable,x
+   260 2870 11 D2				ora (tileIndex),y
+   261 2872 91 D4				sta (vramIndex),y
+   262 2874 C8					iny
+   263
+   264 2875 B1 D2				lda (tileIndex),y
+   265 2877 AA					tax
+   266 2878 B1 D4				lda (vramIndex),y
+   267 287A 3D EA 2B				and autoMaskTable,x
+   268 287D 11 D2				ora (tileIndex),y
+   269 287F 91 D4				sta (vramIndex),y
+   270
+   271 2881 18					clc
+   272 2882 A5 D2				lda tileIndex
+   273 2884 69 04				adc #4
+   274 2886 85 D2				sta tileIndex
+   275 2888 90 03				bcc nextScanAutoMask
+   276 288A E6 D3				inc tileIndex+1
+   277 						
+   278 288C 18					clc
+   279 288D			nextScanAutoMask		
+   280 288D A5 D4				lda vramIndex
+   281 288F 69 28				adc #40
+   282 2891 85 D4				sta vramIndex
+   283 2893 90 02				bcc prepareNextAutoMaskedScan
+   284 2895 E6 D5				inc vramIndex+1
+   285 2897			prepareNextAutoMaskedScan		
+   286 2897 CE A5 2D				dec tileHeight
+   287 289A D0 B0				bne copyTileAutoMaskedScan
+   288 289C 60					rts
+   289
+   290
+   291 289D			clearScreen
+   292 289D AD 7E 4C				lda vramBuffer
+   293 28A0 85 D4				sta vramIndex
+   294 28A2 AD 7F 4C				lda vramBuffer+1
+   295 28A5 85 D5				sta vramIndex+1
+   296 						
+   297 28A7 A2 1E				ldx #>vramSize
+   298 28A9 A0 00				ldy #0
+   299 28AB A9 00				lda #0
+   300 28AD			clearBlock		
+   301 28AD 91 D4				sta (vramIndex),y
+   302 28AF C8					iny
+   303 28B0 D0 FB				bne clearBlock
+   304 28B2 E6 D5				inc vramIndex+1
+   305 28B4 CA					dex
+   306 28B5 D0 F6				bne clearBlock
+   307 						
+   308 28B7 A0 00				ldy #<vramSize
+   309 28B9			clearLastBlock		
+   310 28B9 91 D4				sta (vramIndex),y
+   311 28BB 88					dey
+   312 28BC D0 FB				bne clearLastBlock
+   313 28BE 60					rts
+   314 						
+   315 				; special drawing for C tile + clearing
+   316
+   317 28BF			drawTileC
+   318 28BF C9 00				cmp #0
+   319 28C1 D0 21				bne clearAndDrawC
+   320
+   321 28C3 A2 3F				ldx #stdTileHeight
+   322 28C5 A0 00				ldy #0
+   323 28C7			clearOnlyNextScanC		
+   324 28C7 A9 00				lda #0
+   325 28C9 91 D4				sta (vramIndex),y
+   326 28CB C8					iny
+   327 28CC 91 D4				sta (vramIndex),y
+   328 28CE C8					iny
+   329 28CF 91 D4				sta (vramIndex),y
+   330 28D1 C8					iny
+   331 28D2 91 D4				sta (vramIndex),y
+   332 28D4 CA					dex
+   333 28D5 F0 0C				beq clearOnlyEnd
+   334 28D7 98					tya
+   335 28D8 38					sec
+   336 28D9 E9 2B				sbc #scanBytes+3
+   337 28DB A8					tay
+   338 28DC B0 E9				bcs clearOnlyNextScanC
+   339 28DE C6 D5				dec vramIndex+1
+   340 28E0 4C C7 28				jmp clearOnlyNextScanC
+   341 28E3			clearOnlyEnd		
+   342 28E3 60					rts
+   343 						
+   344 28E4			clearAndDrawC
+   345 28E4 AE 00 06				ldx timesTrackIndex
+   346 28E7 9D 06 06				sta timesTrackBase,x
+   347 28EA EE 00 06				inc timesTrackIndex
+   348 					
+   349 28ED AA					tax
+   350 28EE BD EA 31				lda tilesL,x
+   351 28F1 85 D2				sta tileIndex
+   352 28F3 BD 9A 32				lda tilesH,x
+   353 28F6 85 D3				sta tileIndex+1
+   354 						
+   355 28F8 A0 01				ldy #1
+   356 28FA 38					sec
+   357 28FB A9 3F				lda #stdTileHeight
+   358 28FD F1 D2				sbc (tileIndex),y
+   359 28FF F0 32				beq tileCIsFullSize
+   360
+   361 2901 8D A5 2D				sta tileHeight
+   362 2904 A5 D4				lda vramIndex
+   363 2906 48					pha
+   364 2907 A5 D5				lda vramIndex+1
+   365 2909 48					pha
+   366 290A			clearNextScanC		
+   367 290A 38					sec
+   368 290B A5 D4				lda vramIndex
+   369 290D E9 28				sbc #scanBytes
+   370 290F 85 D4				sta vramIndex
+   371 2911 A5 D5				lda vramIndex+1
+   372 2913 E9 00				sbc #0
+   373 2915 85 D5				sta vramIndex+1
+   374 						
+   375 2917 A9 00				lda #0
+   376 2919 A0 00				ldy #0
+   377 291B 91 D4				sta (vramIndex),y
+   378 291D C8					iny
+   379 291E 91 D4				sta (vramIndex),y
+   380 2920 C8					iny
+   381 2921 91 D4				sta (vramIndex),y
+   382 2923 C8					iny
+   383 2924 91 D4				sta (vramIndex),y
+   384 2926 CE A5 2D				dec tileHeight
+   385 2929 D0 DF				bne clearNextScanC
+   386 292B 68					pla
+   387 292C 85 D5				sta vramIndex+1
+   388 292E 68					pla
+   389 292F 85 D4				sta vramIndex
+   390 2931 A0 01				ldy #1
+   391 						
+   392 2933			tileCIsFullSize		
+   393 2933 B1 D2				lda (tileIndex),y
+   394 2935 AA					tax
+   395 2936 18					clc
+   396 2937 A5 D2				lda tileIndex
+   397 2939 69 02				adc #2
+   398 293B 85 D2				sta tileIndex
+   399 293D 90 02				bcc copyTileCScan
+   400 293F E6 D3				inc tileIndex+1
+   401 						
+   402 2941			copyTileCScan
+   403 2941 A0 00				ldy #0
+   404 2943 B1 D2				lda (tileIndex),y
+   405 2945 91 D4				sta (vramIndex),y
+   406 2947 C8					iny
+   407 2948 B1 D2				lda (tileIndex),y
+   408 294A 91 D4				sta (vramIndex),y
+   409 294C C8					iny
+   410 294D B1 D2				lda (tileIndex),y
+   411 294F 91 D4				sta (vramIndex),y
+   412 2951 C8					iny
+   413 2952 B1 D2				lda (tileIndex),y
+   414 2954 91 D4				sta (vramIndex),y
+   415 2956 C8					iny
+   416 						
+   417 2957 18					clc
+   418 2958 A5 D2				lda tileIndex
+   419 295A 69 04				adc #4
+   420 295C 85 D2				sta tileIndex
+   421 295E 90 03				bcc incVRAMIndexC
+   422 2960 E6 D3				inc tileIndex+1
+   423 2962 18					clc
+   424 2963			incVRAMIndexC		
+   425 2963 A5 D4				lda vramIndex
+   426 2965 69 28				adc #40
+   427 2967 85 D4				sta vramIndex
+   428 2969 90 02				bcc evalNextScanC
+   429 296B E6 D5				inc vramIndex+1
+   430 296D			evalNextScanC
+   431 296D CA					dex
+   432 296E D0 D1				bne copyTileCScan
+   433 2970			drawTileCEnd	
+   434 2970 60					rts
+   169
+   170 2971					icl "sprite.asm"
+     1
+     2 2971			drawKid
+     3 2971 AD F5 2A				lda kidX
+     4 2974 29 FC				and #$FC
+     5 2976 18					clc
+     6 2977 6A					ror 
+     7 2978 6A					ror 
+     8 2979 8D F7 2A				sta kidXOffset
+     9 						
+    10 297C 38					sec
+    11 297D AD F6 2A				lda kidY
+    12 2980 ED 7C 4C				sbc spriteHeight
+    13 2983 AA					tax
+    14 2984 18					clc
+    15 2985 BD EB 4A				lda heightLookupL,x
+    16 2988 6D 7E 4C				adc vramBuffer
+    17 298B 85 D4				sta vramIndex
+    18 298D BD B3 4B				lda heightLookupH,x
+    19 2990 6D 7F 4C				adc vramBuffer+1
+    20 2993 85 D5				sta vramIndex+1
+    21 						
+    22 2995 18					clc
+    23 2996 A5 D4				lda vramIndex
+    24 2998 6D F7 2A				adc kidXOffset
+    25 299B 85 D4				sta vramIndex
+    26 299D 90 02				bcc spriteCopyScan
+    27 299F E6 D5				inc vramIndex+1
+    28 						
+    29 29A1			spriteCopyScan		
+    30 29A1 AC 7B 4C				ldy spriteWidth
+    31 29A4 88					dey
+    32 29A5			spriteCopyByte		
+    33 29A5 B1 D6				lda (spriteIndex),y
+    34 29A7 AA					tax
+    35 29A8 B1 D4				lda (vramIndex),y
+    36 29AA 3D EA 2B				and autoMaskTable,x
+    37 29AD 11 D6				ora (spriteIndex),y
+    38 29AF 91 D4				sta (vramIndex),y
+    39 29B1 88					dey
+    40 29B2 10 F1				bpl spriteCopyByte
+    41 						
+    42 29B4 18					clc
+    43 29B5 A5 D6				lda spriteIndex
+    44 29B7 6D 7B 4C				adc spriteWidth
+    45 29BA 85 D6				sta spriteIndex
+    46 29BC 90 02				bcc noSpriteWidthOverflow
+    47 29BE E6 D7				inc spriteIndex+1
+    48 						
+    49 29C0			noSpriteWidthOverflow		
+    50 29C0 18					clc
+    51 29C1 A5 D4				lda vramIndex
+    52 29C3 69 28				adc #scanBytes
+    53 29C5 85 D4				sta vramIndex
+    54 29C7 90 02				bcc noSpriteVramOverflow
+    55 29C9 E6 D5				inc vramIndex+1
+    56 29CB			noSpriteVramOverflow
+    57 29CB CE 7C 4C				dec spriteHeight
+    58 29CE D0 D1				bne spriteCopyScan		
+    59 29D0 60					rts
+    60
+    61 29D1			kidPreRender
+    62 29D1 AE F8 2A				ldx kidFrameIndex
+    63 29D4 BD FA 2A				lda kid_framesL,x
+    64 29D7 85 D6				sta spriteIndex
+    65 29D9 BD FB 2A				lda kid_framesH,x
+    66 29DC 85 D7				sta spriteIndex+1
+    67 						
+    68 29DE A0 00				ldy #0
+    69 29E0 B1 D6				lda (spriteIndex),y ; sprite width
+    70 29E2 8D 7B 4C				sta spriteWidth
+    71 29E5 C8					iny
+    72 29E6 B1 D6				lda (spriteIndex),y ; sprite height
+    73 29E8 8D 7C 4C				sta spriteHeight
+    74 						
+    75 29EB 18					clc
+    76 29EC A5 D6				lda spriteIndex
+    77 29EE 69 02				adc #2
+    78 29F0 85 D6				sta spriteIndex
+    79 29F2 90 02				bcc kidSaveLastBounds
+    80 29F4 E6 D7				inc spriteIndex+1
+    81
+    82
+    83 29F6			kidSaveLastBounds
+    84 29F6 AD 80 4C				lda boundsKidCurrent
+    85 29F9 8D 84 4C				sta boundsKidPrev
+    86 29FC AD 81 4C				lda boundsKidCurrent+1
+    87 29FF 8D 85 4C				sta boundsKidPrev+1
+    88 2A02 AD 82 4C				lda boundsKidCurrent+2
+    89 2A05 8D 86 4C				sta boundsKidPrev+2
+    90 2A08 AD 83 4C				lda boundsKidCurrent+3
+    91 2A0B 8D 87 4C				sta boundsKidPrev+3
+    92
+    93 				; Save current kid bounds		
+    94 2A0E AD F5 2A				lda kidX
+    95 2A11 8D 80 4C				sta boundsKidCurrent
+    96 2A14 AD 7B 4C				lda spriteWidth
+    97 2A17 0A					asl
+    98 2A18 0A					asl
+    99 2A19 18					clc
+   100 2A1A 6D F5 2A				adc kidX
+   101 2A1D 8D 81 4C				sta boundsKidCurrent+1
+   102 						
+   103 2A20 AD F6 2A				lda kidY
+   104 2A23 8D 83 4C				sta boundsKidCurrent+3
+   105 2A26 38					sec
+   106 2A27 ED 7C 4C				sbc spriteHeight
+   107 2A2A 8D 82 4C				sta boundsKidCurrent+2
+   108
+   109 				; Step 1 calc max bounds between prev and current bounds
+   110 				; Step 2 transform bounds to block positions
+   111 				; Step 3 mark dirty blocks
+   112 				; Step 4 notify changes
+   113
+   114 2A2D			kidUpdateDirtyBlocks
+   115 2A2D AD 84 4C				lda boundsKidPrev		; x1 = min(prevX1, currentX1)
+   116 2A30 CD 80 4C				cmp boundsKidCurrent
+   117 2A33 B0 03				bcs kidUseX1			
+   118 2A35 AA					tax
+   119 2A36 90 03				bcc kidUsePrevX1
+   120 2A38			kidUseX1		
+   121 2A38 AE 80 4C				ldx boundsKidCurrent
+   122 2A3B			kidUsePrevX1		
+   123 2A3B 8E 88 4C				stx boundsKid
+   124 						
+   125 2A3E AD 85 4C				lda boundsKidPrev+1		; x2 = max(prevX2, currentX2)
+   126 2A41 CD 81 4C				cmp boundsKidCurrent+1
+   127 2A44 90 03				bcc kidUseX2
+   128 2A46 AA					tax
+   129 2A47 B0 03				bcs kidUsePrevX2
+   130 2A49			kidUseX2
+   131 2A49 AE 81 4C				ldx boundsKidCurrent+1
+   132 2A4C			kidUsePrevX2
+   133 2A4C 8E 89 4C				stx boundsKid+1
+   134
+   135 2A4F AD 86 4C				lda boundsKidPrev+2		; y1 = min(prevY1, currentY1)
+   136 2A52 CD 82 4C				cmp boundsKidCurrent+2
+   137 2A55 B0 03				bcs kidUseY1
+   138 2A57 AA					tax
+   139 2A58 90 03				bcc kidUsePrevY1
+   140 2A5A			kidUseY1		
+   141 2A5A AE 82 4C				ldx boundsKidCurrent+2
+   142 2A5D			kidUsePrevY1		
+   143 2A5D 8E 8A 4C				stx boundsKid+2
+   144 						
+   145 2A60 AD 87 4C				lda boundsKidPrev+3		; y2 = max(prevY2, currentY2)
+   146 2A63 CD 83 4C				cmp boundsKidCurrent+3
+   147 2A66 90 03				bcc kidUseY2
+   148 2A68 AA					tax
+   149 2A69 B0 03				bcs kidUsePrevY2
+   150 2A6B			kidUseY2
+   151 2A6B AE 83 4C				ldx boundsKidCurrent+3
+   152 2A6E			kidUsePrevY2
+   153 2A6E 8E 8B 4C				stx boundsKid+3
+   154 						
+   155 						; block x1 = x1 / 16
+   156 2A71 AD 88 4C				lda boundsKid
+   157 2A74 29 F0				and #$F0
+   158 2A76 18					clc
+   159 2A77 6A					ror 
+   160 2A78 6A					ror 
+   161 2A79 6A					ror 
+   162 2A7A 6A					ror 
+   163 2A7B 8D 8C 4C				sta dirtyBlockX1
+   164 						
+   165 						; block x2 = (x2-1) / 16  (width=1 means x1==x2)
+   166 2A7E AD 89 4C				lda boundsKid+1
+   167 2A81 38					sec
+   168 2A82 E9 01				sbc #1
+   169 2A84 29 F0				and #$F0
+   170 2A86 18					clc
+   171 2A87 6A					ror 
+   172 2A88 6A					ror 
+   173 2A89 6A					ror 
+   174 2A8A 6A					ror 
+   175 2A8B 69 01				adc #1
+   176 2A8D 8D 8D 4C				sta dirtyBlockX2
+   177
+   178 						; block y1 = (y1 - 3 - 1) / 63  (height=1 means y1==y2)
+   179
+   180 2A90 AD 8A 4C				lda boundsKid+2
+   181 2A93 A2 00				ldx #0
+   182 2A95 38					sec
+   183 2A96 E9 02				sbc #2		; TODO handle top row
+   184 2A98 E9 3F				sbc #63
+   185 2A9A 30 06				bmi boundY1Found
+   186 2A9C E8					inx
+   187 2A9D E9 3F				sbc #63
+   188 2A9F 30 01				bmi boundY1Found
+   189 2AA1 E8					inx
+   190 2AA2			boundY1Found
+   191 2AA2 8E 8E 4C				stx dirtyBlockY1
+   192 						
+   193 2AA5 AD 8B 4C				lda boundsKid+3
+   194 2AA8 A2 00				ldx #0
+   195 2AAA 38					sec
+   196 2AAB E9 03				sbc #3
+   197 2AAD E9 3F				sbc #63
+   198 2AAF 30 06				bmi boundY2Found
+   199 2AB1 E8					inx
+   200 2AB2 E9 3F				sbc #63
+   201 2AB4 30 01				bmi boundY2Found
+   202 2AB6 E8					inx
+   203 2AB7			boundY2Found
+   204 2AB7 E8					inx
+   205 2AB8 8E 8F 4C				stx dirtyBlockY2
+   206 						;.byte 2
+   207 						
+   208 2ABB			dirtyBlockNextRow		
+   209 2ABB A9 14				lda #levelTilesPerRow*2
+   210 2ABD A2 00				ldx #0
+   211 						
+   212 2ABF EC 8E 4C				cpx dirtyBlockY1
+   213 2AC2 F0 0C				beq foundRowStart
+   214 2AC4 38					sec
+   215 2AC5 E9 0A				sbc #levelTilesPerRow 
+   216 2AC7 E8					inx
+   217 2AC8 EC 8E 4C				cpx dirtyBlockY1
+   218 2ACB F0 03				beq foundRowStart
+   219 2ACD 38					sec
+   220 2ACE E9 0A				sbc #levelTilesPerRow
+   221 						
+   222 2AD0			foundRowStart
+   223 						;.byte 2
+   224 2AD0 18					clc
+   225 2AD1 6D 8C 4C				adc dirtyBlockX1
+   226 2AD4 A8					tay
+   227 						
+   228 2AD5 AE 8C 4C				ldx dirtyBlockX1
+   229 2AD8 A9 01				lda #1
+   230 2ADA			dirtyNextBlock		
+   231 2ADA 99 B8 31				sta render_dirty_blocks,y
+   232 2ADD C8					iny
+   233 2ADE E8					inx
+   234 2ADF EC 8D 4C				cpx dirtyBlockX2
+   235 2AE2 D0 F6				bne dirtyNextBlock
+   236 						
+   237 2AE4 EE 8E 4C				inc dirtyBlockY1
+   238 2AE7 AD 8E 4C				lda dirtyBlockY1
+   239 2AEA CD 8F 4C				cmp dirtyBlockY2
+   240 2AED D0 CC				bne dirtyBlockNextRow
+   241 						
+   242 2AEF A9 01				lda #1
+   243 2AF1 8D CC 23				sta levelScreenDirty
+   244 2AF4 60					rts
+   245 						
+   246
+   247 						
+   248 						
+   249 								
+   250
+   251 2AF5 0F			kidX			.byte 15
+   252 2AF6 A6			kidY			.byte 166
+   253 2AF7 00			kidXOffset		.byte 0
+   254 2AF8 00			kidFrameIndex 	.byte 0
+   255 2AF9 00			kidTop			.byte 0
+   256
+   257
+   258 2AFA FC			kid_framesL		.byte <kid_22
+   259 2AFB 2A			kid_framesH		.byte >kid_22
+   260
+   261 2AFC 05 27 3F 00 00 00 + kid_22		ins "images/kid/sprite_22.pic"
+   171 2BC1					icl "mask.asm"
+     1
+     2 2BC1 A2 00		genAutoMaskTable ldx #0
+     3 						
+     4 2BC3			nextAutoMask		
+     5 2BC3 8A					txa
+     6 2BC4 29 AA				and #$AA
+     7 2BC6 8D E9 2B				sta autoMaskBuffer
+     8 2BC9 18					clc
+     9 2BCA 6A					ror
+    10 2BCB 0D E9 2B				ora autoMaskBuffer
+    11 2BCE 8D E9 2B				sta autoMaskBuffer
+    12 2BD1 8A					txa
+    13 2BD2 29 55				and #$55
+    14 2BD4 0D E9 2B				ora autoMaskBuffer
+    15 2BD7 8D E9 2B				sta autoMaskBuffer
+    16 2BDA 29 55				and #$55
+    17 2BDC 0A					asl
+    18 2BDD 0D E9 2B				ora autoMaskBuffer
+    19 2BE0 49 FF				eor #255
+    20 2BE2 9D EA 2B				sta autoMaskTable,x
+    21 2BE5 E8					inx
+    22 2BE6 D0 DB				bne nextAutoMask
+    23 2BE8 60					rts
+    24 								
+    25
+    26
+    27
+    28 2BE9 00			autoMaskBuffer	.byte 0
+    29 				autoMaskTable	.rept 256
+    30 								.BYTE 0
+    31 								.ENDR
+    31 								.endr
+Source: REPT
+    30 2BEA 00							.BYTE 0
+    30 2BEB 00							.BYTE 0
+    30 2BEC 00							.BYTE 0
+    30 2BED 00							.BYTE 0
+    30 2BEE 00							.BYTE 0
+    30 2BEF 00							.BYTE 0
+    30 2BF0 00							.BYTE 0
+    30 2BF1 00							.BYTE 0
+    30 2BF2 00							.BYTE 0
+    30 2BF3 00							.BYTE 0
+    30 2BF4 00							.BYTE 0
+    30 2BF5 00							.BYTE 0
+    30 2BF6 00							.BYTE 0
+    30 2BF7 00							.BYTE 0
+    30 2BF8 00							.BYTE 0
+    30 2BF9 00							.BYTE 0
+    30 2BFA 00							.BYTE 0
+    30 2BFB 00							.BYTE 0
+    30 2BFC 00							.BYTE 0
+    30 2BFD 00							.BYTE 0
+    30 2BFE 00							.BYTE 0
+    30 2BFF 00							.BYTE 0
+    30 2C00 00							.BYTE 0
+    30 2C01 00							.BYTE 0
+    30 2C02 00							.BYTE 0
+    30 2C03 00							.BYTE 0
+    30 2C04 00							.BYTE 0
+    30 2C05 00							.BYTE 0
+    30 2C06 00							.BYTE 0
+    30 2C07 00							.BYTE 0
+    30 2C08 00							.BYTE 0
+    30 2C09 00							.BYTE 0
+    30 2C0A 00							.BYTE 0
+    30 2C0B 00							.BYTE 0
+    30 2C0C 00							.BYTE 0
+    30 2C0D 00							.BYTE 0
+    30 2C0E 00							.BYTE 0
+    30 2C0F 00							.BYTE 0
+    30 2C10 00							.BYTE 0
+    30 2C11 00							.BYTE 0
+    30 2C12 00							.BYTE 0
+    30 2C13 00							.BYTE 0
+    30 2C14 00							.BYTE 0
+    30 2C15 00							.BYTE 0
+    30 2C16 00							.BYTE 0
+    30 2C17 00							.BYTE 0
+    30 2C18 00							.BYTE 0
+    30 2C19 00							.BYTE 0
+    30 2C1A 00							.BYTE 0
+    30 2C1B 00							.BYTE 0
+    30 2C1C 00							.BYTE 0
+    30 2C1D 00							.BYTE 0
+    30 2C1E 00							.BYTE 0
+    30 2C1F 00							.BYTE 0
+    30 2C20 00							.BYTE 0
+    30 2C21 00							.BYTE 0
+    30 2C22 00							.BYTE 0
+    30 2C23 00							.BYTE 0
+    30 2C24 00							.BYTE 0
+    30 2C25 00							.BYTE 0
+    30 2C26 00							.BYTE 0
+    30 2C27 00							.BYTE 0
+    30 2C28 00							.BYTE 0
+    30 2C29 00							.BYTE 0
+    30 2C2A 00							.BYTE 0
+    30 2C2B 00							.BYTE 0
+    30 2C2C 00							.BYTE 0
+    30 2C2D 00							.BYTE 0
+    30 2C2E 00							.BYTE 0
+    30 2C2F 00							.BYTE 0
+    30 2C30 00							.BYTE 0
+    30 2C31 00							.BYTE 0
+    30 2C32 00							.BYTE 0
+    30 2C33 00							.BYTE 0
+    30 2C34 00							.BYTE 0
+    30 2C35 00							.BYTE 0
+    30 2C36 00							.BYTE 0
+    30 2C37 00							.BYTE 0
+    30 2C38 00							.BYTE 0
+    30 2C39 00							.BYTE 0
+    30 2C3A 00							.BYTE 0
+    30 2C3B 00							.BYTE 0
+    30 2C3C 00							.BYTE 0
+    30 2C3D 00							.BYTE 0
+    30 2C3E 00							.BYTE 0
+    30 2C3F 00							.BYTE 0
+    30 2C40 00							.BYTE 0
+    30 2C41 00							.BYTE 0
+    30 2C42 00							.BYTE 0
+    30 2C43 00							.BYTE 0
+    30 2C44 00							.BYTE 0
+    30 2C45 00							.BYTE 0
+    30 2C46 00							.BYTE 0
+    30 2C47 00							.BYTE 0
+    30 2C48 00							.BYTE 0
+    30 2C49 00							.BYTE 0
+    30 2C4A 00							.BYTE 0
+    30 2C4B 00							.BYTE 0
+    30 2C4C 00							.BYTE 0
+    30 2C4D 00							.BYTE 0
+    30 2C4E 00							.BYTE 0
+    30 2C4F 00							.BYTE 0
+    30 2C50 00							.BYTE 0
+    30 2C51 00							.BYTE 0
+    30 2C52 00							.BYTE 0
+    30 2C53 00							.BYTE 0
+    30 2C54 00							.BYTE 0
+    30 2C55 00							.BYTE 0
+    30 2C56 00							.BYTE 0
+    30 2C57 00							.BYTE 0
+    30 2C58 00							.BYTE 0
+    30 2C59 00							.BYTE 0
+    30 2C5A 00							.BYTE 0
+    30 2C5B 00							.BYTE 0
+    30 2C5C 00							.BYTE 0
+    30 2C5D 00							.BYTE 0
+    30 2C5E 00							.BYTE 0
+    30 2C5F 00							.BYTE 0
+    30 2C60 00							.BYTE 0
+    30 2C61 00							.BYTE 0
+    30 2C62 00							.BYTE 0
+    30 2C63 00							.BYTE 0
+    30 2C64 00							.BYTE 0
+    30 2C65 00							.BYTE 0
+    30 2C66 00							.BYTE 0
+    30 2C67 00							.BYTE 0
+    30 2C68 00							.BYTE 0
+    30 2C69 00							.BYTE 0
+    30 2C6A 00							.BYTE 0
+    30 2C6B 00							.BYTE 0
+    30 2C6C 00							.BYTE 0
+    30 2C6D 00							.BYTE 0
+    30 2C6E 00							.BYTE 0
+    30 2C6F 00							.BYTE 0
+    30 2C70 00							.BYTE 0
+    30 2C71 00							.BYTE 0
+    30 2C72 00							.BYTE 0
+    30 2C73 00							.BYTE 0
+    30 2C74 00							.BYTE 0
+    30 2C75 00							.BYTE 0
+    30 2C76 00							.BYTE 0
+    30 2C77 00							.BYTE 0
+    30 2C78 00							.BYTE 0
+    30 2C79 00							.BYTE 0
+    30 2C7A 00							.BYTE 0
+    30 2C7B 00							.BYTE 0
+    30 2C7C 00							.BYTE 0
+    30 2C7D 00							.BYTE 0
+    30 2C7E 00							.BYTE 0
+    30 2C7F 00							.BYTE 0
+    30 2C80 00							.BYTE 0
+    30 2C81 00							.BYTE 0
+    30 2C82 00							.BYTE 0
+    30 2C83 00							.BYTE 0
+    30 2C84 00							.BYTE 0
+    30 2C85 00							.BYTE 0
+    30 2C86 00							.BYTE 0
+    30 2C87 00							.BYTE 0
+    30 2C88 00							.BYTE 0
+    30 2C89 00							.BYTE 0
+    30 2C8A 00							.BYTE 0
+    30 2C8B 00							.BYTE 0
+    30 2C8C 00							.BYTE 0
+    30 2C8D 00							.BYTE 0
+    30 2C8E 00							.BYTE 0
+    30 2C8F 00							.BYTE 0
+    30 2C90 00							.BYTE 0
+    30 2C91 00							.BYTE 0
+    30 2C92 00							.BYTE 0
+    30 2C93 00							.BYTE 0
+    30 2C94 00							.BYTE 0
+    30 2C95 00							.BYTE 0
+    30 2C96 00							.BYTE 0
+    30 2C97 00							.BYTE 0
+    30 2C98 00							.BYTE 0
+    30 2C99 00							.BYTE 0
+    30 2C9A 00							.BYTE 0
+    30 2C9B 00							.BYTE 0
+    30 2C9C 00							.BYTE 0
+    30 2C9D 00							.BYTE 0
+    30 2C9E 00							.BYTE 0
+    30 2C9F 00							.BYTE 0
+    30 2CA0 00							.BYTE 0
+    30 2CA1 00							.BYTE 0
+    30 2CA2 00							.BYTE 0
+    30 2CA3 00							.BYTE 0
+    30 2CA4 00							.BYTE 0
+    30 2CA5 00							.BYTE 0
+    30 2CA6 00							.BYTE 0
+    30 2CA7 00							.BYTE 0
+    30 2CA8 00							.BYTE 0
+    30 2CA9 00							.BYTE 0
+    30 2CAA 00							.BYTE 0
+    30 2CAB 00							.BYTE 0
+    30 2CAC 00							.BYTE 0
+    30 2CAD 00							.BYTE 0
+    30 2CAE 00							.BYTE 0
+    30 2CAF 00							.BYTE 0
+    30 2CB0 00							.BYTE 0
+    30 2CB1 00							.BYTE 0
+    30 2CB2 00							.BYTE 0
+    30 2CB3 00							.BYTE 0
+    30 2CB4 00							.BYTE 0
+    30 2CB5 00							.BYTE 0
+    30 2CB6 00							.BYTE 0
+    30 2CB7 00							.BYTE 0
+    30 2CB8 00							.BYTE 0
+    30 2CB9 00							.BYTE 0
+    30 2CBA 00							.BYTE 0
+    30 2CBB 00							.BYTE 0
+    30 2CBC 00							.BYTE 0
+    30 2CBD 00							.BYTE 0
+    30 2CBE 00							.BYTE 0
+    30 2CBF 00							.BYTE 0
+    30 2CC0 00							.BYTE 0
+    30 2CC1 00							.BYTE 0
+    30 2CC2 00							.BYTE 0
+    30 2CC3 00							.BYTE 0
+    30 2CC4 00							.BYTE 0
+    30 2CC5 00							.BYTE 0
+    30 2CC6 00							.BYTE 0
+    30 2CC7 00							.BYTE 0
+    30 2CC8 00							.BYTE 0
+    30 2CC9 00							.BYTE 0
+    30 2CCA 00							.BYTE 0
+    30 2CCB 00							.BYTE 0
+    30 2CCC 00							.BYTE 0
+    30 2CCD 00							.BYTE 0
+    30 2CCE 00							.BYTE 0
+    30 2CCF 00							.BYTE 0
+    30 2CD0 00							.BYTE 0
+    30 2CD1 00							.BYTE 0
+    30 2CD2 00							.BYTE 0
+    30 2CD3 00							.BYTE 0
+    30 2CD4 00							.BYTE 0
+    30 2CD5 00							.BYTE 0
+    30 2CD6 00							.BYTE 0
+    30 2CD7 00							.BYTE 0
+    30 2CD8 00							.BYTE 0
+    30 2CD9 00							.BYTE 0
+    30 2CDA 00							.BYTE 0
+    30 2CDB 00							.BYTE 0
+    30 2CDC 00							.BYTE 0
+    30 2CDD 00							.BYTE 0
+    30 2CDE 00							.BYTE 0
+    30 2CDF 00							.BYTE 0
+    30 2CE0 00							.BYTE 0
+    30 2CE1 00							.BYTE 0
+    30 2CE2 00							.BYTE 0
+    30 2CE3 00							.BYTE 0
+    30 2CE4 00							.BYTE 0
+    30 2CE5 00							.BYTE 0
+    30 2CE6 00							.BYTE 0
+    30 2CE7 00							.BYTE 0
+    30 2CE8 00							.BYTE 0
+    30 2CE9 00							.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/mask.asm
+    32 							
+   172 2CEA					icl "utils.asm"
+     1
+     2 				; Generic memcpy optimized for speed. No overlapping 
+     3 				; fcatrin@gmail.com
+     4 				;
+     5 				; Copy operation is divided in two parts.  N is the total length 
+     6 				; * memcpyLong  for N / 256 blocks
+     7 				; * memcpyShort for N % 256 remaining bytes
+     8
+     9 2CEA			memcpy
+    10 2CEA A0 00				ldy #0
+    11 2CEC A6 DB				ldx memcpyLen+1
+    12 2CEE F0 11				beq memcpyShort		; we need only the short version for <1 pages
+    13 						
+    14 2CF0			memcpyLoopLong				; copy X pages
+    15 2CF0 B1 D6				lda (memcpySrc),y
+    16 2CF2 91 D8				sta (memcpyDst),y
+    17 2CF4 C8					iny
+    18 2CF5 D0 F9				bne memcpyLoopLong
+    19 2CF7 CA					dex
+    20 2CF8 F0 07				beq memcpyShort
+    21 2CFA E6 D7				inc memcpySrc+1
+    22 2CFC E6 D9				inc memcpyDst+1
+    23 2CFE 4C F0 2C				jmp memcpyLoopLong			
+    24 						
+    25 2D01			memcpyShort					; short copy if N % 256 != 0
+    26 2D01 A6 DA				ldx memcpyLen
+    27 2D03 F0 08				beq memcpyEnd
+    28
+    29 2D05			memcpyLoopShort				; copy X bytes
+    30 2D05 B1 D6				lda (memcpySrc),y
+    31 2D07 91 D8				sta (memcpyDst),y
+    32 2D09 C8					iny
+    33 2D0A CA					dex
+    34 2D0B D0 F8				bne memcpyLoopShort
+    35 						
+    36 2D0D			memcpyEnd
+    37 2D0D 60					rts		
+   173 2D0E					icl "input.asm"
+     1
+     2 2D0E			inputHandler		
+     3 2D0E AD FC 02				lda key_input
+     4 2D11 CD A3 2D				cmp key_last
+     5 2D14 F0 28				beq inputHandlerEnd
+     6 2D16 8D A3 2D				sta key_last
+     7 2D19 A2 FF				ldx #255
+     8 2D1B 8E FC 02				stx key_input
+     9 						
+    10 2D1E C9 2E				cmp #key_w
+    11 2D20 F0 1D				beq showScreenUp
+    12 2D22 C9 3E				cmp #key_s
+    13 2D24 F0 22				beq showScreenDown
+    14 2D26 C9 3F				cmp #key_a
+    15 2D28 F0 27				beq showScreenLeft
+    16 2D2A C9 3A				cmp #key_d
+    17 2D2C F0 2C				beq showScreenRight
+    18 2D2E C9 01				cmp #key_j
+    19 2D30 F0 31				beq moveSpriteRight
+    20 2D32 C9 3D				cmp #key_g
+    21 2D34 F0 3A				beq moveSpriteLeft
+    22 2D36 C9 2B				cmp #key_y
+    23 2D38 F0 56				beq moveSpriteUp
+    24 2D3A C9 39				cmp #key_h
+    25 2D3C F0 45				beq moveSpriteDown
+    26 2D3E			inputHandlerEnd		
+    27 2D3E 60					rts
+    28 						
+    29 2D3F			showScreenUp
+    30 2D3F 20 67 08				jsr getScreenUp
+    31 2D42 20 E7 07				jsr changeScreen
+    32 2D45 4C 3E 2D				jmp inputHandlerEnd
+    33 						
+    34 2D48			showScreenDown
+    35 2D48 20 72 08				jsr getScreenDown
+    36 2D4B 20 E7 07				jsr changeScreen
+    37 2D4E 4C 3E 2D				jmp inputHandlerEnd
+    38 						
+    39 2D51			showScreenLeft
+    40 2D51 20 7E 08				jsr getScreenLeft
+    41 2D54 20 E7 07				jsr changeScreen
+    42 2D57 4C 3E 2D				jmp inputHandlerEnd
+    43 						
+    44 2D5A			showScreenRight
+    45 2D5A 20 87 08				jsr getScreenRight
+    46 2D5D 20 E7 07				jsr changeScreen
+    47 2D60 4C 3E 2D				jmp inputHandlerEnd
+    48
+    49 2D63			moveSpriteRight
+    50 2D63 AE F5 2A				ldx kidX
+    51 2D66 E8					inx
+    52 2D67 E0 A0				cpx #160
+    53 2D69 D0 0F				bne moveSpriteX
+    54 2D6B A2 00				ldx #0
+    55 2D6D 4C 7A 2D				jmp moveSpriteX		
+    56 						
+    57 2D70			moveSpriteLeft
+    58 2D70 AE F5 2A				ldx kidX
+    59 2D73 CA					dex
+    60 2D74 E0 FF				cpx #$FF
+    61 2D76 D0 02				bne moveSpriteX
+    62 2D78 A2 00				ldx #0
+    63 2D7A			moveSpriteX		
+    64 2D7A 8E F5 2A				stx kidX
+    65 2D7D 20 D1 29				jsr kidPreRender
+    66 2D80 4C 3E 2D				jmp inputHandlerEnd
+    67 						
+    68
+    69 2D83			moveSpriteDown
+    70 2D83 AE F6 2A				ldx kidY
+    71 2D86 E8					inx
+    72 2D87 E0 C8				cpx #200
+    73 2D89 D0 0F				bne moveSpriteY
+    74 2D8B A2 00				ldx #0
+    75 2D8D 4C 9A 2D				jmp moveSpriteY		
+    76 						
+    77 2D90			moveSpriteUp
+    78 2D90 AE F6 2A				ldx kidY
+    79 2D93 CA					dex
+    80 2D94 E0 FF				cpx #$FF
+    81 2D96 D0 02				bne moveSpriteY
+    82 2D98 A2 00				ldx #0
+    83 2D9A			moveSpriteY		
+    84 2D9A 8E F6 2A				stx kidY
+    85 2D9D 20 D1 29				jsr kidPreRender
+    86 2DA0 4C 3E 2D				jmp inputHandlerEnd
+    87
+    88
+    89
+    90 = 02FC			key_input   = 764
+    91 = 002E			key_w		= 46
+    92 = 003E			key_s		= 62
+    93 = 003F			key_a		= 63
+    94 = 003A			key_d		= 58
+    95 = 003D			key_g		= 61
+    96 = 0001			key_j		= 1
+    97 = 002B			key_y		= 43
+    98 = 0039			key_h		= 57
+    99
+   100
+   101 2DA3 00			key_last	.byte 0
+   174 2DA4					icl "level/bgdata.asm"
+     1 				; DATA
+     2
+     3 2DA4 00			tileWidth 		.byte 0
+     4 2DA5 00			tileHeight		.byte 0
+     5 2DA6 00			tileMaskDiff	.byte 0
+     6 2DA7 00			tileMaskTemp	.byte 0
+     7
+     8
+     9 2DA8 78 00 50 0A 28 14 + vramOffsets		.word tileBaseOffset, tileBaseOffset+tileScanBytes, tileBaseOffset+tileScanBytes*2,tileBaseOffset+tileScanBytes*3
+    10 2DB0 00 00		vramOffset		.word 0
+    11 2DB2 00 00		vramOffsetTemp	.word 0
+    12
+    13 2DB4 00 00 00 00 0A 00 + blockOffset .word 0, 0, 10, 20
+    14
+    15 2DBC 00 01 05 07 0A 01 + piecea	.byte $00, $01, $05, $07, $0a, $01, $01, $0a, $10, $00, $01, $01, $00, $14, $20, $4b
+    16 2DCC 01 00 00 01 00 97 + 		.byte $01, $00, $00, $01, $00, $97, $00, $01, $00, $a7, $a9, $aa, $ac, $ad, $00, $00
+    17 					
+    18 2DDC 00 02 06 08 0B 1B + pieceb	.byte $00, $02, $06, $08, $0b, $1b, $02, $9e, $1a, $1c, $02, $02, $9e, $4a, $21, $1b
+    19 2DEC 4D 4E 02 51 84 98 + 		.byte $4d, $4e, $02, $51, $84, $98, $02, $91, $92, $02, $00, $00, $00, $00, $00, $00
+    20
+    21 2DFC 00 00 00 00 00 00 + pieceay	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+    22 2E0C 00 00 00 00 00 00 + 		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+    23
+    24 2E1C 00 00 00 00 00 00 + pieceby	.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $FF
+    25 2E2C 00 00 00 00 00 00 + 		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+    26 						
+    27 2E3C 00 03 03 A4 03 03 + maska	.byte $00, $03, $03, $a4, $03, $03, $03, $03, $03, $00, $03, $03, $00, $03, $ff, $a6 
+    28 2E4C 03 00 00 03 00 A7 + 		.byte $03, $00, $00, $03, $00, $a7, $00, $03, $00, $03, $00, $00, $00, $00, $00, $00
+    29 						
+    30 2E5C 00 04 04 04 04 04 + maskb	.byte $00, $04, $04, $04, $04, $04, $04, $00, $04, $00, $04, $04, $00, $04, $ff, $04
+    31 2E6C 00 04 04 04 04 04 + 		.byte $00, $04, $04, $04, $04, $04, $04, $00, $04, $04, $00, $00, $00, $00, $00, $00
+    32 						
+    33 2E7C 00 00 00 09 0C 00 + piecec	.byte $00, $00, $00, $09, $0c, $00, $00, $9f, $00, $1d, $00, $00, $9f, $00, $00, $00
+    34 2E8C 4F 50 00 00 85 00 + 		.byte $4f, $50, $00, $00, $85, $00, $00, $93, $94, $00, $00, $00, $00, $00, $00, $00
+    35 						
+    36 2E9C 00 15 15 15 15 18 + pieced	.byte $00, $15, $15, $15, $15, $18, $19, $16, $15, $00, $15, $15, $17, $15, $15, $4c
+    37 2EAC 15 15 15 15 86 15 + 		.byte $15, $15, $15, $15, $86, $15, $15, $15, $15, $15, $ab, $00, $00, $00, $00, $00
+    38 						
+    39 2EBC 00 00 00 45 46 00 + piecef	.byte $00, $00, $00, $45, $46, $00, $00, $46, $48, $49, $87, $00, $46, $0f, $13, $00
+    40 2ECC 00 00 00 00 83 00 + 		.byte $00, $00, $00, $00, $83, $00, $00, $00, $00, $a8, $00, $ae, $ae, $ae, $00, $00
+    41
+    42 2EDC 00 00 00 A8 FF 00 + maskf	.byte $00, $00, $00, $a8, $ff, $00, $00, $00, $00, $00, $a5, $00, $00, $00, $ff, $00
+    43 2EEC 00 00 00 00 00 00 + 		.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00		
+    44
+    45 2EFC 00 00 00 01 01 01 + screenData	.byte 0, 0, 0, 1, 1, 1, 1, 1, 20, 20
+    46 2F06 13 13 01 03 00 14 + 			.byte 19, 19, 1, 3, 0, 20, 20, 20, 20,20
+    47 2F10 14 14 14 14 0E 03 + 			.byte 20, 20, 20, 20, 14, 3, 11, 1, 1, 20
+    48 2F1A			screenDataTop
+    49 						.rept levelTilesPerRow
+    50 						.BYTE 0
+    51 						.ENDR			
+    51 						.endr			
+Source: REPT
+    50 2F1A 00					.BYTE 0
+    50 2F1B 00					.BYTE 0
+    50 2F1C 00					.BYTE 0
+    50 2F1D 00					.BYTE 0
+    50 2F1E 00					.BYTE 0
+    50 2F1F 00					.BYTE 0
+    50 2F20 00					.BYTE 0
+    50 2F21 00					.BYTE 0
+    50 2F22 00					.BYTE 0
+    50 2F23 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    52
+    53 2F24 00 00 00 00 00 00 + xtestmap .byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    54 2F2E 00 00 00 00 00 00 + 		.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    55 2F38 0E 00 00 00 00 00 + 		.byte 14,0, 0, 0, 0, 0, 0, 0, 0, 0
+    56
+    57 2F42			render_piecea 
+    58 						.rept levelTilesPerScreen
+    59 						.BYTE 0
+    60 						.ENDR
+    60 						.endr
+Source: REPT
+    59 2F42 00					.BYTE 0
+    59 2F43 00					.BYTE 0
+    59 2F44 00					.BYTE 0
+    59 2F45 00					.BYTE 0
+    59 2F46 00					.BYTE 0
+    59 2F47 00					.BYTE 0
+    59 2F48 00					.BYTE 0
+    59 2F49 00					.BYTE 0
+    59 2F4A 00					.BYTE 0
+    59 2F4B 00					.BYTE 0
+    59 2F4C 00					.BYTE 0
+    59 2F4D 00					.BYTE 0
+    59 2F4E 00					.BYTE 0
+    59 2F4F 00					.BYTE 0
+    59 2F50 00					.BYTE 0
+    59 2F51 00					.BYTE 0
+    59 2F52 00					.BYTE 0
+    59 2F53 00					.BYTE 0
+    59 2F54 00					.BYTE 0
+    59 2F55 00					.BYTE 0
+    59 2F56 00					.BYTE 0
+    59 2F57 00					.BYTE 0
+    59 2F58 00					.BYTE 0
+    59 2F59 00					.BYTE 0
+    59 2F5A 00					.BYTE 0
+    59 2F5B 00					.BYTE 0
+    59 2F5C 00					.BYTE 0
+    59 2F5D 00					.BYTE 0
+    59 2F5E 00					.BYTE 0
+    59 2F5F 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    61
+    62 2F60			render_maska 
+    63 						.rept levelTilesPerScreen
+    64 						.BYTE 0
+    65 						.ENDR
+    65 						.endr
+Source: REPT
+    64 2F60 00					.BYTE 0
+    64 2F61 00					.BYTE 0
+    64 2F62 00					.BYTE 0
+    64 2F63 00					.BYTE 0
+    64 2F64 00					.BYTE 0
+    64 2F65 00					.BYTE 0
+    64 2F66 00					.BYTE 0
+    64 2F67 00					.BYTE 0
+    64 2F68 00					.BYTE 0
+    64 2F69 00					.BYTE 0
+    64 2F6A 00					.BYTE 0
+    64 2F6B 00					.BYTE 0
+    64 2F6C 00					.BYTE 0
+    64 2F6D 00					.BYTE 0
+    64 2F6E 00					.BYTE 0
+    64 2F6F 00					.BYTE 0
+    64 2F70 00					.BYTE 0
+    64 2F71 00					.BYTE 0
+    64 2F72 00					.BYTE 0
+    64 2F73 00					.BYTE 0
+    64 2F74 00					.BYTE 0
+    64 2F75 00					.BYTE 0
+    64 2F76 00					.BYTE 0
+    64 2F77 00					.BYTE 0
+    64 2F78 00					.BYTE 0
+    64 2F79 00					.BYTE 0
+    64 2F7A 00					.BYTE 0
+    64 2F7B 00					.BYTE 0
+    64 2F7C 00					.BYTE 0
+    64 2F7D 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    66
+    67 2F7E			render_piecea_offsetL 
+    68 						.rept levelTilesPerScreen
+    69 						.BYTE 0
+    70 						.ENDR
+    70 						.endr
+Source: REPT
+    69 2F7E 00					.BYTE 0
+    69 2F7F 00					.BYTE 0
+    69 2F80 00					.BYTE 0
+    69 2F81 00					.BYTE 0
+    69 2F82 00					.BYTE 0
+    69 2F83 00					.BYTE 0
+    69 2F84 00					.BYTE 0
+    69 2F85 00					.BYTE 0
+    69 2F86 00					.BYTE 0
+    69 2F87 00					.BYTE 0
+    69 2F88 00					.BYTE 0
+    69 2F89 00					.BYTE 0
+    69 2F8A 00					.BYTE 0
+    69 2F8B 00					.BYTE 0
+    69 2F8C 00					.BYTE 0
+    69 2F8D 00					.BYTE 0
+    69 2F8E 00					.BYTE 0
+    69 2F8F 00					.BYTE 0
+    69 2F90 00					.BYTE 0
+    69 2F91 00					.BYTE 0
+    69 2F92 00					.BYTE 0
+    69 2F93 00					.BYTE 0
+    69 2F94 00					.BYTE 0
+    69 2F95 00					.BYTE 0
+    69 2F96 00					.BYTE 0
+    69 2F97 00					.BYTE 0
+    69 2F98 00					.BYTE 0
+    69 2F99 00					.BYTE 0
+    69 2F9A 00					.BYTE 0
+    69 2F9B 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    71 2F9C			render_piecea_offsetH 
+    72 						.rept levelTilesPerScreen
+    73 						.BYTE 0
+    74 						.ENDR
+    74 						.endr
+Source: REPT
+    73 2F9C 00					.BYTE 0
+    73 2F9D 00					.BYTE 0
+    73 2F9E 00					.BYTE 0
+    73 2F9F 00					.BYTE 0
+    73 2FA0 00					.BYTE 0
+    73 2FA1 00					.BYTE 0
+    73 2FA2 00					.BYTE 0
+    73 2FA3 00					.BYTE 0
+    73 2FA4 00					.BYTE 0
+    73 2FA5 00					.BYTE 0
+    73 2FA6 00					.BYTE 0
+    73 2FA7 00					.BYTE 0
+    73 2FA8 00					.BYTE 0
+    73 2FA9 00					.BYTE 0
+    73 2FAA 00					.BYTE 0
+    73 2FAB 00					.BYTE 0
+    73 2FAC 00					.BYTE 0
+    73 2FAD 00					.BYTE 0
+    73 2FAE 00					.BYTE 0
+    73 2FAF 00					.BYTE 0
+    73 2FB0 00					.BYTE 0
+    73 2FB1 00					.BYTE 0
+    73 2FB2 00					.BYTE 0
+    73 2FB3 00					.BYTE 0
+    73 2FB4 00					.BYTE 0
+    73 2FB5 00					.BYTE 0
+    73 2FB6 00					.BYTE 0
+    73 2FB7 00					.BYTE 0
+    73 2FB8 00					.BYTE 0
+    73 2FB9 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    75
+    76 2FBA			render_pieceay 
+    77 						.rept levelTilesPerScreen
+    78 						.BYTE 0
+    79 						.ENDR
+    79 						.endr
+Source: REPT
+    78 2FBA 00					.BYTE 0
+    78 2FBB 00					.BYTE 0
+    78 2FBC 00					.BYTE 0
+    78 2FBD 00					.BYTE 0
+    78 2FBE 00					.BYTE 0
+    78 2FBF 00					.BYTE 0
+    78 2FC0 00					.BYTE 0
+    78 2FC1 00					.BYTE 0
+    78 2FC2 00					.BYTE 0
+    78 2FC3 00					.BYTE 0
+    78 2FC4 00					.BYTE 0
+    78 2FC5 00					.BYTE 0
+    78 2FC6 00					.BYTE 0
+    78 2FC7 00					.BYTE 0
+    78 2FC8 00					.BYTE 0
+    78 2FC9 00					.BYTE 0
+    78 2FCA 00					.BYTE 0
+    78 2FCB 00					.BYTE 0
+    78 2FCC 00					.BYTE 0
+    78 2FCD 00					.BYTE 0
+    78 2FCE 00					.BYTE 0
+    78 2FCF 00					.BYTE 0
+    78 2FD0 00					.BYTE 0
+    78 2FD1 00					.BYTE 0
+    78 2FD2 00					.BYTE 0
+    78 2FD3 00					.BYTE 0
+    78 2FD4 00					.BYTE 0
+    78 2FD5 00					.BYTE 0
+    78 2FD6 00					.BYTE 0
+    78 2FD7 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    80
+    81 2FD8			render_pieceb 
+    82 						.rept levelTilesPerScreen
+    83 						.BYTE 0
+    84 						.ENDR
+    84 						.endr
+Source: REPT
+    83 2FD8 00					.BYTE 0
+    83 2FD9 00					.BYTE 0
+    83 2FDA 00					.BYTE 0
+    83 2FDB 00					.BYTE 0
+    83 2FDC 00					.BYTE 0
+    83 2FDD 00					.BYTE 0
+    83 2FDE 00					.BYTE 0
+    83 2FDF 00					.BYTE 0
+    83 2FE0 00					.BYTE 0
+    83 2FE1 00					.BYTE 0
+    83 2FE2 00					.BYTE 0
+    83 2FE3 00					.BYTE 0
+    83 2FE4 00					.BYTE 0
+    83 2FE5 00					.BYTE 0
+    83 2FE6 00					.BYTE 0
+    83 2FE7 00					.BYTE 0
+    83 2FE8 00					.BYTE 0
+    83 2FE9 00					.BYTE 0
+    83 2FEA 00					.BYTE 0
+    83 2FEB 00					.BYTE 0
+    83 2FEC 00					.BYTE 0
+    83 2FED 00					.BYTE 0
+    83 2FEE 00					.BYTE 0
+    83 2FEF 00					.BYTE 0
+    83 2FF0 00					.BYTE 0
+    83 2FF1 00					.BYTE 0
+    83 2FF2 00					.BYTE 0
+    83 2FF3 00					.BYTE 0
+    83 2FF4 00					.BYTE 0
+    83 2FF5 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    85 2FF6			render_pieceby 
+    86 						.rept levelTilesPerScreen
+    87 						.BYTE 0
+    88 						.ENDR
+    88 						.endr
+Source: REPT
+    87 2FF6 00					.BYTE 0
+    87 2FF7 00					.BYTE 0
+    87 2FF8 00					.BYTE 0
+    87 2FF9 00					.BYTE 0
+    87 2FFA 00					.BYTE 0
+    87 2FFB 00					.BYTE 0
+    87 2FFC 00					.BYTE 0
+    87 2FFD 00					.BYTE 0
+    87 2FFE 00					.BYTE 0
+    87 2FFF 00					.BYTE 0
+    87 3000 00					.BYTE 0
+    87 3001 00					.BYTE 0
+    87 3002 00					.BYTE 0
+    87 3003 00					.BYTE 0
+    87 3004 00					.BYTE 0
+    87 3005 00					.BYTE 0
+    87 3006 00					.BYTE 0
+    87 3007 00					.BYTE 0
+    87 3008 00					.BYTE 0
+    87 3009 00					.BYTE 0
+    87 300A 00					.BYTE 0
+    87 300B 00					.BYTE 0
+    87 300C 00					.BYTE 0
+    87 300D 00					.BYTE 0
+    87 300E 00					.BYTE 0
+    87 300F 00					.BYTE 0
+    87 3010 00					.BYTE 0
+    87 3011 00					.BYTE 0
+    87 3012 00					.BYTE 0
+    87 3013 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    89 3014			render_maskb 
+    90 						.rept levelTilesPerScreen
+    91 						.BYTE 0
+    92 						.ENDR
+    92 						.endr
+Source: REPT
+    91 3014 00					.BYTE 0
+    91 3015 00					.BYTE 0
+    91 3016 00					.BYTE 0
+    91 3017 00					.BYTE 0
+    91 3018 00					.BYTE 0
+    91 3019 00					.BYTE 0
+    91 301A 00					.BYTE 0
+    91 301B 00					.BYTE 0
+    91 301C 00					.BYTE 0
+    91 301D 00					.BYTE 0
+    91 301E 00					.BYTE 0
+    91 301F 00					.BYTE 0
+    91 3020 00					.BYTE 0
+    91 3021 00					.BYTE 0
+    91 3022 00					.BYTE 0
+    91 3023 00					.BYTE 0
+    91 3024 00					.BYTE 0
+    91 3025 00					.BYTE 0
+    91 3026 00					.BYTE 0
+    91 3027 00					.BYTE 0
+    91 3028 00					.BYTE 0
+    91 3029 00					.BYTE 0
+    91 302A 00					.BYTE 0
+    91 302B 00					.BYTE 0
+    91 302C 00					.BYTE 0
+    91 302D 00					.BYTE 0
+    91 302E 00					.BYTE 0
+    91 302F 00					.BYTE 0
+    91 3030 00					.BYTE 0
+    91 3031 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    93 3032			render_pieceb_offsetL 
+    94 						.rept levelTilesPerScreen
+    95 						.BYTE 0
+    96 						.ENDR
+    96 						.endr
+Source: REPT
+    95 3032 00					.BYTE 0
+    95 3033 00					.BYTE 0
+    95 3034 00					.BYTE 0
+    95 3035 00					.BYTE 0
+    95 3036 00					.BYTE 0
+    95 3037 00					.BYTE 0
+    95 3038 00					.BYTE 0
+    95 3039 00					.BYTE 0
+    95 303A 00					.BYTE 0
+    95 303B 00					.BYTE 0
+    95 303C 00					.BYTE 0
+    95 303D 00					.BYTE 0
+    95 303E 00					.BYTE 0
+    95 303F 00					.BYTE 0
+    95 3040 00					.BYTE 0
+    95 3041 00					.BYTE 0
+    95 3042 00					.BYTE 0
+    95 3043 00					.BYTE 0
+    95 3044 00					.BYTE 0
+    95 3045 00					.BYTE 0
+    95 3046 00					.BYTE 0
+    95 3047 00					.BYTE 0
+    95 3048 00					.BYTE 0
+    95 3049 00					.BYTE 0
+    95 304A 00					.BYTE 0
+    95 304B 00					.BYTE 0
+    95 304C 00					.BYTE 0
+    95 304D 00					.BYTE 0
+    95 304E 00					.BYTE 0
+    95 304F 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+    97 3050			render_pieceb_offsetH 
+    98 						.rept levelTilesPerScreen
+    99 						.BYTE 0
+   100 						.ENDR
+   100 						.endr
+Source: REPT
+    99 3050 00					.BYTE 0
+    99 3051 00					.BYTE 0
+    99 3052 00					.BYTE 0
+    99 3053 00					.BYTE 0
+    99 3054 00					.BYTE 0
+    99 3055 00					.BYTE 0
+    99 3056 00					.BYTE 0
+    99 3057 00					.BYTE 0
+    99 3058 00					.BYTE 0
+    99 3059 00					.BYTE 0
+    99 305A 00					.BYTE 0
+    99 305B 00					.BYTE 0
+    99 305C 00					.BYTE 0
+    99 305D 00					.BYTE 0
+    99 305E 00					.BYTE 0
+    99 305F 00					.BYTE 0
+    99 3060 00					.BYTE 0
+    99 3061 00					.BYTE 0
+    99 3062 00					.BYTE 0
+    99 3063 00					.BYTE 0
+    99 3064 00					.BYTE 0
+    99 3065 00					.BYTE 0
+    99 3066 00					.BYTE 0
+    99 3067 00					.BYTE 0
+    99 3068 00					.BYTE 0
+    99 3069 00					.BYTE 0
+    99 306A 00					.BYTE 0
+    99 306B 00					.BYTE 0
+    99 306C 00					.BYTE 0
+    99 306D 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   101
+   102 306E			render_piecec 
+   103 						.rept levelTilesPerScreen
+   104 						.BYTE 0
+   105 						.ENDR
+   105 						.endr
+Source: REPT
+   104 306E 00					.BYTE 0
+   104 306F 00					.BYTE 0
+   104 3070 00					.BYTE 0
+   104 3071 00					.BYTE 0
+   104 3072 00					.BYTE 0
+   104 3073 00					.BYTE 0
+   104 3074 00					.BYTE 0
+   104 3075 00					.BYTE 0
+   104 3076 00					.BYTE 0
+   104 3077 00					.BYTE 0
+   104 3078 00					.BYTE 0
+   104 3079 00					.BYTE 0
+   104 307A 00					.BYTE 0
+   104 307B 00					.BYTE 0
+   104 307C 00					.BYTE 0
+   104 307D 00					.BYTE 0
+   104 307E 00					.BYTE 0
+   104 307F 00					.BYTE 0
+   104 3080 00					.BYTE 0
+   104 3081 00					.BYTE 0
+   104 3082 00					.BYTE 0
+   104 3083 00					.BYTE 0
+   104 3084 00					.BYTE 0
+   104 3085 00					.BYTE 0
+   104 3086 00					.BYTE 0
+   104 3087 00					.BYTE 0
+   104 3088 00					.BYTE 0
+   104 3089 00					.BYTE 0
+   104 308A 00					.BYTE 0
+   104 308B 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   106 308C			render_piecec_offsetL 
+   107 						.rept levelTilesPerScreen
+   108 						.BYTE 0
+   109 						.ENDR
+   109 						.endr
+Source: REPT
+   108 308C 00					.BYTE 0
+   108 308D 00					.BYTE 0
+   108 308E 00					.BYTE 0
+   108 308F 00					.BYTE 0
+   108 3090 00					.BYTE 0
+   108 3091 00					.BYTE 0
+   108 3092 00					.BYTE 0
+   108 3093 00					.BYTE 0
+   108 3094 00					.BYTE 0
+   108 3095 00					.BYTE 0
+   108 3096 00					.BYTE 0
+   108 3097 00					.BYTE 0
+   108 3098 00					.BYTE 0
+   108 3099 00					.BYTE 0
+   108 309A 00					.BYTE 0
+   108 309B 00					.BYTE 0
+   108 309C 00					.BYTE 0
+   108 309D 00					.BYTE 0
+   108 309E 00					.BYTE 0
+   108 309F 00					.BYTE 0
+   108 30A0 00					.BYTE 0
+   108 30A1 00					.BYTE 0
+   108 30A2 00					.BYTE 0
+   108 30A3 00					.BYTE 0
+   108 30A4 00					.BYTE 0
+   108 30A5 00					.BYTE 0
+   108 30A6 00					.BYTE 0
+   108 30A7 00					.BYTE 0
+   108 30A8 00					.BYTE 0
+   108 30A9 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   110 30AA			render_piecec_offsetH
+   111 						.rept levelTilesPerScreen
+   112 						.BYTE 0
+   113 						.ENDR
+   113 						.endr
+Source: REPT
+   112 30AA 00					.BYTE 0
+   112 30AB 00					.BYTE 0
+   112 30AC 00					.BYTE 0
+   112 30AD 00					.BYTE 0
+   112 30AE 00					.BYTE 0
+   112 30AF 00					.BYTE 0
+   112 30B0 00					.BYTE 0
+   112 30B1 00					.BYTE 0
+   112 30B2 00					.BYTE 0
+   112 30B3 00					.BYTE 0
+   112 30B4 00					.BYTE 0
+   112 30B5 00					.BYTE 0
+   112 30B6 00					.BYTE 0
+   112 30B7 00					.BYTE 0
+   112 30B8 00					.BYTE 0
+   112 30B9 00					.BYTE 0
+   112 30BA 00					.BYTE 0
+   112 30BB 00					.BYTE 0
+   112 30BC 00					.BYTE 0
+   112 30BD 00					.BYTE 0
+   112 30BE 00					.BYTE 0
+   112 30BF 00					.BYTE 0
+   112 30C0 00					.BYTE 0
+   112 30C1 00					.BYTE 0
+   112 30C2 00					.BYTE 0
+   112 30C3 00					.BYTE 0
+   112 30C4 00					.BYTE 0
+   112 30C5 00					.BYTE 0
+   112 30C6 00					.BYTE 0
+   112 30C7 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   114
+   115 30C8			render_pieced 
+   116 						.rept levelTilesPerScreen
+   117 						.BYTE 0
+   118 						.ENDR
+   118 						.endr
+Source: REPT
+   117 30C8 00					.BYTE 0
+   117 30C9 00					.BYTE 0
+   117 30CA 00					.BYTE 0
+   117 30CB 00					.BYTE 0
+   117 30CC 00					.BYTE 0
+   117 30CD 00					.BYTE 0
+   117 30CE 00					.BYTE 0
+   117 30CF 00					.BYTE 0
+   117 30D0 00					.BYTE 0
+   117 30D1 00					.BYTE 0
+   117 30D2 00					.BYTE 0
+   117 30D3 00					.BYTE 0
+   117 30D4 00					.BYTE 0
+   117 30D5 00					.BYTE 0
+   117 30D6 00					.BYTE 0
+   117 30D7 00					.BYTE 0
+   117 30D8 00					.BYTE 0
+   117 30D9 00					.BYTE 0
+   117 30DA 00					.BYTE 0
+   117 30DB 00					.BYTE 0
+   117 30DC 00					.BYTE 0
+   117 30DD 00					.BYTE 0
+   117 30DE 00					.BYTE 0
+   117 30DF 00					.BYTE 0
+   117 30E0 00					.BYTE 0
+   117 30E1 00					.BYTE 0
+   117 30E2 00					.BYTE 0
+   117 30E3 00					.BYTE 0
+   117 30E4 00					.BYTE 0
+   117 30E5 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   119 30E6			render_pieced_offsetL 
+   120 						.rept levelTilesPerScreen
+   121 						.BYTE 0
+   122 						.ENDR
+   122 						.endr
+Source: REPT
+   121 30E6 00					.BYTE 0
+   121 30E7 00					.BYTE 0
+   121 30E8 00					.BYTE 0
+   121 30E9 00					.BYTE 0
+   121 30EA 00					.BYTE 0
+   121 30EB 00					.BYTE 0
+   121 30EC 00					.BYTE 0
+   121 30ED 00					.BYTE 0
+   121 30EE 00					.BYTE 0
+   121 30EF 00					.BYTE 0
+   121 30F0 00					.BYTE 0
+   121 30F1 00					.BYTE 0
+   121 30F2 00					.BYTE 0
+   121 30F3 00					.BYTE 0
+   121 30F4 00					.BYTE 0
+   121 30F5 00					.BYTE 0
+   121 30F6 00					.BYTE 0
+   121 30F7 00					.BYTE 0
+   121 30F8 00					.BYTE 0
+   121 30F9 00					.BYTE 0
+   121 30FA 00					.BYTE 0
+   121 30FB 00					.BYTE 0
+   121 30FC 00					.BYTE 0
+   121 30FD 00					.BYTE 0
+   121 30FE 00					.BYTE 0
+   121 30FF 00					.BYTE 0
+   121 3100 00					.BYTE 0
+   121 3101 00					.BYTE 0
+   121 3102 00					.BYTE 0
+   121 3103 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   123 3104			render_pieced_offsetH
+   124 						.rept levelTilesPerScreen
+   125 						.BYTE 0
+   126 						.ENDR
+   126 						.endr
+Source: REPT
+   125 3104 00					.BYTE 0
+   125 3105 00					.BYTE 0
+   125 3106 00					.BYTE 0
+   125 3107 00					.BYTE 0
+   125 3108 00					.BYTE 0
+   125 3109 00					.BYTE 0
+   125 310A 00					.BYTE 0
+   125 310B 00					.BYTE 0
+   125 310C 00					.BYTE 0
+   125 310D 00					.BYTE 0
+   125 310E 00					.BYTE 0
+   125 310F 00					.BYTE 0
+   125 3110 00					.BYTE 0
+   125 3111 00					.BYTE 0
+   125 3112 00					.BYTE 0
+   125 3113 00					.BYTE 0
+   125 3114 00					.BYTE 0
+   125 3115 00					.BYTE 0
+   125 3116 00					.BYTE 0
+   125 3117 00					.BYTE 0
+   125 3118 00					.BYTE 0
+   125 3119 00					.BYTE 0
+   125 311A 00					.BYTE 0
+   125 311B 00					.BYTE 0
+   125 311C 00					.BYTE 0
+   125 311D 00					.BYTE 0
+   125 311E 00					.BYTE 0
+   125 311F 00					.BYTE 0
+   125 3120 00					.BYTE 0
+   125 3121 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   127 						
+   128 3122			render_piecef 
+   129 						.rept levelTilesPerScreen
+   130 						.BYTE 0
+   131 						.ENDR
+   131 						.endr
+Source: REPT
+   130 3122 00					.BYTE 0
+   130 3123 00					.BYTE 0
+   130 3124 00					.BYTE 0
+   130 3125 00					.BYTE 0
+   130 3126 00					.BYTE 0
+   130 3127 00					.BYTE 0
+   130 3128 00					.BYTE 0
+   130 3129 00					.BYTE 0
+   130 312A 00					.BYTE 0
+   130 312B 00					.BYTE 0
+   130 312C 00					.BYTE 0
+   130 312D 00					.BYTE 0
+   130 312E 00					.BYTE 0
+   130 312F 00					.BYTE 0
+   130 3130 00					.BYTE 0
+   130 3131 00					.BYTE 0
+   130 3132 00					.BYTE 0
+   130 3133 00					.BYTE 0
+   130 3134 00					.BYTE 0
+   130 3135 00					.BYTE 0
+   130 3136 00					.BYTE 0
+   130 3137 00					.BYTE 0
+   130 3138 00					.BYTE 0
+   130 3139 00					.BYTE 0
+   130 313A 00					.BYTE 0
+   130 313B 00					.BYTE 0
+   130 313C 00					.BYTE 0
+   130 313D 00					.BYTE 0
+   130 313E 00					.BYTE 0
+   130 313F 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   132 3140			render_maskf 
+   133 						.rept levelTilesPerScreen
+   134 						.BYTE 0
+   135 						.ENDR
+   135 						.endr
+Source: REPT
+   134 3140 00					.BYTE 0
+   134 3141 00					.BYTE 0
+   134 3142 00					.BYTE 0
+   134 3143 00					.BYTE 0
+   134 3144 00					.BYTE 0
+   134 3145 00					.BYTE 0
+   134 3146 00					.BYTE 0
+   134 3147 00					.BYTE 0
+   134 3148 00					.BYTE 0
+   134 3149 00					.BYTE 0
+   134 314A 00					.BYTE 0
+   134 314B 00					.BYTE 0
+   134 314C 00					.BYTE 0
+   134 314D 00					.BYTE 0
+   134 314E 00					.BYTE 0
+   134 314F 00					.BYTE 0
+   134 3150 00					.BYTE 0
+   134 3151 00					.BYTE 0
+   134 3152 00					.BYTE 0
+   134 3153 00					.BYTE 0
+   134 3154 00					.BYTE 0
+   134 3155 00					.BYTE 0
+   134 3156 00					.BYTE 0
+   134 3157 00					.BYTE 0
+   134 3158 00					.BYTE 0
+   134 3159 00					.BYTE 0
+   134 315A 00					.BYTE 0
+   134 315B 00					.BYTE 0
+   134 315C 00					.BYTE 0
+   134 315D 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   136 315E			render_piecef_offsetL 
+   137 						.rept levelTilesPerScreen
+   138 						.BYTE 0
+   139 						.ENDR		
+   139 						.endr		
+Source: REPT
+   138 315E 00					.BYTE 0
+   138 315F 00					.BYTE 0
+   138 3160 00					.BYTE 0
+   138 3161 00					.BYTE 0
+   138 3162 00					.BYTE 0
+   138 3163 00					.BYTE 0
+   138 3164 00					.BYTE 0
+   138 3165 00					.BYTE 0
+   138 3166 00					.BYTE 0
+   138 3167 00					.BYTE 0
+   138 3168 00					.BYTE 0
+   138 3169 00					.BYTE 0
+   138 316A 00					.BYTE 0
+   138 316B 00					.BYTE 0
+   138 316C 00					.BYTE 0
+   138 316D 00					.BYTE 0
+   138 316E 00					.BYTE 0
+   138 316F 00					.BYTE 0
+   138 3170 00					.BYTE 0
+   138 3171 00					.BYTE 0
+   138 3172 00					.BYTE 0
+   138 3173 00					.BYTE 0
+   138 3174 00					.BYTE 0
+   138 3175 00					.BYTE 0
+   138 3176 00					.BYTE 0
+   138 3177 00					.BYTE 0
+   138 3178 00					.BYTE 0
+   138 3179 00					.BYTE 0
+   138 317A 00					.BYTE 0
+   138 317B 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   140 317C			render_piecef_offsetH
+   141 						.rept levelTilesPerScreen
+   142 						.BYTE 0
+   143 						.ENDR	
+   143 						.endr	
+Source: REPT
+   142 317C 00					.BYTE 0
+   142 317D 00					.BYTE 0
+   142 317E 00					.BYTE 0
+   142 317F 00					.BYTE 0
+   142 3180 00					.BYTE 0
+   142 3181 00					.BYTE 0
+   142 3182 00					.BYTE 0
+   142 3183 00					.BYTE 0
+   142 3184 00					.BYTE 0
+   142 3185 00					.BYTE 0
+   142 3186 00					.BYTE 0
+   142 3187 00					.BYTE 0
+   142 3188 00					.BYTE 0
+   142 3189 00					.BYTE 0
+   142 318A 00					.BYTE 0
+   142 318B 00					.BYTE 0
+   142 318C 00					.BYTE 0
+   142 318D 00					.BYTE 0
+   142 318E 00					.BYTE 0
+   142 318F 00					.BYTE 0
+   142 3190 00					.BYTE 0
+   142 3191 00					.BYTE 0
+   142 3192 00					.BYTE 0
+   142 3193 00					.BYTE 0
+   142 3194 00					.BYTE 0
+   142 3195 00					.BYTE 0
+   142 3196 00					.BYTE 0
+   142 3197 00					.BYTE 0
+   142 3198 00					.BYTE 0
+   142 3199 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   144
+   145 319A			render_pieced_top
+   146 						.rept levelTilesPerRow
+   147 						.BYTE 0
+   148 						.ENDR
+   148 						.endr
+Source: REPT
+   147 319A 00					.BYTE 0
+   147 319B 00					.BYTE 0
+   147 319C 00					.BYTE 0
+   147 319D 00					.BYTE 0
+   147 319E 00					.BYTE 0
+   147 319F 00					.BYTE 0
+   147 31A0 00					.BYTE 0
+   147 31A1 00					.BYTE 0
+   147 31A2 00					.BYTE 0
+   147 31A3 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   149 31A4			render_pieced_top_offsetL
+   150 						.rept levelTilesPerRow
+   151 						.BYTE 0
+   152 						.ENDR
+   152 						.endr
+Source: REPT
+   151 31A4 00					.BYTE 0
+   151 31A5 00					.BYTE 0
+   151 31A6 00					.BYTE 0
+   151 31A7 00					.BYTE 0
+   151 31A8 00					.BYTE 0
+   151 31A9 00					.BYTE 0
+   151 31AA 00					.BYTE 0
+   151 31AB 00					.BYTE 0
+   151 31AC 00					.BYTE 0
+   151 31AD 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   153 31AE			render_pieced_top_offsetH
+   154 						.rept levelTilesPerRow
+   155 						.BYTE 0
+   156 						.ENDR
+   156 						.endr
+Source: REPT
+   155 31AE 00					.BYTE 0
+   155 31AF 00					.BYTE 0
+   155 31B0 00					.BYTE 0
+   155 31B1 00					.BYTE 0
+   155 31B2 00					.BYTE 0
+   155 31B3 00					.BYTE 0
+   155 31B4 00					.BYTE 0
+   155 31B5 00					.BYTE 0
+   155 31B6 00					.BYTE 0
+   155 31B7 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   157 31B8			render_dirty_blocks
+   158 						.rept levelTilesPerScreen+levelTilesPerRow
+   159 						.BYTE 0
+   160 						.ENDR	
+   160 						.endr	
+Source: REPT
+   159 31B8 00					.BYTE 0
+   159 31B9 00					.BYTE 0
+   159 31BA 00					.BYTE 0
+   159 31BB 00					.BYTE 0
+   159 31BC 00					.BYTE 0
+   159 31BD 00					.BYTE 0
+   159 31BE 00					.BYTE 0
+   159 31BF 00					.BYTE 0
+   159 31C0 00					.BYTE 0
+   159 31C1 00					.BYTE 0
+   159 31C2 00					.BYTE 0
+   159 31C3 00					.BYTE 0
+   159 31C4 00					.BYTE 0
+   159 31C5 00					.BYTE 0
+   159 31C6 00					.BYTE 0
+   159 31C7 00					.BYTE 0
+   159 31C8 00					.BYTE 0
+   159 31C9 00					.BYTE 0
+   159 31CA 00					.BYTE 0
+   159 31CB 00					.BYTE 0
+   159 31CC 00					.BYTE 0
+   159 31CD 00					.BYTE 0
+   159 31CE 00					.BYTE 0
+   159 31CF 00					.BYTE 0
+   159 31D0 00					.BYTE 0
+   159 31D1 00					.BYTE 0
+   159 31D2 00					.BYTE 0
+   159 31D3 00					.BYTE 0
+   159 31D4 00					.BYTE 0
+   159 31D5 00					.BYTE 0
+   159 31D6 00					.BYTE 0
+   159 31D7 00					.BYTE 0
+   159 31D8 00					.BYTE 0
+   159 31D9 00					.BYTE 0
+   159 31DA 00					.BYTE 0
+   159 31DB 00					.BYTE 0
+   159 31DC 00					.BYTE 0
+   159 31DD 00					.BYTE 0
+   159 31DE 00					.BYTE 0
+   159 31DF 00					.BYTE 0
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/level/bgdata.asm
+   161
+   162 						
+   163 31E0 00			renderBlockNumber		.byte 0
+   164 31E1 00			renderBlockOffset		.byte 0
+   165 31E2 00			preRenderBlockDst		.byte 0
+   166 31E3 00			preRenderBlockSrc		.byte 0
+   167 31E4 00			preRenderRow			.byte 0
+   168 31E5 00			preRenderCols			.byte 0
+   169 31E6 00			preRenderOffsetBlock	.byte 0
+   170 31E7 00			preYPos					.byte 0
+   171
+   172 31E8 00			tmpSaveX			.byte 0
+   173 31E9 00			tmpSaveY			.byte 0
+   174
+   175 31EA 00 4A 7C BA F0 2E + tilesL  .byte       0, <tile01, <tile02, <tile03, <tile04, <tile05, <tile06, <tile07
+   176 31F2 90 8E B0 A2 9C 00 + 		.byte <tile08, <tile09, <tile0a, <tile0b, <tile0c,       0,       0,       0
+   177 31FA 00 00 00 D2 00 F8 + 		.byte       0,       0,       0, <tile13,       0, <tile15,       0,       0
+   178 3202 00 06 00 14 00 00 + 		.byte       0, <tile19,       0, <tile1b,       0,       0, <tile1e, <tile1f
+   179 320A C2 F8 3A 00 A4 00 + 		.byte <tile20, <tile21, <tile22,       0, <tile24,       0, <tile26,       0
+   180 3212 78 00 E2 4C 9A A8 + 		.byte <tile28,       0, <tile2a, <tile2b, <tile2c, <tile2d,       0,       0
+   181 321A 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   182 3222 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   183 322A 00 00 00 00 00 B6 + 		.byte       0,       0,       0,       0,       0, <tile45, <tile46,       0
+   184 3232 00 00 00 9A D0 DE + 		.byte       0,       0,       0, <tile4b, <tile4c, <tile4d, <tile4e, <tile4f
+   185 323A 10 52 00 00 00 00 + 		.byte <tile50, <tile51,       0,       0,       0,       0,       0,       0
+   186 3242 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   187 324A 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   188 3252 00 00 30 00 27 00 + 		.byte       0,       0, <tile6a,       0, <tile6c,       0,       0,       0
+   189 325A 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   190 3262 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   191 326A 00 00 00 51 43 41 + 		.byte       0,       0,       0, <tile83, <tile84, <tile85, <tile86, <tile87
+   192 3272 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   193 327A 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0, <tile97,       0
+   194 3282 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   195 328A 25 17 09 17 25 17 + 		.byte <tilea0, <tilea1, <tilea2, <tilea3, <tilea4, <tilea5, <tilea6, <tilea7
+   196 3292 F9 00 00 00 00 00 + 		.byte <tilea8,       0,       0,       0,       0,       0,       0,       0
+   197 						
+   198 329A 00 33 33 33 33 34 + tilesH	.byte       0, >tile01, >tile02, >tile03, >tile04, >tile05, >tile06, >tile07
+   199 32A2 35 36 36 37 38 00 + 		.byte >tile08, >tile09, >tile0a, >tile0b, >tile0c,       0,       0,       0
+   200 32AA 00 00 00 38 00 38 + 		.byte       0,       0,       0, >tile13,       0, >tile15,       0,       0
+   201 32B2 00 39 00 39 00 00 + 		.byte       0, >tile19,       0, >tile1b,       0,       0, >tile1e, >tile1f
+   202 32BA 39 39 3A 00 3A 00 + 		.byte >tile20, >tile21, >tile22,       0, >tile24,       0, >tile26,       0
+   203 32C2 3B 00 3B 3C 3C 3C + 		.byte >tile28,       0, >tile2a, >tile2b, >tile2c, >tile2d,       0,       0
+   204 32CA 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   205 32D2 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   206 32DA 00 00 00 00 00 3C + 		.byte       0,       0,       0,       0,       0, >tile45, >tile46,       0
+   207 32E2 00 00 00 3E 3E 3E + 		.byte       0,       0,       0, >tile4b, >tile4c, >tile4d, >tile4e, >tile4f
+   208 32EA 41 41 00 00 00 00 + 		.byte >tile50, >tile51,       0,       0,       0,       0,       0,       0
+   209 32F2 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   210 32FA 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   211 3302 00 00 42 00 43 00 + 		.byte       0,       0, >tile6a,       0, >tile6c,       0,       0,       0
+   212 330A 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   213 3312 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   214 331A 00 00 00 43 44 45 + 		.byte       0,       0,       0, >tile83, >tile84, >tile85, >tile86, >tile87
+   215 3322 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   216 332A 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0, >tile97,       0
+   217 3332 00 00 00 00 00 00 + 		.byte       0,       0,       0,       0,       0,       0,       0,       0
+   218 333A 46 47 48 48 48 49 + 		.byte >tilea0, >tilea1, >tilea2, >tilea3, >tilea4, >tilea5, >tilea6, >tilea7
+   219 3342 49 00 00 00 00 00 + 		.byte >tilea8,       0,       0,       0,       0,       0,       0,       0
+   220
+   221
+   222 334A 04 0C 00 00 00 AA + tile01	ins "images/dungeon/tile_01.pic"
+   223 337C 04 0F AA AA AA 40 + tile02	ins "images/dungeon/tile_02.pic"
+   224 33BA 04 0D FF FF FF 00 + tile03	ins "images/dungeon/tile_03.pic"
+   225 33F0 04 0F 00 00 00 3F + tile04	ins "images/dungeon/tile_04.pic"
+   226 342E 04 0C 00 00 00 AA + tile05	ins "images/dungeon/tile_05.pic"
+   227 3460 04 0F AA AA AA 40 + tile06	ins "images/dungeon/tile_06.pic"
+   228 349E 04 3C 00 00 00 00 + tile07	ins "images/dungeon/tile_07.pic"
+   229 3590 04 3F 44 54 00 00 + tile08	ins "images/dungeon/tile_08.pic"
+   230 368E 04 08 45 54 00 00 + tile09	ins "images/dungeon/tile_09.pic"
+   231 36B0 04 3C 00 00 00 79 + tile0a	ins "images/dungeon/tile_0a.pic"
+   232 37A2 04 3E 00 00 79 00 + tile0b	ins "images/dungeon/tile_0b.pic"
+   233 389C 04 0D 00 00 00 40 + tile0c	ins "images/dungeon/tile_0c.pic"
+   234 38D2 04 09 00 28 00 00 + tile13	ins "images/dungeon/tile_13.pic"
+   235 38F8 04 03 1F FE FF EE + tile15	ins "images/dungeon/tile_15.pic"
+   236 3906 04 03 3A A6 7A A6 + tile19	ins "images/dungeon/tile_19.pic"
+   237 3914 04 0F AA AA AA 40 + tile1b	ins "images/dungeon/tile_1b.pic"
+   238 3952 04 0E 00 00 00 2A + tile1e	ins "images/dungeon/tile_1e.pic"
+   239 398C 04 0D 00 00 00 0A + tile1f	ins "images/dungeon/tile_1f.pic"
+   240 39C2 04 0D 00 00 00 A9 + tile20	ins "images/dungeon/tile_20.pic"
+   241 39F8 04 10 00 2A 80 00 + tile21	ins "images/dungeon/tile_21.pic"
+   242 3A3A 04 1A 00 00 00 00 + tile22	ins "images/dungeon/tile_22.pic"
+   243 3AA4 04 1A 00 00 00 00 + tile24	ins "images/dungeon/tile_24.pic"
+   244 3B0E 04 1A 00 00 00 00 + tile26	ins "images/dungeon/tile_26.pic"
+   245 3B78 04 1A 00 00 00 00 + tile28	ins "images/dungeon/tile_28.pic"
+   246 3BE2 04 1A 00 00 0C 00 + tile2a	ins "images/dungeon/tile_2a.pic"
+   247 3C4C 04 13 0C 00 00 00 + tile2b	ins "images/dungeon/tile_2b.pic"
+   248 3C9A 04 03 FF FF FF FF + tile2c	ins "images/dungeon/tile_2c.pic"
+   249 3CA8 04 03 FF FF FF FF + tile2d	ins "images/dungeon/tile_2d.pic"
+   250 3CB6 04 3C 00 00 00 00 + tile45	ins "images/dungeon/tile_45.pic"
+   251 3DA8 04 3C 00 00 00 79 + tile46	ins "images/dungeon/tile_46.pic"
+   252 3E9A 04 0D 00 00 00 AA + tile4b	ins "images/dungeon/tile_4b.pic"
+   253 3ED0 04 03 3A A6 7A A6 + tile4c	ins "images/dungeon/tile_4c.pic"
+   254 3EDE 04 3C 2F 80 00 00 + tile4d	ins "images/dungeon/tile_4d.pic"
+   255 3FD0 04 3F 00 00 BE 00 + tile4e	ins "images/dungeon/tile_4e.pic"
+   256 40CE 04 10 15 55 55 55 + tile4f	ins "images/dungeon/tile_4f.pic"
+   257 4110 04 10 55 55 55 00 + tile50	ins "images/dungeon/tile_50.pic"
+   258 4152 04 37 00 00 00 00 + tile51	ins "images/dungeon/tile_51.pic"
+   259 4230 05 31 80 00 00 00 + tile6a	ins "images/dungeon/tile_6a.pic"
+   260 4327 05 08 CD CD CD CD + tile6c	ins "images/dungeon/tile_6c.pic"
+   261 4351 04 3C 00 00 00 00 + tile83	ins "images/dungeon/tile_83.pic"
+   262 4443 04 3F 01 49 55 50 + tile84	ins "images/dungeon/tile_84.pic"
+   263 4541 04 0A 00 00 00 00 + tile85	ins "images/dungeon/tile_85.pic"
+   264 456B 04 03 A5 1A AA AA + tile86	ins "images/dungeon/tile_86.pic"
+   265 4579 04 17 00 00 00 00 + tile87	ins "images/dungeon/tile_87.pic"
+   266 45D7 04 13 00 00 00 03 + tile97	ins "images/dungeon/tile_97.pic"
+   267 4625 04 3C 00 00 00 00 + tilea0	ins "images/dungeon/tile_a0.pic"
+   268 4717 04 3C 00 00 00 00 + tilea1	ins "images/dungeon/tile_a1.pic"
+   269 4809 04 03 A5 1A AA AA + tilea2	ins "images/dungeon/tile_a2.pic"
+   270 4817 04 03 69 1A AA AA + tilea3	ins "images/dungeon/tile_a3.pic"
+   271 4825 04 3C FF 00 00 00 + tilea4	ins "images/dungeon/tile_a4.pic"
+   272 4917 04 17 FF FF FF FF + tilea5	ins "images/dungeon/tile_a5.pic"
+   273 4975 04 0D FF FF FC 00 + tilea6	ins "images/dungeon/tile_a6.pic"
+   274 49AB 04 13 FF FF FF F0 + tilea7	ins "images/dungeon/tile_a7.pic"
+   275 49F9 04 3C FF FF FF FF + tilea8	ins "images/dungeon/tile_a8.pic"
+   276
+   175
+   176 4AEB			heightLookupL 
+   177 						.rept 200
+   178 						.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   179 						.ENDR
+   179 						.endr
+Source: REPT
+   178 4AEB 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AEC 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AED 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AEE 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AEF A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF0 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF1 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF2 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF3 40					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF4 68					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF5 90					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF6 B8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF7 E0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF8 08					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AF9 30					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AFA 58					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AFB 80					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AFC A8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AFD D0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AFE F8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4AFF 20					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B00 48					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B01 70					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B02 98					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B03 C0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B04 E8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B05 10					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B06 38					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B07 60					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B08 88					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B09 B0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B0A D8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B0B 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B0C 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B0D 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B0E 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B0F A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B10 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B11 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B12 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B13 40					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B14 68					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B15 90					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B16 B8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B17 E0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B18 08					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B19 30					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B1A 58					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B1B 80					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B1C A8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B1D D0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B1E F8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B1F 20					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B20 48					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B21 70					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B22 98					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B23 C0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B24 E8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B25 10					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B26 38					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B27 60					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B28 88					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B29 B0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B2A D8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B2B 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B2C 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B2D 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B2E 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B2F A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B30 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B31 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B32 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B33 40					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B34 68					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B35 90					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B36 B8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B37 E0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B38 08					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B39 30					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B3A 58					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B3B 80					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B3C A8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B3D D0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B3E F8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B3F 20					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B40 48					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B41 70					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B42 98					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B43 C0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B44 E8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B45 10					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B46 38					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B47 60					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B48 88					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B49 B0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B4A D8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B4B 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B4C 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B4D 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B4E 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B4F A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B50 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B51 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B52 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B53 40					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B54 68					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B55 90					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B56 B8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B57 E0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B58 08					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B59 30					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B5A 58					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B5B 80					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B5C A8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B5D D0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B5E F8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B5F 20					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B60 48					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B61 70					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B62 98					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B63 C0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B64 E8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B65 10					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B66 38					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B67 60					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B68 88					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B69 B0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B6A D8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B6B 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B6C 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B6D 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B6E 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B6F A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B70 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B71 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B72 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B73 40					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B74 68					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B75 90					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B76 B8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B77 E0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B78 08					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B79 30					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B7A 58					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B7B 80					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B7C A8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B7D D0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B7E F8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B7F 20					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B80 48					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B81 70					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B82 98					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B83 C0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B84 E8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B85 10					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B86 38					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B87 60					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B88 88					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B89 B0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B8A D8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B8B 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B8C 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B8D 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B8E 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B8F A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B90 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B91 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B92 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B93 40					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B94 68					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B95 90					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B96 B8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B97 E0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B98 08					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B99 30					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B9A 58					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B9B 80					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B9C A8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B9D D0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B9E F8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4B9F 20					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA0 48					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA1 70					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA2 98					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA3 C0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA4 E8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA5 10					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA6 38					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA7 60					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA8 88					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BA9 B0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BAA D8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BAB 00					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BAC 28					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BAD 50					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BAE 78					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BAF A0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BB0 C8					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BB1 F0					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+   178 4BB2 18					.BYTE <([*-HEIGHTLOOKUPL]*SCANBYTES)
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/prince.asm
+   180
+   181 4BB3			heightLookupH 
+   182 						.rept 200
+   183 						.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   184 						.ENDR
+   184 						.endr
+Source: REPT
+   183 4BB3 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BB4 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BB5 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BB6 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BB7 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BB8 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BB9 00					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BBA 01					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BBB 01					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BBC 01					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BBD 01					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BBE 01					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BBF 01					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC0 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC1 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC2 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC3 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC4 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC5 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC6 02					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC7 03					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC8 03					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BC9 03					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BCA 03					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BCB 03					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BCC 03					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BCD 04					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BCE 04					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BCF 04					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD0 04					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD1 04					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD2 04					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD3 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD4 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD5 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD6 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD7 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD8 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BD9 05					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BDA 06					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BDB 06					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BDC 06					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BDD 06					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BDE 06					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BDF 06					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE0 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE1 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE2 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE3 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE4 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE5 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE6 07					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE7 08					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE8 08					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BE9 08					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BEA 08					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BEB 08					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BEC 08					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BED 09					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BEE 09					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BEF 09					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF0 09					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF1 09					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF2 09					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF3 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF4 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF5 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF6 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF7 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF8 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BF9 0A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BFA 0B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BFB 0B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BFC 0B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BFD 0B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BFE 0B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4BFF 0B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C00 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C01 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C02 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C03 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C04 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C05 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C06 0C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C07 0D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C08 0D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C09 0D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C0A 0D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C0B 0D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C0C 0D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C0D 0E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C0E 0E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C0F 0E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C10 0E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C11 0E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C12 0E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C13 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C14 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C15 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C16 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C17 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C18 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C19 0F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C1A 10					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C1B 10					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C1C 10					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C1D 10					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C1E 10					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C1F 10					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C20 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C21 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C22 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C23 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C24 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C25 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C26 11					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C27 12					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C28 12					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C29 12					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C2A 12					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C2B 12					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C2C 12					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C2D 13					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C2E 13					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C2F 13					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C30 13					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C31 13					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C32 13					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C33 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C34 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C35 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C36 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C37 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C38 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C39 14					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C3A 15					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C3B 15					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C3C 15					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C3D 15					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C3E 15					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C3F 15					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C40 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C41 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C42 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C43 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C44 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C45 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C46 16					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C47 17					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C48 17					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C49 17					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C4A 17					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C4B 17					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C4C 17					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C4D 18					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C4E 18					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C4F 18					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C50 18					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C51 18					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C52 18					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C53 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C54 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C55 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C56 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C57 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C58 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C59 19					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C5A 1A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C5B 1A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C5C 1A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C5D 1A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C5E 1A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C5F 1A					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C60 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C61 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C62 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C63 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C64 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C65 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C66 1B					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C67 1C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C68 1C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C69 1C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C6A 1C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C6B 1C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C6C 1C					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C6D 1D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C6E 1D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C6F 1D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C70 1D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C71 1D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C72 1D					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C73 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C74 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C75 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C76 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C77 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C78 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C79 1E					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+   183 4C7A 1F					.BYTE >([*-HEIGHTLOOKUPH]*SCANBYTES)
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/prince.asm
+   185
+   186 4C7B 00			spriteWidth			.byte 0
+   187 4C7C 00			spriteHeight		.byte 0
+   188
+   189 4C7D 00			vramActiveBuffer	.byte 0
+   190 4C7E 00 00		vramBuffer			.word 0
+   191
+   192 				; x1, x2, y1, y2
+   193 4C80 50 50 64 64		boundsKidCurrent	.byte 80, 80, 100, 100 ; safe defaults
+   194 4C84 50 50 64 64		boundsKidPrev		.byte 80, 80, 100, 100 
+   195 4C88 00 00 00 00		boundsKid			.byte 0, 0, 0, 0
+   196
+   197 4C8C 00			dirtyBlockX1	.byte 0
+   198 4C8D 00			dirtyBlockX2	.byte 0
+   199 4C8E 00			dirtyBlockY1	.byte 0
+   200 4C8F 00			dirtyBlockY2	.byte 0
+   201
+   202 4C90 00			frame0 .byte 0
+   203 4C91 00			frame1 .byte 0
+   204 4C92 00			frame2 .byte 0
+   205
+   206
+   207 = 9000			vramBufferBottom1 = $9000
+   208 = 8100			vramBuffer1 = vramBufferBottom1 - (96*40)
+   209 = B000			vramBufferBottom2 = $B000
+   210 = A100			vramBuffer2 = vramBufferBottom2 - (96*40)
+   211
+   212 4C93					org $A000
+   213 A000			displayList
+   214 A000-A0C9> 70 70 70			.byte 112, 112, 112
+   215 A003 4E					.byte $4E
+   216 A004			vramPage1
+   217 A004 00 00				.word 0
+   218 						.rept 95
+   219 						.BYTE $0E
+   220 						.ENDR 
+   220 						.endr 
+Source: REPT
+   219 A006 0E					.BYTE $0E
+   219 A007 0E					.BYTE $0E
+   219 A008 0E					.BYTE $0E
+   219 A009 0E					.BYTE $0E
+   219 A00A 0E					.BYTE $0E
+   219 A00B 0E					.BYTE $0E
+   219 A00C 0E					.BYTE $0E
+   219 A00D 0E					.BYTE $0E
+   219 A00E 0E					.BYTE $0E
+   219 A00F 0E					.BYTE $0E
+   219 A010 0E					.BYTE $0E
+   219 A011 0E					.BYTE $0E
+   219 A012 0E					.BYTE $0E
+   219 A013 0E					.BYTE $0E
+   219 A014 0E					.BYTE $0E
+   219 A015 0E					.BYTE $0E
+   219 A016 0E					.BYTE $0E
+   219 A017 0E					.BYTE $0E
+   219 A018 0E					.BYTE $0E
+   219 A019 0E					.BYTE $0E
+   219 A01A 0E					.BYTE $0E
+   219 A01B 0E					.BYTE $0E
+   219 A01C 0E					.BYTE $0E
+   219 A01D 0E					.BYTE $0E
+   219 A01E 0E					.BYTE $0E
+   219 A01F 0E					.BYTE $0E
+   219 A020 0E					.BYTE $0E
+   219 A021 0E					.BYTE $0E
+   219 A022 0E					.BYTE $0E
+   219 A023 0E					.BYTE $0E
+   219 A024 0E					.BYTE $0E
+   219 A025 0E					.BYTE $0E
+   219 A026 0E					.BYTE $0E
+   219 A027 0E					.BYTE $0E
+   219 A028 0E					.BYTE $0E
+   219 A029 0E					.BYTE $0E
+   219 A02A 0E					.BYTE $0E
+   219 A02B 0E					.BYTE $0E
+   219 A02C 0E					.BYTE $0E
+   219 A02D 0E					.BYTE $0E
+   219 A02E 0E					.BYTE $0E
+   219 A02F 0E					.BYTE $0E
+   219 A030 0E					.BYTE $0E
+   219 A031 0E					.BYTE $0E
+   219 A032 0E					.BYTE $0E
+   219 A033 0E					.BYTE $0E
+   219 A034 0E					.BYTE $0E
+   219 A035 0E					.BYTE $0E
+   219 A036 0E					.BYTE $0E
+   219 A037 0E					.BYTE $0E
+   219 A038 0E					.BYTE $0E
+   219 A039 0E					.BYTE $0E
+   219 A03A 0E					.BYTE $0E
+   219 A03B 0E					.BYTE $0E
+   219 A03C 0E					.BYTE $0E
+   219 A03D 0E					.BYTE $0E
+   219 A03E 0E					.BYTE $0E
+   219 A03F 0E					.BYTE $0E
+   219 A040 0E					.BYTE $0E
+   219 A041 0E					.BYTE $0E
+   219 A042 0E					.BYTE $0E
+   219 A043 0E					.BYTE $0E
+   219 A044 0E					.BYTE $0E
+   219 A045 0E					.BYTE $0E
+   219 A046 0E					.BYTE $0E
+   219 A047 0E					.BYTE $0E
+   219 A048 0E					.BYTE $0E
+   219 A049 0E					.BYTE $0E
+   219 A04A 0E					.BYTE $0E
+   219 A04B 0E					.BYTE $0E
+   219 A04C 0E					.BYTE $0E
+   219 A04D 0E					.BYTE $0E
+   219 A04E 0E					.BYTE $0E
+   219 A04F 0E					.BYTE $0E
+   219 A050 0E					.BYTE $0E
+   219 A051 0E					.BYTE $0E
+   219 A052 0E					.BYTE $0E
+   219 A053 0E					.BYTE $0E
+   219 A054 0E					.BYTE $0E
+   219 A055 0E					.BYTE $0E
+   219 A056 0E					.BYTE $0E
+   219 A057 0E					.BYTE $0E
+   219 A058 0E					.BYTE $0E
+   219 A059 0E					.BYTE $0E
+   219 A05A 0E					.BYTE $0E
+   219 A05B 0E					.BYTE $0E
+   219 A05C 0E					.BYTE $0E
+   219 A05D 0E					.BYTE $0E
+   219 A05E 0E					.BYTE $0E
+   219 A05F 0E					.BYTE $0E
+   219 A060 0E					.BYTE $0E
+   219 A061 0E					.BYTE $0E
+   219 A062 0E					.BYTE $0E
+   219 A063 0E					.BYTE $0E
+   219 A064 0E					.BYTE $0E
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/prince.asm
+   221 A065 4E					.byte $4E
+   222 A066			vramPage2		
+   223 A066 00 00				.word 0
+   224 						.rept 95
+   225 						.BYTE $0E
+   226 						.ENDR 
+   226 						.endr 
+Source: REPT
+   225 A068 0E					.BYTE $0E
+   225 A069 0E					.BYTE $0E
+   225 A06A 0E					.BYTE $0E
+   225 A06B 0E					.BYTE $0E
+   225 A06C 0E					.BYTE $0E
+   225 A06D 0E					.BYTE $0E
+   225 A06E 0E					.BYTE $0E
+   225 A06F 0E					.BYTE $0E
+   225 A070 0E					.BYTE $0E
+   225 A071 0E					.BYTE $0E
+   225 A072 0E					.BYTE $0E
+   225 A073 0E					.BYTE $0E
+   225 A074 0E					.BYTE $0E
+   225 A075 0E					.BYTE $0E
+   225 A076 0E					.BYTE $0E
+   225 A077 0E					.BYTE $0E
+   225 A078 0E					.BYTE $0E
+   225 A079 0E					.BYTE $0E
+   225 A07A 0E					.BYTE $0E
+   225 A07B 0E					.BYTE $0E
+   225 A07C 0E					.BYTE $0E
+   225 A07D 0E					.BYTE $0E
+   225 A07E 0E					.BYTE $0E
+   225 A07F 0E					.BYTE $0E
+   225 A080 0E					.BYTE $0E
+   225 A081 0E					.BYTE $0E
+   225 A082 0E					.BYTE $0E
+   225 A083 0E					.BYTE $0E
+   225 A084 0E					.BYTE $0E
+   225 A085 0E					.BYTE $0E
+   225 A086 0E					.BYTE $0E
+   225 A087 0E					.BYTE $0E
+   225 A088 0E					.BYTE $0E
+   225 A089 0E					.BYTE $0E
+   225 A08A 0E					.BYTE $0E
+   225 A08B 0E					.BYTE $0E
+   225 A08C 0E					.BYTE $0E
+   225 A08D 0E					.BYTE $0E
+   225 A08E 0E					.BYTE $0E
+   225 A08F 0E					.BYTE $0E
+   225 A090 0E					.BYTE $0E
+   225 A091 0E					.BYTE $0E
+   225 A092 0E					.BYTE $0E
+   225 A093 0E					.BYTE $0E
+   225 A094 0E					.BYTE $0E
+   225 A095 0E					.BYTE $0E
+   225 A096 0E					.BYTE $0E
+   225 A097 0E					.BYTE $0E
+   225 A098 0E					.BYTE $0E
+   225 A099 0E					.BYTE $0E
+   225 A09A 0E					.BYTE $0E
+   225 A09B 0E					.BYTE $0E
+   225 A09C 0E					.BYTE $0E
+   225 A09D 0E					.BYTE $0E
+   225 A09E 0E					.BYTE $0E
+   225 A09F 0E					.BYTE $0E
+   225 A0A0 0E					.BYTE $0E
+   225 A0A1 0E					.BYTE $0E
+   225 A0A2 0E					.BYTE $0E
+   225 A0A3 0E					.BYTE $0E
+   225 A0A4 0E					.BYTE $0E
+   225 A0A5 0E					.BYTE $0E
+   225 A0A6 0E					.BYTE $0E
+   225 A0A7 0E					.BYTE $0E
+   225 A0A8 0E					.BYTE $0E
+   225 A0A9 0E					.BYTE $0E
+   225 A0AA 0E					.BYTE $0E
+   225 A0AB 0E					.BYTE $0E
+   225 A0AC 0E					.BYTE $0E
+   225 A0AD 0E					.BYTE $0E
+   225 A0AE 0E					.BYTE $0E
+   225 A0AF 0E					.BYTE $0E
+   225 A0B0 0E					.BYTE $0E
+   225 A0B1 0E					.BYTE $0E
+   225 A0B2 0E					.BYTE $0E
+   225 A0B3 0E					.BYTE $0E
+   225 A0B4 0E					.BYTE $0E
+   225 A0B5 0E					.BYTE $0E
+   225 A0B6 0E					.BYTE $0E
+   225 A0B7 0E					.BYTE $0E
+   225 A0B8 0E					.BYTE $0E
+   225 A0B9 0E					.BYTE $0E
+   225 A0BA 0E					.BYTE $0E
+   225 A0BB 0E					.BYTE $0E
+   225 A0BC 0E					.BYTE $0E
+   225 A0BD 0E					.BYTE $0E
+   225 A0BE 0E					.BYTE $0E
+   225 A0BF 0E					.BYTE $0E
+   225 A0C0 0E					.BYTE $0E
+   225 A0C1 0E					.BYTE $0E
+   225 A0C2 0E					.BYTE $0E
+   225 A0C3 0E					.BYTE $0E
+   225 A0C4 0E					.BYTE $0E
+   225 A0C5 0E					.BYTE $0E
+   225 A0C6 0E					.BYTE $0E
+Source: /Users/fcatrin/devel/retrobox.kepler/pop/asm/prince.asm
+   227 A0C7 41					.byte 65
+   228 A0C8 00 A0				.word displayList
+   229
+   230 A0CA					org $2E0
+   231 02E0-02E1> 00 07				.word start
+   232 						
+   233 					

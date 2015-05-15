@@ -1,6 +1,5 @@
-.bank
 
-.include "utilsdef.asm"
+	icl "utilsdef.asm"
 
 SDLSTL = 560
 COLOR0 = 708
@@ -51,7 +50,7 @@ timesTrackAcum  = $602
 timesTrackBase  = $606
 
 
-* = $700
+		org $700
 
 start
 		lda #dungeon_color0		; setup colors
@@ -163,16 +162,16 @@ vramActiveBufferSecond
 		rts	
 		
 
-		.include "level/level.asm"		
-		.include "level/render.asm"
-		.include "level/prerender.asm"
-		.include "level/drawTile.asm"
+		icl "level/level.asm"		
+		icl "level/render.asm"
+		icl "level/prerender.asm"
+		icl "level/drawTile.asm"
 
-		.include "sprite.asm"
-		.include "mask.asm"
-		.include "utils.asm"
-		.include "input.asm"
-		.include "level/bgdata.asm"
+		icl "sprite.asm"
+		icl "mask.asm"
+		icl "utils.asm"
+		icl "input.asm"
+		icl "level/bgdata.asm"
 
 heightLookupL 
 		.rept 200
@@ -204,16 +203,15 @@ frame0 .byte 0
 frame1 .byte 0
 frame2 .byte 0
 
-.bank
 
 vramBufferBottom1 = $9000
 vramBuffer1 = vramBufferBottom1 - (96*40)
 vramBufferBottom2 = $B000
 vramBuffer2 = vramBufferBottom2 - (96*40)
 
-*		= $A000
+		org $A000
 displayList
-		.byte 112, 112, 112, 
+		.byte 112, 112, 112
 		.byte $4E
 vramPage1
 		.word 0
@@ -229,8 +227,7 @@ vramPage2
 		.byte 65
 		.word displayList
 
-.bank
-* = $2E0
-	.word start
+		org $2E0
+		.word start
 		
 	
