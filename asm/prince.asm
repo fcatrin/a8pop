@@ -87,7 +87,6 @@ nextFrame
 
 		lda #0
 		sta 559
-		sta levelScreenChanged
 		jsr kidPreRender		; TODO evaluate to do only if needed
 		jmp waitvsync 
 		
@@ -110,8 +109,16 @@ waitvsync
 		lda 20
 		sta frame2
 		jsr dirtyClearAll
-		
+
 		jsr swapBuffers
+		
+		lda levelScreenChanged
+		beq noCopyBuffers
+		jsr copyBuffers
+		lda #0
+		sta levelScreenChanged
+		
+noCopyBuffers
 		
 		lda #34
 		sta 559
@@ -129,8 +136,10 @@ swapBuffers
 		
 		lda #<vramBuffer2
 		sta vramPage1
+		sta vramBackBuffer
 		lda #>vramBuffer2
 		sta vramPage1+1
+		sta vramBackBuffer+1
 		
 		lda #<vramBufferBottom2
 		sta vramPage2
@@ -148,8 +157,10 @@ vramActiveBufferSecond
 		
 		lda #<vramBuffer1
 		sta vramPage1
+		sta vramBackBuffer
 		lda #>vramBuffer1
 		sta vramPage1+1
+		sta vramBackBuffer+1
 		
 		lda #<vramBufferBottom1
 		sta vramPage2
@@ -158,7 +169,25 @@ vramActiveBufferSecond
 		
 		lda #1
 		sta vramActiveBuffer
-		rts	
+		rts
+		
+copyBuffers
+		lda vramBackBuffer
+		sta memcpySrc
+		lda vramBackBuffer+1
+		sta memcpySrc+1
+		
+		lda vramBuffer
+		sta memcpyDst
+		lda vramBuffer+1
+		sta memcpyDst+1
+		
+		lda #<vramSize
+		sta memcpyLen
+		lda #>vramSize+1
+		sta memcpyLen+1
+		jmp memcpy
+		
 		
 
 		icl "level/level.asm"		
@@ -187,6 +216,7 @@ spriteHeight		.byte 0
 
 vramActiveBuffer	.byte 0
 vramBuffer			.word 0
+vramBackBuffer		.word 0
 
 ; x1, x2, y1, y2
 boundsKidCurrent	.byte 80, 80, 100, 100 ; safe defaults

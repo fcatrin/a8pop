@@ -14,7 +14,7 @@ clearTimesTrackBase
 		bne clearTimesTrackBase
 waitVsync1	
 		lda vcount
-		bne waitVsync1
+		;bne waitVsync1
 		lda #0
 		sta 20
 		sta timesTrackIndex
