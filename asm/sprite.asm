@@ -248,14 +248,29 @@ dirtyNextBlock
 		
 				
 
-kidX			.byte 15
-kidY			.byte 166
+kidX			.byte 45
+kidY			.byte 120
 kidXOffset		.byte 0
 kidFrameIndex 	.byte 0
 kidTop			.byte 0
 
 
-kid_framesL		.byte <kid_22
-kid_framesH		.byte >kid_22
+kid_framesL		.byte <kid_22, <kid_23, <kid_24, <kid_25, <kid_26
+				.byte <kid_27, <kid_28, <kid_29, <kid_2a, <kid_2b
+				.byte <kid_2b
+
+kid_framesH		.byte >kid_22, >kid_23, >kid_24, >kid_25, >kid_26
+				.byte >kid_27, >kid_28, >kid_29, >kid_2a, >kid_2b
+				.byte >kid_2b
 
 kid_22		ins "images/kid/sprite_22.pic"
+kid_23		ins "images/kid/sprite_23.pic"
+kid_24		ins "images/kid/sprite_24.pic"
+kid_25		ins "images/kid/sprite_25.pic"
+kid_26		ins "images/kid/sprite_26.pic"
+kid_27		ins "images/kid/sprite_27.pic"
+kid_28		ins "images/kid/sprite_28.pic"
+kid_29		ins "images/kid/sprite_29.pic"
+kid_2a		ins "images/kid/sprite_2a.pic"
+kid_2b		ins "images/kid/sprite_2b.pic"
+kid_2c		ins "images/kid/sprite_2c.pic"

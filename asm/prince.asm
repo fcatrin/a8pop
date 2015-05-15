@@ -78,16 +78,24 @@ start
 		lda #0
 		jsr changeScreen
 		
-		jsr kidPreRender
+		;jsr kidPreRender
 
 nextFrame
+		ldx kidFrameIndex
+		inx
+		cpx #9
+		bne noKidFrameReset
+		ldx #0
+noKidFrameReset
+		stx kidFrameIndex
+		jsr kidPreRender		
+
 		jsr inputHandler
 		lda levelScreenChanged
 		beq noScreenChanged
 
 		lda #0
 		sta 559
-		jsr kidPreRender		; TODO evaluate to do only if needed
 		jmp waitvsync 
 		
 noScreenChanged
