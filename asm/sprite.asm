@@ -13,10 +13,10 @@ drawKid
 		tax
 		clc
 		lda heightLookupL,x
-		adc #<vram
+		adc vramBuffer
 		sta vramIndex
 		lda heightLookupH,x
-		adc #>vram
+		adc vramBuffer+1
 		sta vramIndex+1
 		
 		clc

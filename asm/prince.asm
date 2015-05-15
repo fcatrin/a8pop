@@ -53,23 +53,6 @@ timesTrackBase  = $606
 
 * = $700
 
-spriteWidth		.byte 0
-spriteHeight	.byte 0
-
-; x1, x2, y1, y2
-boundsKidCurrent	.byte 80, 80, 100, 100 ; safe defaults
-boundsKidPrev		.byte 80, 80, 100, 100 
-boundsKid			.byte 0, 0, 0, 0
-
-dirtyBlockX1	.byte 0
-dirtyBlockX2	.byte 0
-dirtyBlockY1	.byte 0
-dirtyBlockY2	.byte 0
-
-frame0 .byte 0
-frame1 .byte 0
-frame2 .byte 0
-
 start
 		lda #dungeon_color0		; setup colors
 		sta COLOR0
@@ -78,6 +61,8 @@ start
 		lda #dungeon_color2
 		sta COLOR2
 
+		.byte 2
+		jsr swapBuffers
 
 		lda #<displayList		; setup display list
 		sta SDLSTL
@@ -122,14 +107,61 @@ waitvsync
 
 		lda 20
 		sta frame1
+		.byte 2
 		jsr drawBack
 		lda 20
 		sta frame2
 		jsr dirtyClearAll
+		
+		jsr swapBuffers
+		
 		lda #34
 		sta 559
 
 		jmp nextFrame	
+		
+swapBuffers
+		lda vramActiveBuffer
+		beq vramActiveBufferSecond
+		
+		lda #<vramBuffer1
+		sta vramBuffer
+		lda #>vramBuffer1
+		sta vramBuffer
+		
+		lda #<vramBuffer2
+		sta vramPage1
+		lda #>vramBuffer2
+		sta vramPage1+1
+		
+		lda #<vramBufferBottom2
+		sta vramPage2
+		lda #>vramBufferBottom2
+		sta vramPage2+1
+		
+		lda #1
+		sta vramActiveBuffer
+		rts
+vramActiveBufferSecond		
+		lda #<vramBuffer2
+		sta vramBuffer
+		lda #>vramBuffer2
+		sta vramBuffer
+		
+		lda #<vramBuffer1
+		sta vramPage1
+		lda #>vramBuffer1
+		sta vramPage1+1
+		
+		lda #<vramBufferBottom1
+		sta vramPage2
+		lda #>vramBufferBottom1
+		sta vramPage2+1
+		
+		lda #0
+		sta vramActiveBuffer
+		rts	
+		
 
 		.include "level/level.asm"		
 		.include "level/render.asm"
@@ -152,31 +184,50 @@ heightLookupH
 		.byte >([*-heightLookupH]*scanbytes)
 		.endr
 
+spriteWidth			.byte 0
+spriteHeight		.byte 0
+
+vramActiveBuffer	.byte 0
+vramBuffer			.word 0
+
+; x1, x2, y1, y2
+boundsKidCurrent	.byte 80, 80, 100, 100 ; safe defaults
+boundsKidPrev		.byte 80, 80, 100, 100 
+boundsKid			.byte 0, 0, 0, 0
+
+dirtyBlockX1	.byte 0
+dirtyBlockX2	.byte 0
+dirtyBlockY1	.byte 0
+dirtyBlockY2	.byte 0
+
+frame0 .byte 0
+frame1 .byte 0
+frame2 .byte 0
 
 .bank
 
-vramBack = $9000
+vramBufferBottom1 = $9000
+vramBuffer1 = vramBufferBottom1 - (96*40)
+vramBufferBottom2 = $B000
+vramBuffer2 = vramBufferBottom2 - (96*40)
 
 *		= $A000
 displayList
 		.byte 112, 112, 112, 
 		.byte $4E
-		.word vram
+vramPage1
+		.word 0
 		.rept 95
 		.byte $0E
 		.endr 
 		.byte $4E
-		.word vram2
+vramPage2		
+		.word 0
 		.rept 95
 		.byte $0E
 		.endr 
 		.byte 65
 		.word displayList
-		
-
-vram2	= $b000
-vram    = vram2 - (96*40)
-
 
 .bank
 * = $2E0

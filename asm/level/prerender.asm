@@ -112,10 +112,8 @@ preRenderOffsetRow
 
 		clc						; set vramOffset for row on x
 		lda vramOffsets,x
-		adc #<vram
 		sta vramOffset
 		lda vramOffsets+1,x
-		adc #>vram
 		sta vramOffset+1
 
 preRenderOffsetNextCol
@@ -200,9 +198,7 @@ preRenderOffsetEnd
 
 ; calc offsets for first row.  Constant for now
 		clc						; set vramOffset for row on x
-		lda #<vram
 		sta vramOffset
-		lda #>vram
 		sta vramOffset+1
 		ldx #0
 nextTopOffset

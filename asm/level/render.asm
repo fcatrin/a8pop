@@ -34,9 +34,12 @@ drawNextBlock
 		bne noShortCut
 		jmp noDrawB
 noShortCut
+		clc
 		lda render_piecec_offsetL,y
+		adc vramBuffer
 		sta vramIndex
 		lda render_piecec_offsetH,y
+		adc vramBuffer+1
 		sta vramIndex+1
 		ldy #0
 		lda render_piecec,x
@@ -46,9 +49,12 @@ noShortCut
 noDrawC
 		lda render_pieceb,x
 		beq noDrawB
+		clc
 		lda render_pieceb_offsetL,y
+		adc vramBuffer
 		sta vramIndex
 		lda render_pieceb_offsetH,y
+		adc vramBuffer+1
 		sta vramIndex+1
 		ldy render_maskb,x
 		lda render_pieceb,x
@@ -59,9 +65,12 @@ noDrawC
 noDrawB
 		lda render_piecea,x
 		beq noDrawA
+		clc
 		lda render_piecea_offsetL,y
+		adc vramBuffer
 		sta vramIndex
 		lda render_piecea_offsetH,y
+		adc vramBuffer+1
 		sta vramIndex+1
 		ldy render_maska,x
 		lda render_piecea,x
@@ -72,8 +81,10 @@ noDrawA
 		iny
 		inx
 		cpx #levelTilesPerScreen
-		bne drawNextBlock
+		beq drawBackEnd
+		jmp drawNextBlock
 		
+drawBackEnd		
 		jsr drawKid
 	
 		ldx #0
@@ -89,9 +100,12 @@ drawFront
 		lda render_pieced,x
 		beq noDrawD
 
+		clc
 		lda render_pieced_offsetL,y
+		adc vramBuffer
 		sta vramIndex
 		lda render_pieced_offsetH,y
+		adc vramBuffer+1
 		sta vramIndex+1
 		ldy #0
 		lda render_pieced,x
@@ -102,9 +116,12 @@ drawFront
 noDrawD		
 		lda render_piecef,x
 		beq noDrawF
+		clc
 		lda render_piecef_offsetL,y
+		adc vramBuffer
 		sta vramIndex
 		lda render_piecef_offsetH,y
+		adc vramBuffer+1
 		sta vramIndex+1
 		ldy render_maskf,x
 		lda render_piecef,x
@@ -126,9 +143,12 @@ renderNextTopTile
 		lda #0
 		sta render_dirty_blocks+levelTilesPerScreen,x
 		stx renderBlockNumber
+		clc
 		lda render_pieced_top_offsetL,x
+		adc vramBuffer
 		sta vramIndex
 		lda render_pieced_top_offsetH,x
+		adc vramBuffer+1
 		sta vramIndex+1
 		ldy #0
 		lda render_pieced_top,x

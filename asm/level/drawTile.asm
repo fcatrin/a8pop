@@ -289,9 +289,9 @@ prepareNextAutoMaskedScan
 
 
 clearScreen
-		lda #<vram
+		lda vramBuffer
 		sta vramIndex
-		lda #>vram
+		lda vramBuffer+1
 		sta vramIndex+1
 		
 		ldx #>vramSize
