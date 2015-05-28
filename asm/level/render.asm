@@ -153,7 +153,6 @@ renderNextTopTile
 		sta vramIndex+1
 		ldy #0
 		lda render_pieced_top,x
-		.byte 2
 		jsr drawTile
 		ldx renderBlockNumber
 noRenderTopTile		

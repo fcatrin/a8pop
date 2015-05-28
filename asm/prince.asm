@@ -75,10 +75,8 @@ start
 		jsr changeLevel
 		
 		
-		lda #0
+		lda #7
 		jsr changeScreen
-		
-		;jsr kidPreRender
 
 nextFrame
 		ldx kidFrameIndex

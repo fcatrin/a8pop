@@ -107,12 +107,7 @@ preNextTopTile
 		sta render_pieceby + levelTilesPerRow*2
 		
 ; now go for piece c from left screen(s)		
-		lda screenDataLeftC+2
-		and #$1F
-		tay
-		lda piecec,y
-		sta render_piecec+0
-		
+
 		lda screenDataLeftC+1
 		and #$1F
 		tay
@@ -124,6 +119,16 @@ preNextTopTile
 		tay
 		lda piecec,y
 		sta render_piecec+levelTilesPerRow*2
+		
+		ldx #levelTilesPerRow-1
+preCopyBottomTiles		
+		lda screenDataBottomC,x
+		and #$1F
+		tay
+		lda piecec,y
+		sta render_piecec,x
+		dex
+		bpl preCopyBottomTiles
 
 		
 ; remove unused blocks

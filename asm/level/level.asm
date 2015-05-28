@@ -83,7 +83,6 @@ setScreenLeftB
 		sta screenDataLeftB+2
 		sta screenDataLeftC+0
 		sta screenDataLeftC+1
-		sta screenDataLeftC+2
 
 		jsr getScreenLeft
 		cmp #255
@@ -115,7 +114,7 @@ getScreenBottom
 		jsr getScreenDown			 ; look for screen at down -> left
 		jsr getScreenLeftFromA
 		cmp #255
-		beq changeScreenEnd
+		beq copyScreenBottomTopLine
 		
 setScreenBottomC		
 		asl
@@ -126,7 +125,33 @@ setScreenBottomC
 		sta memcpySrc+1
 		ldy #levelTilesPerRow-1      ; last column from first row
 		lda (memcpySrc),y
-		sta screenDataLeftC+2
+		sta screenDataBottomC
+		
+copyScreenBottomTopLine		
+		jsr getScreenDown
+		cmp #255
+		bne hasScreenBottomTopLine
+		ldy #levelTilesPerRow-2
+		lda #TILE_BLOCK
+setTileBlockBottom		
+		sta screenDataBottomC,y
+		dey
+		bpl setTileBlockBottom
+		jmp changeScreenEnd
+		
+hasScreenBottomTopLine		
+		asl
+		tax
+		lda levelScreenLookup,x
+		sta memcpySrc
+		lda levelScreenLookup+1,x
+		sta memcpySrc+1
+		ldy #levelTilesPerRow-2
+copyScreenBottomC		
+		lda (memcpySrc),y
+		sta screenDataBottomC+1,y
+		dey
+		bpl copyScreenBottomC
 		
 changeScreenEnd	
 

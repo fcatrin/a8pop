@@ -159,8 +159,12 @@ render_dirty_blocks
 		.byte 0
 		.endr	
 
-screenDataLeftB .byte 0, 0, 0
-screenDataLeftC .byte 0, 0, 0
+screenDataLeftB .byte 0, 0, 0		; B pieces from screen to the left to be drawn on first col
+screenDataLeftC .byte 0, 0			; C pieces from screen to the left to be drawn on first col (first two rows)
+screenDataBottomC 					; C pieces from screen to the bottom + left (1 piece) and screen at bottom (9 pieces)
+ 		.rept levelTilesPerRow
+		.byte 0
+		.endr
 		
 renderBlockNumber		.byte 0
 renderBlockOffset		.byte 0
