@@ -112,7 +112,6 @@ waitvsync
 
 		lda 20
 		sta frame1
-		;.byte 2
 		jsr drawBack
 		lda 20
 		sta frame2

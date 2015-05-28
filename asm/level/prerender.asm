@@ -75,6 +75,57 @@ preNextTopTile
 		cpx #levelTilesPerRow
 		bne preNextTopTile
 		
+; now go for piece b from last column of left screen
+		lda screenDataLeftB+2
+		and #$1F
+		tay
+		lda pieceb,y
+		sta render_pieceb  + 0
+		lda maskb,y
+		sta render_maskb   + 0
+		lda pieceby,y
+		sta render_pieceby + 0
+		
+		lda screenDataLeftB+1
+		and #$1F
+		tay
+		lda pieceb,y
+		sta render_pieceb  + levelTilesPerRow
+		lda maskb,y
+		sta render_maskb   + levelTilesPerRow
+		lda pieceby,y
+		sta render_pieceby + levelTilesPerRow
+		
+		lda screenDataLeftB+0
+		and #$1F
+		tay
+		lda pieceb,y
+		sta render_pieceb  + levelTilesPerRow*2
+		lda maskb,y
+		sta render_maskb   + levelTilesPerRow*2
+		lda pieceby,y
+		sta render_pieceby + levelTilesPerRow*2
+		
+; now go for piece c from left screen(s)		
+		lda screenDataLeftC+2
+		and #$1F
+		tay
+		lda piecec,y
+		sta render_piecec+0
+		
+		lda screenDataLeftC+1
+		and #$1F
+		tay
+		lda piecec,y
+		sta render_piecec+levelTilesPerRow
+		
+		lda screenDataLeftC+0
+		and #$1F
+		tay
+		lda piecec,y
+		sta render_piecec+levelTilesPerRow*2
+
+		
 ; remove unused blocks
 		ldx #0
 removeUnusedNext		
@@ -110,8 +161,7 @@ preRenderOffsetRow
 		lda #10
 		sta preRenderCols
 
-		clc						; set vramOffset for row on x
-		lda vramOffsets,x
+		lda vramOffsets,x		; set vramOffset for row on x
 		sta vramOffset
 		lda vramOffsets+1,x
 		sta vramOffset+1
@@ -139,7 +189,7 @@ preRenderOffsetNextCol
 		sta render_pieceb_offsetH,x
 		tya
 		sta render_pieceb_offsetL,x
-		
+
 		ldx preRenderBlockDst
 		lda render_piecec,x
 		ldy #0
@@ -197,8 +247,9 @@ preRenderOffsetNextRow
 preRenderOffsetEnd
 
 ; calc offsets for first row.  Constant for now
-		clc						; set vramOffset for row on x
+		lda vramOffsets,x		; set vramOffset for row on x
 		sta vramOffset
+		lda vramOffsets+1,x
 		sta vramOffset+1
 		ldx #0
 nextTopOffset

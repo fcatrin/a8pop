@@ -159,6 +159,8 @@ render_dirty_blocks
 		.byte 0
 		.endr	
 
+screenDataLeftB .byte 0, 0, 0
+screenDataLeftC .byte 0, 0, 0
 		
 renderBlockNumber		.byte 0
 renderBlockOffset		.byte 0

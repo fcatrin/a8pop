@@ -55,7 +55,7 @@ setScreenTopBlock
 		sta screenDataTop,x
 		dex
 		bpl setScreenTopBlock
-		jmp changeScreenEnd
+		jmp setScreenLeftB
 hasScreenTopRow
 		asl
 		tax		
@@ -75,7 +75,61 @@ hasScreenTopRow
 		lda #0
 		sta memcpyLen+1
 		jsr memcpy
+		
+setScreenLeftB
+		lda #TILE_BLOCK				; default values if there is no screen at left or bottom/left (for C+2)
+		sta screenDataLeftB+0
+		sta screenDataLeftB+1
+		sta screenDataLeftB+2
+		sta screenDataLeftC+0
+		sta screenDataLeftC+1
+		sta screenDataLeftC+2
+
+		jsr getScreenLeft
+		cmp #255
+		beq getScreenBottom
+		asl
+		tax
+		lda levelScreenLookup,x
+		sta memcpySrc
+		lda levelScreenLookup+1,x
+		sta memcpySrc+1
+		ldy #levelTilesPerRow-1      ; last column from first row
+		lda (memcpySrc),y
+		sta screenDataLeftB+0
+		ldy #(levelTilesPerRow*2)-1  ; last column from second row
+		lda (memcpySrc),y
+		sta screenDataLeftB+1
+		sta screenDataLeftC+0
+		ldy #(levelTilesPerRow*3)-1  ; last column from third row
+		lda (memcpySrc),y
+		sta screenDataLeftB+2
+		sta screenDataLeftC+1
+
+		jsr getScreenLeft			 ; look for screen at left -> down
+		jsr getScreenDownFromA
+		cmp #255
+		bne setScreenBottomC
+		
+getScreenBottom		
+		jsr getScreenDown			 ; look for screen at down -> left
+		jsr getScreenLeftFromA
+		cmp #255
+		beq changeScreenEnd
+		
+setScreenBottomC		
+		asl
+		tax
+		lda levelScreenLookup,x
+		sta memcpySrc
+		lda levelScreenLookup+1,x
+		sta memcpySrc+1
+		ldy #levelTilesPerRow-1      ; last column from first row
+		lda (memcpySrc),y
+		sta screenDataLeftC+2
+		
 changeScreenEnd	
+
 		lda #1
 		sta levelScreenChanged	
 		jsr dirtySetAll
@@ -112,6 +166,7 @@ getScreenUp
 		
 getScreenDown
 		lda levelScreen
+getScreenDownFromA
 		asl
 		asl
 		tax
@@ -122,6 +177,7 @@ getScreenDown
 		
 getScreenLeft
 		lda levelScreen
+getScreenLeftFromA		
 		asl
 		asl
 		tax

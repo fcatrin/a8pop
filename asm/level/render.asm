@@ -42,6 +42,7 @@ noShortCut
 		adc vramBuffer+1
 		sta vramIndex+1
 		ldy #0
+		
 		lda render_piecec,x
 		jsr drawTileC
 		ldy renderBlockOffset
@@ -152,6 +153,7 @@ renderNextTopTile
 		sta vramIndex+1
 		ldy #0
 		lda render_pieced_top,x
+		.byte 2
 		jsr drawTile
 		ldx renderBlockNumber
 noRenderTopTile		
