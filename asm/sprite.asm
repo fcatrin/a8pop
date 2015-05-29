@@ -22,21 +22,37 @@ drawKid
 		lda vramIndex
 		adc kidXOffset
 		sta vramIndex
-		bcc spriteCopyScanP1
+		bcc spriteCopyScanRot1
 		inc vramIndex+1
+spriteCopyScanRot1
+		
+		lda kidX
+		and #03
+		beq spriteCopyScan
+		tax
+		dex
 
-; Original copy with pad 0
+		lda rotTableRightL,x
+		sta rotTableRight+1
+		lda rotTableRightH,x
+		sta rotTableRight+2
+		lda rotTableLeftL,x
+		sta rotTableLeft+1
+		lda rotTableLeftH,x
+		sta rotTableLeft+2
 		
 spriteCopyScanP1
 		ldy #0
-		sty rotationBuffer
+		sty rotationBufferOld
 spriteCopyByteP1		
 		lda (spriteIndex),y
 		tax
-		lda rot1TableRight,x
+rotTableRight		
+		lda $FFFF,x
 		sta rotationBufferNew
 		lda rotationBufferOld
-		ora rot1TableLeft,x
+rotTableLeft		
+		ora $FFFF,x
 		beq spriteNoCopyRot1
 		sta rotationBuffer
 		tax
@@ -85,7 +101,6 @@ noSpriteVramOverflowP1
 
 ; Original copy with pad 0
 
-/*		
 spriteCopyScan		
 		ldy spriteWidth
 		dey
@@ -117,7 +132,6 @@ noSpriteVramOverflow
 		dec spriteHeight
 		bne spriteCopyScan		
 		rts
-*/
 
 kidPreRender
 		ldx kidFrameIndex
@@ -307,7 +321,7 @@ dirtyNextBlock
 		
 				
 
-kidX			.byte 70
+kidX			.byte 66
 kidY			.byte 120
 kidXOffset		.byte 0
 kidFrameIndex 	.byte 0

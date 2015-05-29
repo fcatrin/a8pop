@@ -70,7 +70,7 @@ start
 		sta SDLSTL+1
 		
 		jsr genAutoMaskTable
-		jsr genRot1Table
+		jsr genRotTables
 		
 		lda #1
 		sta levelNumber
