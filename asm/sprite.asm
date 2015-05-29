@@ -2,9 +2,8 @@
 drawKid
 		lda kidX
 		and #$FC
-		clc
-		ror 
-		ror 
+		lsr
+		lsr 
 		sta kidXOffset
 		
 		sec
@@ -23,15 +22,75 @@ drawKid
 		lda vramIndex
 		adc kidXOffset
 		sta vramIndex
-		bcc spriteCopyScan
+		bcc spriteCopyScanP1
 		inc vramIndex+1
+
+; Original copy with pad 0
 		
+spriteCopyScanP1
+		ldy #0
+		sty rotationBuffer
+spriteCopyByteP1		
+		lda (spriteIndex),y
+		tax
+		lda rot1TableRight,x
+		sta rotationBufferNew
+		lda rotationBufferOld
+		ora rot1TableLeft,x
+		beq spriteNoCopyRot1
+		sta rotationBuffer
+		tax
+		
+		lda (vramIndex),y
+		and autoMaskTable,x
+		ora rotationBuffer
+		sta (vramIndex),y
+		
+spriteNoCopyRot1		
+		lda rotationBufferNew
+		sta rotationBufferOld
+		
+		iny
+		cpy spriteWidth
+		bne spriteCopyByteP1
+		; copy remainder byte
+		lda rotationBufferOld
+		tax
+		
+		lda (vramIndex),y
+		and autoMaskTable,x
+		ora rotationBufferOld
+		sta (vramIndex),y		
+		
+	
+		clc
+		lda spriteIndex
+		adc spriteWidth
+		sta spriteIndex
+		bcc noSpriteWidthOverflowP1
+		inc spriteIndex+1
+		
+noSpriteWidthOverflowP1		
+		clc
+		lda vramIndex
+		adc #scanBytes
+		sta vramIndex
+		bcc noSpriteVramOverflowP1
+		inc vramIndex+1
+noSpriteVramOverflowP1
+		dec spriteHeight
+		bne spriteCopyScanP1	
+		rts
+
+
+; Original copy with pad 0
+
+/*		
 spriteCopyScan		
 		ldy spriteWidth
 		dey
 spriteCopyByte		
 		lda (spriteIndex),y
-		lda #255
 		tax
 		lda (vramIndex),y
 		and autoMaskTable,x
@@ -39,7 +98,7 @@ spriteCopyByte
 		sta (vramIndex),y
 		dey
 		bpl spriteCopyByte
-		
+	
 		clc
 		lda spriteIndex
 		adc spriteWidth
@@ -58,6 +117,7 @@ noSpriteVramOverflow
 		dec spriteHeight
 		bne spriteCopyScan		
 		rts
+*/
 
 kidPreRender
 		ldx kidFrameIndex
@@ -106,6 +166,7 @@ kidSaveLastBounds
 		sec
 		sbc spriteHeight
 		sta boundsKidCurrent+2
+		lda spriteHeight
 
 ; Step 1 calc max bounds between prev and current bounds
 ; Step 2 transform bounds to block positions
@@ -156,11 +217,10 @@ kidUsePrevY2
 		; block x1 = x1 / 16
 		lda boundsKid
 		and #$F0
-		clc
-		ror 
-		ror 
-		ror 
-		ror 
+		lsr 
+		lsr 
+		lsr 
+		lsr 
 		sta dirtyBlockX1
 		
 		; block x2 = (x2-1) / 16  (width=1 means x1==x2)
@@ -168,14 +228,13 @@ kidUsePrevY2
 		sec
 		sbc #1
 		and #$F0
-		clc
-		ror 
-		ror 
-		ror 
-		ror 
+		lsr 
+		lsr 
+		lsr 
+		lsr 
 		adc #1
 		sta dirtyBlockX2
-
+		
 		; block y1 = (y1 - 3 - 1) / 63  (height=1 means y1==y2)
 
 		lda boundsKid+2
@@ -204,7 +263,6 @@ boundY1Found
 boundY2Found
 		inx
 		stx dirtyBlockY2
-		;.byte 2
 		
 dirtyBlockNextRow		
 		lda #levelTilesPerRow*2
@@ -249,7 +307,7 @@ dirtyNextBlock
 		
 				
 
-kidX			.byte 45
+kidX			.byte 70
 kidY			.byte 120
 kidXOffset		.byte 0
 kidFrameIndex 	.byte 0

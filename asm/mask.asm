@@ -1,5 +1,6 @@
 
-genAutoMaskTable ldx #0
+genAutoMaskTable 
+		ldx #0
 		
 nextAutoMask		
 		txa
@@ -21,7 +22,26 @@ nextAutoMask
 		inx
 		bne nextAutoMask
 		rts
-				
+
+genRot1Table
+		ldx #0
+nextRot1Table		
+		txa
+		lsr
+		lsr
+		sta rot1TableLeft,x
+		txa
+		and #3
+		ror
+		ror
+		ror
+		sta rot1TableRight,x
+		inx
+		bne nextRot1Table
+		rts
+		
+		
+						
 
 
 
@@ -29,4 +49,10 @@ autoMaskBuffer	.byte 0
 autoMaskTable	.rept 256
 				.byte 0
 				.endr
-			
+rot1TableLeft	.rept 256
+				.byte 0
+				.endr
+rot1TableRight	.rept 256
+				.byte 0
+				.endr
+				

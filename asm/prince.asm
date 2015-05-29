@@ -6,6 +6,10 @@ COLOR0 = 708
 COLOR1 = 709
 COLOR2 = 710
 
+rotationBuffer = 200
+rotationBufferNew = 201
+rotationBufferOld = 202
+
 maskIndex   = 208
 tileIndex   = 210
 vramIndex   = 212
@@ -45,6 +49,8 @@ levelInfo    = levelData + 720 + 720 + 256 + 256 + 96
 
 levelMapTop = 2
 
+		org $600
+
 		org $700
 
 start
@@ -64,6 +70,7 @@ start
 		sta SDLSTL+1
 		
 		jsr genAutoMaskTable
+		jsr genRot1Table
 		
 		lda #1
 		sta levelNumber
@@ -73,9 +80,12 @@ start
 		lda #7
 		jsr changeScreen
 
+		lda #7
+		sta kidFrameIndex
+
 nextFrame
 		ldx kidFrameIndex
-		inx
+		;inx
 		cpx #9
 		bne noKidFrameReset
 		ldx #0
