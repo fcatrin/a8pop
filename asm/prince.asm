@@ -45,11 +45,6 @@ levelInfo    = levelData + 720 + 720 + 256 + 256 + 96
 
 levelMapTop = 2
 
-timesTrackIndex = $600
-timesTrackAcum  = $602
-timesTrackBase  = $606
-
-
 		org $700
 
 start

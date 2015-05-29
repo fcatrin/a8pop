@@ -17,10 +17,6 @@ validTile
 		cpy #0
 		bne drawTileMasked		; use slower version with masking
 
-		ldx timesTrackIndex
-		sta timesTrackBase,x
-		inc timesTrackIndex
-		
 		tax
 		lda tilesL,x
 		sta tileIndex
@@ -90,10 +86,6 @@ drawTileMasked
 		jmp drawTileAutoMasked
 drawTileRegularMask		
 
-		ldx timesTrackIndex
-		sta timesTrackBase,x
-		inc timesTrackIndex
-	
 		tax
 		lda tilesL,x
 		sta tileIndex
@@ -213,10 +205,6 @@ drawTileMaskedEnd
 
 ; draw tile in A using automasking
 drawTileAutoMasked
-
-		ldx timesTrackIndex
-		sta timesTrackBase,x
-		inc timesTrackIndex
 
 		tax
 		lda tilesL,x
@@ -342,10 +330,6 @@ clearOnlyEnd
 		rts
 		
 clearAndDrawC
-		ldx timesTrackIndex
-		sta timesTrackBase,x
-		inc timesTrackIndex
-	
 		tax
 		lda tilesL,x
 		sta tileIndex

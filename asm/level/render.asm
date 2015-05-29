@@ -6,21 +6,6 @@
 ; skip drawing if render_dirty_blocks,x is not set
 
 drawBack
-		ldx #200
-		lda #0
-clearTimesTrackBase		
-		sta timesTrackBase,x
-		dex
-		bne clearTimesTrackBase
-waitVsync1	
-		lda vcount
-		;bne waitVsync1
-		lda #0
-		sta 20
-		sta timesTrackIndex
-		sta timesTrackAcum
-		sta timesTrackAcum+1
-		
 		ldx #0
 		ldy #0
 drawNextBlock
@@ -160,10 +145,5 @@ noRenderTopTile
 		cpx #levelTilesPerRow
 		bne renderNextTopTile
 		
-		sec
-		lda 20
-		sta timesTrackAcum
-		lda vcount
-		sta timesTrackAcum+1
 		rts
 			

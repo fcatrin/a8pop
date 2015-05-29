@@ -31,6 +31,7 @@ spriteCopyScan
 		dey
 spriteCopyByte		
 		lda (spriteIndex),y
+		lda #255
 		tax
 		lda (vramIndex),y
 		and autoMaskTable,x
