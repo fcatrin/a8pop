@@ -22,9 +22,9 @@ drawKid
 		lda vramIndex
 		adc kidXOffset
 		sta vramIndex
-		bcc spriteCopyScanRot1
+		bcc spriteCopyRot
 		inc vramIndex+1
-spriteCopyScanRot1
+spriteCopyRot
 		
 		lda kidX
 		and #03
@@ -41,10 +41,10 @@ spriteCopyScanRot1
 		lda rotTableLeftH,x
 		sta rotTableLeft+2
 		
-spriteCopyScanP1
+spriteCopyScanRot
 		ldy #0
 		sty rotationBufferOld
-spriteCopyByteP1		
+spriteCopyByteRot		
 		lda (spriteIndex),y
 		tax
 rotTableRight		
@@ -53,7 +53,7 @@ rotTableRight
 		lda rotationBufferOld
 rotTableLeft		
 		ora $FFFF,x
-		beq spriteNoCopyRot1
+		beq spriteNoCopyRot
 		sta rotationBuffer
 		tax
 		
@@ -62,13 +62,13 @@ rotTableLeft
 		ora rotationBuffer
 		sta (vramIndex),y
 		
-spriteNoCopyRot1		
+spriteNoCopyRot	
 		lda rotationBufferNew
 		sta rotationBufferOld
 		
 		iny
 		cpy spriteWidth
-		bne spriteCopyByteP1
+		bne spriteCopyByteRot
 		; copy remainder byte
 		lda rotationBufferOld
 		tax
@@ -77,25 +77,24 @@ spriteNoCopyRot1
 		and autoMaskTable,x
 		ora rotationBufferOld
 		sta (vramIndex),y		
-		
 	
 		clc
 		lda spriteIndex
 		adc spriteWidth
 		sta spriteIndex
-		bcc noSpriteWidthOverflowP1
+		bcc noSpriteWidthOverflowRot
 		inc spriteIndex+1
 		
-noSpriteWidthOverflowP1		
+noSpriteWidthOverflowRot
 		clc
 		lda vramIndex
 		adc #scanBytes
 		sta vramIndex
-		bcc noSpriteVramOverflowP1
+		bcc noSpriteVramOverflowRot
 		inc vramIndex+1
-noSpriteVramOverflowP1
+noSpriteVramOverflowRot
 		dec spriteHeight
-		bne spriteCopyScanP1	
+		bne spriteCopyScanRot	
 		rts
 
 

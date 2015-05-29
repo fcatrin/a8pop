@@ -80,12 +80,12 @@ start
 		lda #7
 		jsr changeScreen
 
-		lda #7
+		lda #0
 		sta kidFrameIndex
 
 nextFrame
 		ldx kidFrameIndex
-		;inx
+		inx
 		cpx #9
 		bne noKidFrameReset
 		ldx #0
