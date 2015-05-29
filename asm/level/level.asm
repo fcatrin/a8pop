@@ -1,8 +1,12 @@
-
-
+; Change current level
+; a) Copy level data 
+; b) Set current screen to 0
 
 changeLevel
-		lda #<levelData
+		lda #0
+		sta levelScreen
+
+		lda #<levelData				; memcpy levelDataSrc[levelNumber] -> levelData
 		sta memcpyDst
 		lda #>levelData
 		sta memcpyDst+1
@@ -20,10 +24,15 @@ changeLevel
 		lda #>levelSize
 		sta memcpyLen+1
 		
-		lda #0
-		sta levelScreen
-		
 		jmp memcpy
+
+; Change current screen
+; A = new screent
+;
+; a) copy screen data
+; b) copy bottom row of screen above
+; c) copy pieces B and C from screen at left. Put them on the first column
+
 		
 changeScreen
 		cmp #255
@@ -38,7 +47,7 @@ changeValidScreen
 		lda levelScreenLookup+1,x
 		sta levelScreenOffset+2
 		
-		ldy #0
+		ldy #0							; a) copy screen data from level -> to screenData
 levelScreenOffset
 		lda $FFFF,y
 		sta screenData,y
@@ -46,10 +55,10 @@ levelScreenOffset
 		cpy #levelTilesPerScreen
 		bne levelScreenOffset
 		
-		jsr getScreenUp
+		jsr getScreenUp					; b) copy bottom row of screen above
 		cmp #255
 		bne hasScreenTopRow
-		lda #TILE_BLOCK
+		lda #TILE_BLOCK					; use block tile if there is no screen above
 		ldx #levelTilesPerRow
 setScreenTopBlock		
 		sta screenDataTop,x
@@ -61,7 +70,7 @@ hasScreenTopRow
 		tax		
 		clc
 		lda levelScreenLookup,x
-		adc #2*levelTilesPerRow		; last row
+		adc #2*levelTilesPerRow			; last row is here
 		sta memcpySrc
 		lda levelScreenLookup+1,x
 		adc #0
@@ -76,7 +85,7 @@ hasScreenTopRow
 		sta memcpyLen+1
 		jsr memcpy
 		
-setScreenLeftB
+setScreenLeftB						
 		lda #TILE_BLOCK				; default values if there is no screen at left or bottom/left (for C+2)
 		sta screenDataLeftB+0
 		sta screenDataLeftB+1
@@ -84,7 +93,7 @@ setScreenLeftB
 		sta screenDataLeftC+0
 		sta screenDataLeftC+1
 
-		jsr getScreenLeft
+		jsr getScreenLeft			; c) copy pieces B and C from screen at left. Put them on the first column
 		cmp #255
 		beq getScreenBottom
 		asl
@@ -105,16 +114,16 @@ setScreenLeftB
 		sta screenDataLeftB+2
 		sta screenDataLeftC+1
 
-		jsr getScreenLeft			 ; look for screen at left -> down
+		jsr getScreenLeft				; look for screen at left -> down
 		jsr getScreenDownFromA
 		cmp #255
 		bne setScreenBottomC
 		
-getScreenBottom		
-		jsr getScreenDown			 ; look for screen at down -> left
+getScreenBottom							; piece C at bottom left is from top right of screen at bottom left
+		jsr getScreenDown				; look for screen at down -> left
 		jsr getScreenLeftFromA
 		cmp #255
-		beq copyScreenBottomTopLine
+		beq copyScreenBottomTopLine		; there is no screen at bottom left. Continue 
 		
 setScreenBottomC		
 		asl
@@ -123,15 +132,15 @@ setScreenBottomC
 		sta memcpySrc
 		lda levelScreenLookup+1,x
 		sta memcpySrc+1
-		ldy #levelTilesPerRow-1      ; last column from first row
+		ldy #levelTilesPerRow-1			; last column from first row
 		lda (memcpySrc),y
-		sta screenDataBottomC
+		sta screenDataBottomC			; just copy piece C on bottom left
 		
 copyScreenBottomTopLine		
 		jsr getScreenDown
 		cmp #255
 		bne hasScreenBottomTopLine
-		ldy #levelTilesPerRow-2
+		ldy #levelTilesPerRow-2			; no screen at bottom -> use blocks
 		lda #TILE_BLOCK
 setTileBlockBottom		
 		sta screenDataBottomC,y
@@ -139,7 +148,7 @@ setTileBlockBottom
 		bpl setTileBlockBottom
 		jmp changeScreenEnd
 		
-hasScreenBottomTopLine		
+hasScreenBottomTopLine					; copy top row of screen at bottom, on bottom row
 		asl
 		tax
 		lda levelScreenLookup,x
@@ -153,8 +162,7 @@ copyScreenBottomC
 		dey
 		bpl copyScreenBottomC
 		
-changeScreenEnd	
-
+changeScreenEnd							; mark dirty flags for entire screen and go for pre-render
 		lda #1
 		sta levelScreenChanged	
 		jsr dirtySetAll
