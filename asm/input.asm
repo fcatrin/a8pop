@@ -1,3 +1,4 @@
+; @com.wudsn.ide.asm.mainsourcefile=prince.asm
 
 inputHandler		
 		lda key_input
