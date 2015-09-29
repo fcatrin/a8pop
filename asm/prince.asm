@@ -69,6 +69,8 @@ start
 		lda #>displayList
 		sta SDLSTL+1
 		
+		jsr initpmg
+		
 		jsr genAutoMaskTable
 		jsr genRotTables
 		
@@ -210,6 +212,7 @@ copyBuffers
 		icl "utils.asm"
 		icl "input.asm"
 		icl "level/bgdata.asm"
+		icl "pmg.asm"
 
 heightLookupL 
 		.rept 200
