@@ -104,7 +104,7 @@ public class Main {
 		Level.dumpTiles();
 		
 		
-		Level level = Level.load(new File("levels/level1"));
+		Level level = Level.load(new File("levels/LEVEL1"));
 		level.kid = kid;
 		level.dumpSprites();
 		
