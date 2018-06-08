@@ -50,8 +50,10 @@ public class ScreenView extends CustomWidget {
 		sourceData.setPixel(x, y, value);
 	}
 	
+	private String imageLock = "";
+	
 	public void finishFrame() {
-		synchronized (this) {
+		synchronized (imageLock) {
 			if (image!=null) image.dispose();
 			image = new Image(Display.getCurrent(), sourceData);
 		}
