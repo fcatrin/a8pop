@@ -1,10 +1,12 @@
 package fcatrin.a8mon;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 
 import org.eclipse.swt.widgets.Display;
 
@@ -39,10 +41,17 @@ public class Main {
 			@Override
 			public void run() {
 				BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
+				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()));
 				String line;
 				try {
 					while ((line = in.readLine()) != null) {
 					    System.out.println("XX:" + line);
+					    
+					    if (line.startsWith("  0  ")) {
+					    	out.append("POKEY\n");
+					    	out.flush();
+					    	System.out.println("sending pokey");
+					    }
 					}
 					process.waitFor();
 					System.out.println("ok!");
@@ -59,4 +68,19 @@ public class Main {
 		t.start();
 	}
 	
+	private static class CommandExecutor implements Runnable {
+		
+		private OutputStream os;
+
+		public CommandExecutor(OutputStream os) {
+			this.os = os;
+		}
+		
+		@Override
+		public void run() {
+			// TODO Auto-generated method stub
+			
+		}
+	}
+
 }
