@@ -49,9 +49,7 @@ levelInfo    = levelData + 720 + 720 + 256 + 256 + 96
 
 levelMapTop = 2
 
-		org $600
-
-		org $700
+		org $800
 
 start
 		lda #dungeon_color0		; setup colors
@@ -69,7 +67,7 @@ start
 		lda #>displayList
 		sta SDLSTL+1
 		
-		jsr initpmg
+		; jsr initpmg
 		
 		jsr genAutoMaskTable
 		jsr genRotTables
