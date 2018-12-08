@@ -1,11 +1,14 @@
 
 drawKid
+      ; pixels to vram byte conversion on X
 		lda kidX
 		and #$FC
 		lsr
 		lsr 
 		sta kidXOffset
 		
+		; pixels to vram byte conversion on Y (kidY is floor based)
+      ; start of scan at vramIndex
 		sec
 		lda kidY
 		sbc spriteHeight
@@ -18,17 +21,18 @@ drawKid
 		adc vramBuffer+1
 		sta vramIndex+1
 		
+		; calculate exact byte to start rendering on vramIndex
 		clc
 		lda vramIndex
 		adc kidXOffset
 		sta vramIndex
-		bcc spriteCopyRot
+		scc 
 		inc vramIndex+1
-spriteCopyRot
-		
+
+		; check if rotation is needed
 		lda kidX
 		and #03
-		beq spriteCopyScan
+		beq spriteCopyScan ; no rotation needed
 		tax
 		dex
 
