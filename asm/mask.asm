@@ -34,6 +34,11 @@ nextAutoMask
 		bne nextAutoMask
 		rts
 
+; create rotation tables
+; rot_N_table_side
+; where N is the number of rotations in pixels
+; and side is direction of rotation
+
 genRotTables
 		ldx #0
 nextRot1Table		
