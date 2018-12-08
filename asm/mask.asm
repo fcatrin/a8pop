@@ -1,4 +1,14 @@
 
+; create a mask table converting bits to pixels (4 pixels / byte)
+; for each possible value creata a mask to be anded with the background
+; 00 is transparent
+;
+; original value       ; 11000110
+; even bits ($AA)      : 1?0?0?1? -> 11000011
+; odd bits  ($55)      : ?1?0?1?0 -> 11001100
+; final pixels (or)    :             11001111
+; final mask (xor $FF) :             00110000
+
 genAutoMaskTable 
 		ldx #0
 		
@@ -10,6 +20,7 @@ nextAutoMask
 		ror
 		ora autoMaskBuffer
 		sta autoMaskBuffer
+		
 		txa
 		and #$55
 		ora autoMaskBuffer
